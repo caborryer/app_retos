@@ -272,7 +272,7 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
                         {task.photoRequired ? (
                           <>
                             <input
-                              ref={(el) => (fileInputRefs.current[task.id] = el)}
+                              ref={(el) => { fileInputRefs.current[task.id] = el; }}
                               type="file"
                               accept="image/jpeg,image/png,image/gif,image/webp"
                               onChange={(e) => handleFileSelect(e, task.id)}
