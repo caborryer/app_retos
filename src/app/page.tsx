@@ -77,6 +77,7 @@ export default function HomePage() {
           {challenges.length > 0 && (
             <BingoBoard
               challenges={challenges}
+              boardTitle={`Tablero ${boardIndex + 1}`}
               boardNumber={boardIndex + 1}
               onBingoContinue={handleBingoContinue}
             />
