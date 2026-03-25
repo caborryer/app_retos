@@ -1,0 +1,42 @@
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import './globals.css';
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+});
+
+export const metadata: Metadata = {
+  title: 'SportChallenge - Retos Deportivos',
+  description: 'Participa en retos deportivos, alcanza tus metas y compite con amigos',
+  manifest: '/manifest.json',
+  themeColor: '#FC0230',
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'SportChallenge',
+  },
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="es" className={inter.variable}>
+      <body className="font-sans antialiased">
+        {children}
+      </body>
+    </html>
+  );
+}
+
