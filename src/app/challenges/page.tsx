@@ -58,10 +58,12 @@ export default function HomePage() {
     resetChallenges(makeFreshBoard(board.challenges));
   }, [activeBoard.id, hasProgress, resetChallenges]);
 
-  const handleBingoContinue = useCallback((board: ThemedBoard) => {
-    setActiveBoard(board);
-    resetChallenges(makeFreshBoard(board.challenges));
-  }, [resetChallenges]);
+  const handleBingoContinue = useCallback(() => {
+    const currentIndex = THEMED_BOARDS.findIndex((b) => b.id === activeBoard.id);
+    const next = THEMED_BOARDS[(currentIndex + 1) % THEMED_BOARDS.length];
+    setActiveBoard(next);
+    resetChallenges(makeFreshBoard(next.challenges));
+  }, [activeBoard.id, resetChallenges]);
 
   const confirmSwitch = () => {
     if (!confirmBoard) return;

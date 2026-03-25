@@ -6,13 +6,11 @@ import type { Challenge } from '@/types';
 import { ChallengeStatus } from '@/types';
 import ChallengeFlipCard from '@/components/challenges/ChallengeFlipCard';
 import BingoModal from './BingoModal';
-import type { ThemedBoard } from '@/lib/mockData';
-
 interface BingoBoardProps {
   challenges: Challenge[];
   boardTitle: string;
   boardNumber: number;
-  onBingoContinue: (board: ThemedBoard) => void;
+  onBingoContinue: () => void;
 }
 
 function EmptyCell() {
@@ -56,9 +54,9 @@ export function BingoBoard({ challenges, boardTitle, boardNumber, onBingoContinu
   const totalPoints = challenges.reduce((acc, c) => acc + c.points, 0);
   const cells = buildCells(challenges);
 
-  const handleContinue = (board: ThemedBoard) => {
+  const handleContinue = () => {
     setShowBingo(false);
-    onBingoContinue(board);
+    onBingoContinue();
   };
 
   return (
