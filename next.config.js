@@ -11,6 +11,7 @@ const nextConfig = {
       { protocol: 'https', hostname: 'previews.123rf.com' },
       { protocol: 'https', hostname: 'i0.wp.com' },
       { protocol: 'https', hostname: 'cdn0.expertoanimal.com' },
+      { protocol: 'https', hostname: 'i.ibb.co' }, 
     ],
     formats: ['image/avif', 'image/webp'],
   },

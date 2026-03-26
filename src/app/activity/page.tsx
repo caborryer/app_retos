@@ -67,7 +67,7 @@ export default function ActivityPage() {
         </Card>
 
         {/* Recent Badges */}
-        {user && user.badges.length > 0 && (
+        {/* {user && user.badges.length > 0 && (
           <div className="space-y-4">
             <h2 className="text-lg font-bold text-secondary-900 flex items-center gap-2">
               <Award className="w-5 h-5 text-primary-500" />
@@ -111,7 +111,7 @@ export default function ActivityPage() {
               ))}
             </div>
           </div>
-        )}
+        )} */}
 
         {/* Recent Activity Timeline */}
         <div className="space-y-4">

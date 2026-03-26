@@ -80,7 +80,7 @@ export default function HomePage() {
         <div className="pt-1 pb-0" style={{ paddingLeft: '8.53%', paddingRight: 17 }}>
           <div className="flex items-center justify-between">
             <h1 className="text-[#1E1E22] font-semibold text-xl tracking-tight">
-              Retos
+              {activeBoard.title}
             </h1>
             <div className="flex items-center gap-1.5">
               <span className="text-base">{activeBoard.emoji}</span>

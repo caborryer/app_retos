@@ -82,12 +82,12 @@ export default function ProfilePage() {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-3 gap-3">
-          <Card variant="elevated" className="p-4 text-center">
+          {/* <Card variant="elevated" className="p-4 text-center">
             <div className="text-3xl font-bold text-primary-500 mb-1">
               {formatNumber(user.points)}
             </div>
             <div className="text-xs text-secondary-600">Puntos</div>
-          </Card>
+          </Card> */}
 
           <Card variant="elevated" className="p-4 text-center">
             <div className="text-3xl font-bold text-green-500 mb-1">
@@ -105,7 +105,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Badges Collection */}
-        <div className="space-y-4">
+        {/* <div className="space-y-4">
           <h2 className="text-lg font-bold text-secondary-900 flex items-center gap-2">
             <Award className="w-5 h-5 text-primary-500" />
             Mis Insignias ({user.badges.length})
@@ -137,7 +137,7 @@ export default function ProfilePage() {
               </p>
             </Card>
           )}
-        </div>
+        </div> */}
 
         {/* Menu Options */}
         <div className="space-y-3">
@@ -158,7 +158,7 @@ export default function ProfilePage() {
 
             <div className="border-t border-secondary-100" />
 
-            <button className="w-full flex items-center justify-between p-4 hover:bg-secondary-50 transition-colors">
+            {/* <button className="w-full flex items-center justify-between p-4 hover:bg-secondary-50 transition-colors">
               <div className="flex items-center gap-3">
                 <Trophy className="w-5 h-5 text-secondary-600" />
                 <span className="font-medium text-secondary-900">
@@ -166,11 +166,11 @@ export default function ProfilePage() {
                 </span>
               </div>
               <ChevronRight className="w-5 h-5 text-secondary-400" />
-            </button>
+            </button> */}
 
             <div className="border-t border-secondary-100" />
 
-            <button className="w-full flex items-center justify-between p-4 hover:bg-secondary-50 transition-colors">
+            {/* <button className="w-full flex items-center justify-between p-4 hover:bg-secondary-50 transition-colors">
               <div className="flex items-center gap-3">
                 <Star className="w-5 h-5 text-secondary-600" />
                 <span className="font-medium text-secondary-900">
@@ -178,7 +178,7 @@ export default function ProfilePage() {
                 </span>
               </div>
               <ChevronRight className="w-5 h-5 text-secondary-400" />
-            </button>
+            </button> */}
           </Card>
 
           <Button

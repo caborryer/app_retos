@@ -6,6 +6,7 @@ import type { Challenge } from '@/types';
 import { ChallengeStatus } from '@/types';
 import ChallengeFlipCard from '@/components/challenges/ChallengeFlipCard';
 import BingoModal from './BingoModal';
+import Image from 'next/image'; 
 interface BingoBoardProps {
   challenges: Challenge[];
   boardTitle: string;
@@ -15,10 +16,16 @@ interface BingoBoardProps {
 
 function EmptyCell() {
   return (
-    <div
-      className="w-full aspect-square rounded-[16px]"
-      style={{ backgroundColor: 'rgba(243, 246, 251, 0.25)' }}
-    />
+    <div className="w-full aspect-square rounded-[16px] overflow-hidden relative">
+      <Image
+        src="https://i.ibb.co/C3wDYt0T/Whats-App-Image-2026-03-25-at-12-34-56-PM.jpg"
+        alt="Casilla especial"
+        fill
+        className="object-cover"
+        sizes="100px"
+        style={{ borderRadius: 16 }}
+      />
+    </div>
   );
 }
 
