@@ -2,10 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAppStore } from '@/store/useAppStore';
 
 const BOARDS = [
-  { id: 'running',  emoji: '🏃', label: 'Running',  color: '#FC0230' },
+  { id: 'running',  emoji: '🏃', label: 'Running',  color: '#FF5327' },
   { id: 'gym',      emoji: '💪', label: 'Gym',       color: '#FC0230' },
   { id: 'swimming', emoji: '🏊', label: 'Natación',  color: '#06B6D4' },
   { id: 'yoga',     emoji: '🧘', label: 'Yoga',      color: '#10B981' },
@@ -113,19 +112,6 @@ export default function LandingPage() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
-
-  // Already logged in → skip landing
-  useEffect(() => {
-    if (!mounted) return;
-    const check = () => {
-      const { currentUser } = useAppStore.getState();
-      if (currentUser?.role === 'admin') router.replace('/admin');
-      else if (currentUser?.role === 'user') router.replace('/home');
-    };
-    if (useAppStore.persist.hasHydrated()) check();
-    else useAppStore.persist.onFinishHydration(check);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mounted]);
 
   useEffect(() => {
     if (completed.size === 9) {

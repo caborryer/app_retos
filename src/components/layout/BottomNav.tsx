@@ -16,7 +16,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { icon: Home, label: 'Home', path: '/', tab: 'home' },
+  { icon: Home, label: 'Home', path: '/home', tab: 'home' },
   { icon: Trophy, label: 'Retos', path: '/challenges', tab: 'challenges' },
   { icon: Calendar, label: 'Actividad', path: '/activity', tab: 'activity' },
   { icon: User, label: 'Perfil', path: '/profile', tab: 'profile' },
@@ -46,20 +46,12 @@ export default function BottomNav() {
             >
               <motion.div
                 className={cn(
-                  'relative transition-colors duration-200',
+                  'transition-colors duration-200',
                   isActive ? 'text-primary-500' : 'text-secondary-500'
                 )}
                 whileTap={{ scale: 0.9 }}
               >
                 <Icon className="w-6 h-6" />
-                
-                {isActive && (
-                  <motion.div
-                    layoutId="activeTab"
-                    className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary-500 rounded-full"
-                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                  />
-                )}
               </motion.div>
 
               <span
@@ -70,6 +62,14 @@ export default function BottomNav() {
               >
                 {item.label}
               </span>
+
+              {isActive && (
+                <motion.div
+                  layoutId="activeTab"
+                  className="w-1 h-1 bg-primary-500 rounded-full"
+                  transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                />
+              )}
             </Link>
           );
         })}

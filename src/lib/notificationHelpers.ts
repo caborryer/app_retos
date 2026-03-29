@@ -73,7 +73,7 @@ export const NotificationTemplates = {
   friendJoined: (friendName: string) =>
     createNotification(
       '👥 Nuevo Amigo',
-      `${friendName} se unió a SportChallenge.`,
+      `${friendName} se unió a BingoChallenge.`,
       'info'
     ),
 

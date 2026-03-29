@@ -4,6 +4,8 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  password?: string;
+  role: 'user' | 'admin';
   avatar?: string;
   level: number;
   points: number;
@@ -38,11 +40,14 @@ export interface ChallengeTask {
   completed: boolean;
   photoRequired: boolean;
   photoUrl?: string;
+  linkUrl?: string;
   completedAt?: Date;
   validationStatus?: 'pending' | 'approved' | 'rejected';
   rejectionReason?: string;
   validatedBy?: string;
   validatedAt?: Date;
+  submittedByUserId?: string;
+  submittedByUserName?: string;
 }
 
 export enum ChallengeCategory {

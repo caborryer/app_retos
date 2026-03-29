@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Layout from '@/components/layout/Layout';
 import { BingoBoard } from '@/components/bingo/BingoBoard';
 import { useAppStore } from '@/store/useAppStore';
-import { mockUser, THEMED_BOARDS } from '@/lib/mockData';
+import { THEMED_BOARDS } from '@/lib/mockData';
 import type { ThemedBoard } from '@/lib/mockData';
 import type { Challenge } from '@/types';
 import { ChallengeStatus } from '@/types';
@@ -25,7 +25,7 @@ function makeFreshBoard(template: Challenge[]): Challenge[] {
 }
 
 export default function HomePage() {
-  const { user, setUser, challenges, resetChallenges, setIsLoading } = useAppStore();
+  const { challenges, resetChallenges, setIsLoading } = useAppStore();
   const [activeBoard, setActiveBoard] = useState<ThemedBoard>(THEMED_BOARDS[0]);
   const [confirmBoard, setConfirmBoard] = useState<ThemedBoard | null>(null);
   const initialized = useRef(false);
@@ -33,7 +33,6 @@ export default function HomePage() {
   useEffect(() => {
     if (initialized.current) return;
     initialized.current = true;
-    if (!user) setUser(mockUser);
     setIsLoading(false);
     if (challenges.length === 0) {
       resetChallenges(makeFreshBoard(THEMED_BOARDS[0].challenges));
@@ -73,7 +72,7 @@ export default function HomePage() {
   };
 
   return (
-    <Layout title="SportChallenge">
+    <Layout title="BingoChallenge">
       <div className="min-h-full pb-8">
 
         {/* ── Título ─────────────────────────────────────────────────────── */}

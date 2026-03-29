@@ -1,12 +1,14 @@
 import type { User, Challenge, Notification } from '@/types';
 import { ChallengeCategory, ChallengeDifficulty, ChallengeStatus } from '@/types';
 
-// ─── Usuario ────────────────────────────────────────────────────────────────
+// ─── Usuarios ────────────────────────────────────────────────────────────────
 
 export const mockUser: User = {
   id: '1',
   name: 'Andrea Corrales',
-  email: 'andrea@sportchallenge.com',
+  email: 'andrea@BingoChallenge.com',
+  password: 'user123',
+  role: 'user',
   avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400',
   level: 12,
   points: 2450,
@@ -31,6 +33,22 @@ export const mockUser: User = {
   completedChallenges: 15,
   activeChallenges: 3,
 };
+
+export const adminUser: User = {
+  id: 'admin-1',
+  name: 'Admin Sport',
+  email: 'admin@sport.com',
+  password: 'admin123',
+  role: 'admin',
+  avatar: 'https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?w=400',
+  level: 99,
+  points: 0,
+  badges: [],
+  completedChallenges: 0,
+  activeChallenges: 0,
+};
+
+export const USERS_DB: User[] = [mockUser, adminUser];
 
 // ─── Pool global de retos (todos los disponibles) ───────────────────────────
 
@@ -1126,6 +1144,9 @@ export interface ThemedBoard {
   emoji: string;
   color: string;
   challenges: Challenge[];
+  coverImage?: string;
+  description?: string;
+  active?: boolean;
 }
 
 export const THEMED_BOARDS: ThemedBoard[] = [

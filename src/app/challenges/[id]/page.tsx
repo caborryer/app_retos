@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, Users, Trophy, Check, Camera } from 'lucide-react';
+import { Calendar, Users, Trophy, Check, Camera, Link as LinkIcon, X } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -10,9 +10,83 @@ import ProgressBar from '@/components/ui/ProgressBar';
 import Badge from '@/components/ui/Badge';
 import ChallengeGrid from '@/components/challenges/ChallengeGrid';
 import { useAppStore } from '@/store/useAppStore';
-import { formatDuration, formatNumber, getDifficultyName, getDifficultyColor, formatRelativeTime } from '@/lib/utils';
-import { notFound } from 'next/navigation';
-import type { Challenge } from '@/types';
+import { formatDuration, formatNumber, getDifficultyName, formatRelativeTime } from '@/lib/utils';
+import type { Challenge, ChallengeTask } from '@/types';
+import { ChallengeCategory } from '@/types';
+
+const STRAVA_CATEGORIES: ChallengeCategory[] = [
+  ChallengeCategory.RUNNING, ChallengeCategory.CYCLING, ChallengeCategory.GYM,
+  ChallengeCategory.SWIMMING, ChallengeCategory.YOGA, ChallengeCategory.TEAM_SPORTS,
+  ChallengeCategory.OUTDOOR, ChallengeCategory.MIXED,
+];
+
+function StravaLinkInput({ task, challengeId, onSubmit }: {
+  task: ChallengeTask;
+  challengeId: string;
+  onSubmit: (taskId: string, link: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState(task.linkUrl ?? '');
+  const [error, setError] = useState('');
+
+  if (task.completed) return null;
+
+  const handleSubmit = () => {
+    const trimmed = value.trim();
+    if (!trimmed) { setError('Ingresa un link'); return; }
+    try { new URL(trimmed); } catch { setError('URL inválida'); return; }
+    if (!trimmed.startsWith('https://')) { setError('El link debe comenzar con https://'); return; }
+    onSubmit(task.id, trimmed);
+    setOpen(false);
+    setError('');
+  };
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-[#FC4C02] border border-[#FC4C02]/30 bg-[#FC4C02]/5 hover:bg-[#FC4C02]/10 transition-colors"
+      >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="#FC4C02">
+          <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169" />
+        </svg>
+        {task.linkUrl ? 'Editar link Strava' : 'Link Strava'}
+      </button>
+    );
+  }
+
+  return (
+    <div className="mt-3 p-3 rounded-xl border border-[#FC4C02]/20 bg-[#FC4C02]/5 space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-bold text-[#FC4C02] flex items-center gap-1.5">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="#FC4C02">
+            <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169" />
+          </svg>
+          Actividad de Strava
+        </span>
+        <button onClick={() => { setOpen(false); setError(''); }} className="text-secondary-400 hover:text-secondary-600">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+      <input
+        type="url"
+        value={value}
+        onChange={(e) => { setValue(e.target.value); setError(''); }}
+        placeholder="https://strava.com/activities/1234567890"
+        className="w-full text-sm border border-secondary-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#FC4C02]/40 focus:border-[#FC4C02]"
+        autoFocus
+      />
+      {error && <p className="text-xs text-red-500">{error}</p>}
+      <button
+        onClick={handleSubmit}
+        className="w-full py-2 rounded-xl bg-[#FC4C02] hover:bg-[#e04400] text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+      >
+        <LinkIcon className="w-4 h-4" />
+        Adjuntar link
+      </button>
+    </div>
+  );
+}
 
 export default function ChallengeDetailPage({ params }: { params: { id: string } }) {
   const { challenges, setChallenges, startChallenge, completeTask, user, setUser } = useAppStore();
@@ -129,6 +203,12 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
     completeTask(challenge.id, taskId, photoUrl);
   };
 
+  const handleStravaLink = (taskId: string, linkUrl: string) => {
+    completeTask(challenge.id, taskId, undefined, linkUrl);
+  };
+
+  const supportsStrava = STRAVA_CATEGORIES.includes(challenge.category);
+
   return (
     <Layout showBack title="">
       <div className="space-y-6 -mt-4">
@@ -224,7 +304,7 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
                   variant="elevated"
                   className="p-4"
                 >
-                  <div className="flex items-start gap-4">
+                  <div className="flex items-start gap-4 flex-wrap">
                     <div
                       className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
                         task.completed
@@ -260,6 +340,21 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
                         </div>
                       )}
 
+                      {/* Strava link adjunto */}
+                      {task.linkUrl && (
+                        <a
+                          href={task.linkUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 mt-2 text-xs text-[#FC4C02] hover:underline break-all"
+                        >
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="#FC4C02" className="shrink-0">
+                            <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169" />
+                          </svg>
+                          <span className="truncate max-w-[180px]">{task.linkUrl}</span>
+                        </a>
+                      )}
+
                       {task.completedAt && (
                         <p className="text-xs text-green-600 mt-2">
                           Completado {formatRelativeTime(task.completedAt)}
@@ -267,36 +362,43 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
                       )}
                     </div>
 
-                    {isInProgress && !task.completed && (
+                    {isInProgress && !task.completed && task.photoRequired && (
                       <>
-                        {task.photoRequired ? (
-                          <>
-                            <input
-                              ref={(el) => { fileInputRefs.current[task.id] = el; }}
-                              type="file"
-                              accept="image/jpeg,image/png,image/gif,image/webp"
-                              onChange={(e) => handleFileSelect(e, task.id)}
-                              className="hidden"
-                            />
-                            <Button
-                              size="sm"
-                              onClick={() => handlePhotoButtonClick(task.id)}
-                              leftIcon={<Camera className="w-4 h-4" />}
-                            >
-                              Subir Foto
-                            </Button>
-                          </>
-                        ) : (
-                          <Button
-                            size="sm"
-                            onClick={() => handleCompleteTask(task.id)}
-                          >
-                            Completar
-                          </Button>
-                        )}
+                        <input
+                          ref={(el) => { fileInputRefs.current[task.id] = el; }}
+                          type="file"
+                          accept="image/jpeg,image/png,image/gif,image/webp"
+                          onChange={(e) => handleFileSelect(e, task.id)}
+                          className="hidden"
+                        />
+                        <Button
+                          size="sm"
+                          onClick={() => handlePhotoButtonClick(task.id)}
+                          leftIcon={<Camera className="w-4 h-4" />}
+                        >
+                          Foto
+                        </Button>
                       </>
                     )}
+
+                    {isInProgress && !task.completed && !task.photoRequired && (
+                      <Button
+                        size="sm"
+                        onClick={() => handleCompleteTask(task.id)}
+                      >
+                        Completar
+                      </Button>
+                    )}
                   </div>
+
+                  {/* Strava link input — double validation for sports */}
+                  {isInProgress && supportsStrava && (
+                    <StravaLinkInput
+                      task={task}
+                      challengeId={challenge.id}
+                      onSubmit={handleStravaLink}
+                    />
+                  )}
                 </Card>
               </motion.div>
             ))}

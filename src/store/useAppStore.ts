@@ -2,8 +2,15 @@ import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import type { User, Challenge, Notification, Activity, TabType } from '@/types';
 import { ChallengeStatus } from '@/types';
+import { USERS_DB, THEMED_BOARDS } from '@/lib/mockData';
+import type { ThemedBoard } from '@/lib/mockData';
 
 interface AppState {
+  // Auth state
+  currentUser: User | null;
+  login: (email: string, password: string) => boolean;
+  logout: () => void;
+
   // User state
   user: User | null;
   setUser: (user: User | null) => void;
@@ -17,10 +24,17 @@ interface AppState {
   addChallenge: (challenge: Challenge) => void;
   updateChallenge: (id: string, updates: Partial<Challenge>) => void;
   startChallenge: (id: string) => void;
-  completeTask: (challengeId: string, taskId: string, photoUrl?: string) => void;
+  completeTask: (challengeId: string, taskId: string, photoUrl?: string, linkUrl?: string) => void;
+  submitLinkAndComplete: (challengeId: string, linkUrl: string) => void;
   completeChallenge: (id: string) => void;
   uploadPhotoAndComplete: (challengeId: string, photoDataUrl: string) => void;
   resetChallenges: (newChallenges: Challenge[]) => void;
+  validateTask: (challengeId: string, taskId: string, status: 'pending' | 'approved' | 'rejected', reason?: string) => void;
+
+  // Boards state
+  boards: ThemedBoard[];
+  updateBoard: (id: string, updates: Partial<ThemedBoard>) => void;
+  addBoard: (board: ThemedBoard) => void;
 
   // Notifications
   notifications: Notification[];
@@ -49,16 +63,33 @@ export const useAppStore = create<AppState>()(
     persist(
       (set, get) => ({
         // ── Initial state ────────────────────────────────────────────────────
+        currentUser: null,
         user: null,
         challenges: [],
         activeChallenges: [],
         completedChallenges: [],
+        boards: THEMED_BOARDS,
         notifications: [],
         unreadCount: 0,
         activities: [],
         activeTab: 'home',
         isLoading: false,
         selectedCategory: null,
+
+        // ── Auth actions ──────────────────────────────────────────────────────
+        login: (email, password) => {
+          const found = USERS_DB.find(
+            (u) => u.email === email && u.password === password
+          );
+          if (found) {
+            // For regular users also populate `user` so the bingo board has access
+            set({ currentUser: found, user: found.role === 'user' ? found : get().user });
+            return true;
+          }
+          return false;
+        },
+
+        logout: () => set({ currentUser: null, user: null }),
 
         // ── User actions ─────────────────────────────────────────────────────
         setUser: (user) => set({ user }),
@@ -135,14 +166,21 @@ export const useAppStore = create<AppState>()(
         // completeTask solo actualiza la tarea y el progreso.
         // NO completa el challenge aquí — eso le corresponde a completeChallenge
         // o a uploadPhotoAndComplete según el flujo.
-        completeTask: (challengeId, taskId, photoUrl) => {
+        completeTask: (challengeId, taskId, photoUrl, linkUrl) => {
           const { challenges } = get();
           const challenge = challenges.find((c) => c.id === challengeId);
           if (!challenge) return;
 
           const updatedTasks = challenge.tasks.map((task) =>
             task.id === taskId
-              ? { ...task, completed: true, completedAt: new Date(), photoUrl }
+              ? {
+                  ...task,
+                  completed: true,
+                  completedAt: new Date(),
+                  photoUrl: photoUrl ?? task.photoUrl,
+                  linkUrl: linkUrl ?? task.linkUrl,
+                  validationStatus: (photoUrl || linkUrl) ? 'pending' : task.validationStatus,
+                }
               : task
           );
 
@@ -220,6 +258,26 @@ export const useAppStore = create<AppState>()(
           get().completeChallenge(challengeId);
         },
 
+        submitLinkAndComplete: (challengeId, linkUrl) => {
+          const challenge = get().challenges.find((c) => c.id === challengeId);
+          if (!challenge) return;
+          if (challenge.status === ChallengeStatus.COMPLETED) return;
+
+          if (challenge.status === ChallengeStatus.NOT_STARTED) {
+            get().startChallenge(challengeId);
+          }
+
+          const linkTask = get()
+            .challenges.find((c) => c.id === challengeId)
+            ?.tasks.find((t) => !t.completed);
+
+          if (linkTask) {
+            get().completeTask(challengeId, linkTask.id, undefined, linkUrl);
+          }
+
+          get().completeChallenge(challengeId);
+        },
+
         resetChallenges: (newChallenges) => {
           set({
             challenges: newChallenges,
@@ -230,6 +288,42 @@ export const useAppStore = create<AppState>()(
               (c) => c.status === ChallengeStatus.COMPLETED
             ),
           });
+        },
+
+        validateTask: (challengeId, taskId, status, reason) => {
+          set((state) => ({
+            challenges: state.challenges.map((c) =>
+              c.id === challengeId
+                ? {
+                    ...c,
+                    tasks: c.tasks.map((t) =>
+                      t.id === taskId
+                        ? {
+                            ...t,
+                            validationStatus: status,
+                            rejectionReason: reason,
+                            validatedAt: new Date(),
+                            validatedBy: state.currentUser?.name ?? 'Admin',
+                          }
+                        : t
+                    ),
+                  }
+                : c
+            ),
+          }));
+        },
+
+        // ── Boards actions ────────────────────────────────────────────────────
+        updateBoard: (id, updates) => {
+          set((state) => ({
+            boards: state.boards.map((b) =>
+              b.id === id ? { ...b, ...updates } : b
+            ),
+          }));
+        },
+
+        addBoard: (board) => {
+          set((state) => ({ boards: [...state.boards, board] }));
         },
 
         // ── Notification actions ──────────────────────────────────────────────
@@ -273,9 +367,11 @@ export const useAppStore = create<AppState>()(
         name: 'sport-challenge-storage',
         partialize: (state) => ({
           user: state.user,
+          currentUser: state.currentUser,
           challenges: state.challenges,
           notifications: state.notifications,
           activeTab: state.activeTab,
+          boards: state.boards,
         }),
       }
     )

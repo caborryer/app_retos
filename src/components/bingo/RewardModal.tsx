@@ -14,7 +14,7 @@ export function RewardModal({ onClose }: RewardModalProps) {
         id: i,
         x: Math.random() * window.innerWidth,
         y: Math.random() * -500,
-        color: ['#E9191C', '#FF5327', '#10B981', '#3B82F6', '#F59E0B'][Math.floor(Math.random() * 5)],
+        color: ['#E9191C', '#FC0230', '#10B981', '#3B82F6', '#F59E0B'][Math.floor(Math.random() * 5)],
         size: Math.random() * 8 + 4,
         rotation: Math.random() * 360,
     }));
@@ -67,7 +67,7 @@ export function RewardModal({ onClose }: RewardModalProps) {
                     initial={{ scale: 0, rotate: -180 }}
                     animate={{ scale: 1, rotate: 0 }}
                     transition={{ type: "spring", damping: 15, delay: 0.2 }}
-                    className="w-24 h-24 bg-gradient-to-tr from-[#FF5327] to-[#F59E0B] rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(255,83,39,0.5)] mb-6"
+                    className="w-24 h-24 bg-gradient-to-tr from-[#FC0230] to-[#F59E0B] rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(255,83,39,0.5)] mb-6"
                 >
                     <Trophy size={48} className="text-white" />
                 </motion.div>
@@ -82,7 +82,7 @@ export function RewardModal({ onClose }: RewardModalProps) {
 
                 <div className="w-full bg-[#2A2831] rounded-2xl p-4 border border-gray-700 mb-6">
                     <p className="text-sm font-semibold text-white mb-1">Recompensa Desbloqueada</p>
-                    <p className="text-2xl font-bold text-[#FF5327]">+500 Pts</p>
+                    <p className="text-2xl font-bold text-[#FC0230]">+500 Pts</p>
                 </div>
 
                 <button

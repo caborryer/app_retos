@@ -1,6 +1,9 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
+import { DM_Sans } from 'next/font/google';
 import './globals.css';
+
+const dmSans = DM_Sans({ subsets: ['latin'] });
 
 const inter = Inter({
   subsets: ['latin'],
@@ -9,7 +12,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'SportChallenge - Retos Deportivos',
+  title: 'BingoChallenge - Retos Deportivos',
   description: 'Participa en retos deportivos, alcanza tus metas y compite con amigos',
   manifest: '/manifest.json',
   themeColor: '#FC0230',
@@ -22,7 +25,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'SportChallenge',
+    title: 'BingoChallenge',
   },
 };
 

@@ -1,6 +1,6 @@
 {
-  "name": "SportChallenge - Retos Deportivos",
-  "short_name": "SportChallenge",
+  "name": "BingoChallenge - Retos Deportivos",
+  "short_name": "BingoChallenge",
   "description": "Participa en retos deportivos, alcanza tus metas y compite con amigos",
   "start_url": "/",
   "display": "standalone",

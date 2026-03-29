@@ -1,4 +1,4 @@
-# 🏃‍♂️ SportChallenge - App de Retos Deportivos
+# 🏃‍♂️ BingoChallenge - App de Retos Deportivos
 
 Una aplicación web moderna de retos deportivos, optimizada para dispositivos móviles con diseño responsive y una experiencia de usuario excepcional.
 

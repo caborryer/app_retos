@@ -13,7 +13,7 @@ interface BingoModalProps {
 }
 
 const confettiColors = [
-  '#FF5327', '#FC0230', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899',
+  '#FC0230', '#FC0230', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899',
 ];
 
 function Confetti() {
@@ -73,7 +73,7 @@ export default function BingoModal({ open, boardNumber, totalPoints, onContinue 
             {/* Header naranja */}
             <div
               className="relative flex flex-col items-center pt-8 pb-6 px-6"
-              style={{ background: 'linear-gradient(180deg, #FF5327 0%, #FC0230 100%)' }}
+              style={{ background: 'linear-gradient(180deg, #FC0230 0%, #FC0230 100%)' }}
             >
               {/* Icono trofeo */}
               <motion.div

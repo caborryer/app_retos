@@ -55,7 +55,7 @@ export function PhotoUploadModal({ challenge, onClose, onUpload }: PhotoUploadMo
                     </p>
 
                     <div className="bg-[#2A2831] rounded-[16px] border-2 border-dashed border-gray-600 p-6 flex flex-col items-center justify-center text-center">
-                        <div className="bg-[#E9191C]/20 p-4 rounded-full mb-3 text-[#FF5327]">
+                        <div className="bg-[#E9191C]/20 p-4 rounded-full mb-3 text-[#FC0230]">
                             <Camera size={28} />
                         </div>
                         <h3 className="text-white font-medium mb-1">Evidencia requerida</h3>
@@ -64,7 +64,7 @@ export function PhotoUploadModal({ challenge, onClose, onUpload }: PhotoUploadMo
                         <button
                             onClick={handleSimulatedUpload}
                             disabled={isUploading}
-                            className="w-full bg-gradient-to-r from-[#FF5327] to-[#E9191C] hover:opacity-90 disabled:opacity-50 text-white font-semibold flex items-center justify-center gap-2 py-3 px-4 rounded-[12px] transition-all"
+                            className="w-full bg-gradient-to-r from-[#FC0230] to-[#E9191C] hover:opacity-90 disabled:opacity-50 text-white font-semibold flex items-center justify-center gap-2 py-3 px-4 rounded-[12px] transition-all"
                         >
                             {isUploading ? (
                                 <motion.div

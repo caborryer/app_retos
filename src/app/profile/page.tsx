@@ -1,38 +1,55 @@
 'use client';
 
-import { motion } from 'framer-motion';
-import { Trophy, Star, TrendingUp, Award, Settings, LogOut, ChevronRight } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Settings, LogOut, ChevronRight, ShieldCheck } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import Card from '@/components/ui/Card';
 import ProgressBar from '@/components/ui/ProgressBar';
-import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import { useAppStore } from '@/store/useAppStore';
-import { calculateLevel, getLevelProgress, formatNumber } from '@/lib/utils';
+import { calculateLevel, getLevelProgress } from '@/lib/utils';
 
 export default function ProfilePage() {
-  const { user } = useAppStore();
+  const router = useRouter();
+  const logout = useAppStore((s) => s.logout);
+  // Prefer currentUser (set by login), fall back to user (legacy mock)
+  const currentUser = useAppStore((s) => s.currentUser);
+  const legacyUser = useAppStore((s) => s.user);
+  const user = currentUser ?? legacyUser;
 
-  if (!user) {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const check = () => {
+      const { currentUser: cu, user: u } = useAppStore.getState();
+      if (!cu && !u) {
+        router.replace('/login');
+      } else {
+        setReady(true);
+      }
+    };
+    if (useAppStore.persist.hasHydrated()) check();
+    else useAppStore.persist.onFinishHydration(check);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function handleLogout() {
+    logout();
+    router.push('/login');
+  }
+
+  if (!ready || !user) {
     return (
-      <Layout title="Perfil">
-        <Card variant="bordered" className="p-12 text-center">
-          <div className="text-6xl mb-4">👤</div>
-          <h3 className="text-lg font-bold text-secondary-900 mb-2">
-            No has iniciado sesión
-          </h3>
-          <p className="text-sm text-secondary-600 mb-4">
-            Inicia sesión para ver tu perfil y estadísticas
-          </p>
-          <Button>Iniciar Sesión</Button>
-        </Card>
-      </Layout>
+      <div className="min-h-screen bg-gradient-to-b from-secondary-50 to-white flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
+      </div>
     );
   }
 
-  const level = calculateLevel(user.points);
-  const levelProgress = getLevelProgress(user.points);
-  const pointsToNext = 200 - (user.points % 200);
+  const level = calculateLevel(user.points ?? 0);
+  const levelProgress = getLevelProgress(user.points ?? 0);
+  const pointsToNext = 200 - ((user.points ?? 0) % 200);
 
   return (
     <Layout title="Perfil">
@@ -59,6 +76,12 @@ export default function ProfilePage() {
               <p className="text-white/80 text-sm">
                 {user.email}
               </p>
+              {user.role === 'admin' && (
+                <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-xs font-medium bg-white/20 text-white">
+                  <ShieldCheck className="w-3 h-3" />
+                  Admin
+                </span>
+              )}
             </div>
           </div>
 
@@ -181,10 +204,21 @@ export default function ProfilePage() {
             </button> */}
           </Card>
 
+          {user.role === 'admin' && (
+            <button
+              onClick={() => router.push('/admin')}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-primary-200 bg-primary-50 text-primary-700 font-medium text-sm hover:bg-primary-100 transition-colors"
+            >
+              <ShieldCheck className="w-5 h-5" />
+              Ir al Panel Admin
+            </button>
+          )}
+
           <Button
             variant="ghost"
             className="w-full text-error"
             leftIcon={<LogOut className="w-5 h-5" />}
+            onClick={handleLogout}
           >
             Cerrar Sesión
           </Button>
@@ -192,7 +226,7 @@ export default function ProfilePage() {
 
         {/* App Version */}
         <p className="text-center text-xs text-secondary-400 pb-6">
-          SportChallenge v1.0.0
+          BingoChallenge v1.0.0
         </p>
       </div>
     </Layout>
