@@ -48,7 +48,7 @@ export default function AdminSidebar({ mobileOpen = false, onMobileClose }: Admi
 
   function handleLogout() {
     logout();
-    router.push('/admin/login');
+    router.push('/login');
   }
 
   function isActive(item: (typeof NAV_ITEMS)[0]) {
