@@ -17,7 +17,7 @@ const CELLS = [
   { emoji: '💪', label: 'Flexiones' },
   { emoji: '🧘', label: 'Yoga' },
   { emoji: '🚴', label: 'Ciclismo' },
-  { emoji: '⭐', label: 'Libre', special: true },
+  { emoji: '⭐', label: 'Bingo', special: true },
   { emoji: '🏊', label: 'Natación' },
   { emoji: '🔥', label: 'HIIT' },
   { emoji: '🐾', label: 'Mascota' },
