@@ -22,7 +22,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       const adminOk = !!(currentUser && currentUser.role === 'admin');
 
       if (!adminOk && !isLoginPage) {
-        router.replace('/admin/login');
+        router.replace('/login');
       } else if (adminOk && isLoginPage) {
         router.replace('/admin');
       }

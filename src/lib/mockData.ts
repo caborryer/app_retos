@@ -6,7 +6,7 @@ import { ChallengeCategory, ChallengeDifficulty, ChallengeStatus } from '@/types
 export const mockUser: User = {
   id: '1',
   name: 'Andrea Corrales',
-  email: 'andrea@BingoChallenge.com',
+  email: 'andrea@sportchallenge.com',
   password: 'user123',
   role: 'user',
   avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400',
