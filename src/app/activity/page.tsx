@@ -7,9 +7,19 @@ import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import { useAppStore } from '@/store/useAppStore';
 import { formatRelativeTime, formatDate } from '@/lib/utils';
+import { useAuthGuard } from '@/hooks/useAuthGuard';
 
 export default function ActivityPage() {
+  const ready = useAuthGuard();
   const { user, activeChallenges, completedChallenges } = useAppStore();
+
+  if (!ready) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-secondary-50">
+        <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <Layout title="Actividad">

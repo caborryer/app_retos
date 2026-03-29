@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, Users, Trophy, Check, Camera, Link as LinkIcon, X } from 'lucide-react';
+import { useAuthGuard } from '@/hooks/useAuthGuard';
 import Layout from '@/components/layout/Layout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -89,6 +90,7 @@ function StravaLinkInput({ task, challengeId, onSubmit }: {
 }
 
 export default function ChallengeDetailPage({ params }: { params: { id: string } }) {
+  const authReady = useAuthGuard();
   const { challenges, setChallenges, startChallenge, completeTask, user, setUser } = useAppStore();
   const [challenge, setChallenge] = useState<Challenge | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -113,16 +115,11 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
     }
   }, [params.id, challenges]);
 
-  if (isLoading) {
+  if (!authReady || isLoading) {
     return (
-      <Layout showBack title="">
-        <div className="flex items-center justify-center min-h-[50vh]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4" />
-            <p className="text-secondary-600">Cargando reto...</p>
-          </div>
-        </div>
-      </Layout>
+      <div className="min-h-screen flex items-center justify-center bg-secondary-50">
+        <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+      </div>
     );
   }
 

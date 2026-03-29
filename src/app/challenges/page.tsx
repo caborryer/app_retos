@@ -9,6 +9,7 @@ import { THEMED_BOARDS } from '@/lib/mockData';
 import type { ThemedBoard } from '@/lib/mockData';
 import type { Challenge } from '@/types';
 import { ChallengeStatus } from '@/types';
+import { useAuthGuard } from '@/hooks/useAuthGuard';
 
 function makeFreshBoard(template: Challenge[]): Challenge[] {
   return template.map((c) => ({
@@ -25,6 +26,7 @@ function makeFreshBoard(template: Challenge[]): Challenge[] {
 }
 
 export default function HomePage() {
+  const ready = useAuthGuard();
   const { challenges, resetChallenges, setIsLoading } = useAppStore();
   const [activeBoard, setActiveBoard] = useState<ThemedBoard>(THEMED_BOARDS[0]);
   const [confirmBoard, setConfirmBoard] = useState<ThemedBoard | null>(null);
@@ -70,6 +72,14 @@ export default function HomePage() {
     resetChallenges(makeFreshBoard(confirmBoard.challenges));
     setConfirmBoard(null);
   };
+
+  if (!ready) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-secondary-50">
+        <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <Layout title="BingoChallenge">
