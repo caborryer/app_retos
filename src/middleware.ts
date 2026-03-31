@@ -4,11 +4,20 @@ import { NextRequest, NextResponse } from 'next/server';
 const PUBLIC_ROUTES = ['/', '/login', '/admin/login'];
 const ADMIN_ROUTES = ['/admin'];
 
+function isRequestHttps(req: NextRequest) {
+  return (
+    req.nextUrl.protocol === 'https:' || req.headers.get('x-forwarded-proto') === 'https'
+  );
+}
+
 export default async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
+  // Auth.js uses __Secure-authjs.session-token on HTTPS; getToken defaults to
+  // non-secure cookie names when secureCookie is omitted (middleware runs on Edge).
   const token = await getToken({
     req,
     secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
+    secureCookie: isRequestHttps(req),
   });
 
   const isPublic = PUBLIC_ROUTES.some((r) => pathname === r);
