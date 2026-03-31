@@ -35,6 +35,15 @@ export default function AdminLoginPage() {
   const [state, formAction] = useFormState(credentialsSignInAction, undefined);
 
   useEffect(() => {
+    if (state && 'ok' in state && state.ok && state.redirectTo) {
+      const url = state.redirectTo.startsWith('http')
+        ? state.redirectTo
+        : `${window.location.origin}${state.redirectTo.startsWith('/') ? '' : '/'}${state.redirectTo}`;
+      window.location.assign(url);
+    }
+  }, [state]);
+
+  useEffect(() => {
     if (status === 'authenticated' && session?.user?.role === 'ADMIN') {
       router.replace('/admin');
     }
@@ -106,7 +115,7 @@ export default function AdminLoginPage() {
             </div>
           </div>
 
-          {state?.error && (
+          {state && 'error' in state && state.error && (
             <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-400 text-sm">
               {state.error}
             </div>
