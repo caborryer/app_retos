@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAppStore } from '@/store/useAppStore';
+import { useSession } from 'next-auth/react';
 
 const BOARDS = [
   { id: 'running',  emoji: '🏃', label: 'Running',  color: '#FC0230' },
@@ -107,25 +107,17 @@ function CheckIcon() {
 
 export default function LandingPage() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [activeBoard, setActiveBoard] = useState(BOARDS[0]);
   const [completed, setCompleted] = useState<Set<number>>(new Set([4]));
   const [showBingo, setShowBingo] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => { setMounted(true); }, []);
 
   // Already logged in → skip landing
   useEffect(() => {
-    if (!mounted) return;
-    const check = () => {
-      const { currentUser } = useAppStore.getState();
-      if (currentUser?.role === 'admin') router.replace('/admin');
-      else if (currentUser?.role === 'user') router.replace('/home');
-    };
-    if (useAppStore.persist.hasHydrated()) check();
-    else useAppStore.persist.onFinishHydration(check);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mounted]);
+    if (status === 'authenticated' && session?.user) {
+      router.replace(session.user.role === 'ADMIN' ? '/admin' : '/home');
+    }
+  }, [status, session, router]);
 
   useEffect(() => {
     if (completed.size === 9) {
@@ -155,7 +147,7 @@ export default function LandingPage() {
   const pct = Math.round((done / total) * 100);
   const c = activeBoard.color;
 
-  if (!mounted) return null;
+  if (status === 'loading') return null;
 
   // Duplicar sponsors para loop continuo
   const marqueeItems = [...SPONSORS, ...SPONSORS, ...SPONSORS];

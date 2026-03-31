@@ -91,21 +91,10 @@ function StravaLinkInput({ task, challengeId, onSubmit }: {
 
 export default function ChallengeDetailPage({ params }: { params: { id: string } }) {
   const authReady = useAuthGuard();
-  const { challenges, setChallenges, startChallenge, completeTask, user, setUser } = useAppStore();
+  const { challenges, setChallenges, updateChallenge } = useAppStore();
   const [challenge, setChallenge] = useState<Challenge | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
-
-  useEffect(() => {
-    // Initialize data if empty (direct URL access)
-    if (challenges.length === 0) {
-      const { mockChallenges, mockUser } = require('@/lib/mockData');
-      setChallenges(mockChallenges);
-      if (!user) {
-        setUser(mockUser);
-      }
-    }
-  }, [challenges.length, user, setChallenges, setUser]);
 
   useEffect(() => {
     if (challenges.length > 0) {
@@ -114,6 +103,30 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
       setIsLoading(false);
     }
   }, [params.id, challenges]);
+
+  // Poll challenge data so admin approvals are reflected automatically
+  useEffect(() => {
+    if (!authReady || !params.id) return;
+    const interval = setInterval(() => {
+      fetch('/api/challenges')
+        .then((r) => r.json())
+        .then((data: Challenge[]) => {
+          const found = data.find((c) => c.id === params.id);
+          if (found) {
+            setChallenge(found);
+            const current = useAppStore.getState().challenges;
+            if (current.some((c) => c.id === found.id)) {
+              useAppStore.getState().updateChallenge(found.id, found);
+            }
+          }
+        })
+        .catch(() => {
+          // Ignore transient polling errors
+        });
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [authReady, params.id]);
 
   if (!authReady || isLoading) {
     return (
@@ -146,12 +159,22 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
   const isCompleted = challenge.status === 'completed';
   const canStart = challenge.status === 'not_started';
 
-  const handleStartChallenge = () => {
-    startChallenge(challenge.id);
+  const handleStartChallenge = async () => {
+    await fetch(`/api/challenges/${challenge.id}/start`, { method: 'POST' });
+    updateChallenge(challenge.id, { status: 'in_progress' as never });
   };
 
-  const handleCompleteTask = (taskId: string) => {
-    completeTask(challenge.id, taskId);
+  const handleCompleteTask = async (taskId: string) => {
+    await fetch(`/api/tasks/${taskId}/submit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    updateChallenge(challenge.id, {
+      tasks: challenge.tasks.map((t) =>
+        t.id === taskId ? { ...t, completed: true, validationStatus: 'pending' as never } : t
+      ),
+    });
   };
 
   const handlePhotoButtonClick = (taskId: string) => {
@@ -179,29 +202,58 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
     }
 
     try {
-      // Crear preview y convertir a base64
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const photoUrl = reader.result as string;
-        // Completar la tarea con la foto
-        completeTask(challenge.id, taskId, photoUrl);
-      };
-      reader.readAsDataURL(file);
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/upload', { method: 'POST', body: fd });
+      let photoUrl: string | undefined;
+      if (res.ok) {
+        const { url } = await res.json();
+        photoUrl = url;
+      }
+      await fetch(`/api/tasks/${taskId}/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ photoUrl }),
+      });
+      updateChallenge(challenge.id, {
+        tasks: challenge.tasks.map((t) =>
+          t.id === taskId ? { ...t, completed: true, photoUrl, validationStatus: 'pending' as never } : t
+        ),
+      });
+      alert('Foto enviada. Estado: En revision por el admin.');
     } catch (error) {
       console.error('Error al procesar la imagen:', error);
       alert('Error al procesar la imagen. Intenta nuevamente.');
     }
 
-    // Limpiar el input para permitir seleccionar la misma imagen de nuevo
     event.target.value = '';
   };
 
-  const handlePhotoUpload = (taskId: string, photoUrl: string) => {
-    completeTask(challenge.id, taskId, photoUrl);
+  const handlePhotoUpload = async (taskId: string, photoUrl: string) => {
+    await fetch(`/api/tasks/${taskId}/submit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ photoUrl }),
+    });
+    updateChallenge(challenge.id, {
+      tasks: challenge.tasks.map((t) =>
+        t.id === taskId ? { ...t, completed: true, photoUrl, validationStatus: 'pending' as never } : t
+      ),
+    });
   };
 
-  const handleStravaLink = (taskId: string, linkUrl: string) => {
-    completeTask(challenge.id, taskId, undefined, linkUrl);
+  const handleStravaLink = async (taskId: string, linkUrl: string) => {
+    await fetch(`/api/tasks/${taskId}/submit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ linkUrl }),
+    });
+    updateChallenge(challenge.id, {
+      tasks: challenge.tasks.map((t) =>
+        t.id === taskId ? { ...t, completed: true, linkUrl, validationStatus: 'pending' as never } : t
+      ),
+    });
+    alert('Link de Strava enviado. Estado: En revision por el admin.');
   };
 
   const supportsStrava = STRAVA_CATEGORIES.includes(challenge.category);
@@ -355,6 +407,21 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
                       {task.completedAt && (
                         <p className="text-xs text-green-600 mt-2">
                           Completado {formatRelativeTime(task.completedAt)}
+                        </p>
+                      )}
+                      {task.validationStatus === 'pending' && (
+                        <p className="text-xs text-amber-600 mt-1 font-medium">
+                          Evidencia en revision por el admin
+                        </p>
+                      )}
+                      {task.validationStatus === 'approved' && (
+                        <p className="text-xs text-green-600 mt-1 font-medium">
+                          Evidencia aprobada
+                        </p>
+                      )}
+                      {task.validationStatus === 'rejected' && (
+                        <p className="text-xs text-red-600 mt-1 font-medium">
+                          Evidencia rechazada {task.rejectionReason ? `: ${task.rejectionReason}` : ''}
                         </p>
                       )}
                     </div>

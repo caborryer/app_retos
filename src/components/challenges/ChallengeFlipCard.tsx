@@ -44,14 +44,65 @@ export default function ChallengeFlipCard({ challenge, className }: ChallengeFli
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [linkValue, setLinkValue] = useState('');
   const [linkError, setLinkError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { completeChallenge, uploadPhotoAndComplete, submitLinkAndComplete } = useAppStore();
+  const { updateChallenge } = useAppStore();
+
+  // Helper: call API to submit evidence for the first uncompleted task
+  const submitEvidence = async (photoFile?: File, linkUrl?: string) => {
+    setSubmitting(true);
+    const firstTask = challenge.tasks?.find((t) => !t.completed);
+    if (!firstTask) {
+      setSubmitting(false);
+      return;
+    }
+
+    // If photo, upload it first
+    let photoUrl: string | undefined;
+    if (photoFile) {
+      const fd = new FormData();
+      fd.append('file', photoFile);
+      const res = await fetch('/api/upload', { method: 'POST', body: fd });
+      if (res.ok) {
+        const { url } = await res.json();
+        photoUrl = url;
+      }
+    }
+
+    // Submit to task endpoint
+    const submitRes = await fetch(`/api/tasks/${firstTask.id}/submit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ photoUrl, linkUrl }),
+    });
+    if (!submitRes.ok) {
+      setSubmitting(false);
+      alert('No pudimos enviar tu evidencia. Intenta nuevamente.');
+      return;
+    }
+
+    // Optimistic local update
+    updateChallenge(challenge.id, {
+      status: 'in_progress' as never,
+      tasks: challenge.tasks.map((t) =>
+        t.id === firstTask.id
+          ? { ...t, completed: true, photoUrl: photoUrl ?? t.photoUrl, linkUrl: linkUrl ?? t.linkUrl, validationStatus: 'pending' as never }
+          : t
+      ),
+    });
+    setSubmitting(false);
+    alert('Evidencia enviada. Estado: En revision por el admin.');
+  };
 
   const imageUrl = challenge.images?.[0] ?? null;
   const isCompleted = challenge.status === ChallengeStatus.COMPLETED;
   const hasPhotoTask = challenge.tasks?.some((t) => t.photoRequired) ?? false;
   const hasNoTasks = !challenge.tasks || challenge.tasks.length === 0;
   const supportsStrava = STRAVA_CATEGORIES.includes(challenge.category);
+  const latestEvidenceTask = [...challenge.tasks]
+    .reverse()
+    .find((t) => t.completed && (t.photoUrl || t.linkUrl));
+  const latestStatus = latestEvidenceTask?.validationStatus;
 
   const handleCardInteraction = () => {
     if (isCompleted) return;
@@ -64,10 +115,10 @@ export default function ChallengeFlipCard({ challenge, className }: ChallengeFli
     fileInputRef.current?.click();
   };
 
-  const handleCompleteClick = (e: React.MouseEvent) => {
+  const handleCompleteClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    completeChallenge(challenge.id);
+    await submitEvidence();
     setIsFlipped(false);
   };
 
@@ -82,16 +133,11 @@ export default function ChallengeFlipCard({ challenge, className }: ChallengeFli
       alert('La imagen no debe superar 5MB.');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      uploadPhotoAndComplete(challenge.id, reader.result as string);
-      setIsFlipped(false);
-    };
-    reader.readAsDataURL(file);
+    submitEvidence(file).then(() => setIsFlipped(false));
     e.target.value = '';
   };
 
-  const handleLinkSubmit = (e: React.MouseEvent) => {
+  const handleLinkSubmit = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     const trimmed = linkValue.trim();
@@ -103,7 +149,7 @@ export default function ChallengeFlipCard({ challenge, className }: ChallengeFli
       setLinkError('El link debe comenzar con https://');
       return;
     }
-    submitLinkAndComplete(challenge.id, trimmed);
+    await submitEvidence(undefined, trimmed);
     setLinkValue('');
     setLinkError('');
     setShowLinkInput(false);
@@ -181,6 +227,21 @@ export default function ChallengeFlipCard({ challenge, className }: ChallengeFli
                 <span className="text-white text-[10px] font-bold tracking-wide uppercase">¡Listo!</span>
               </div>
             )}
+            {!isCompleted && latestStatus === 'pending' && (
+              <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-md bg-amber-500/90 text-white text-[9px] font-semibold">
+                En revision
+              </div>
+            )}
+            {!isCompleted && latestStatus === 'approved' && (
+              <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-md bg-green-600/90 text-white text-[9px] font-semibold">
+                Aprobado
+              </div>
+            )}
+            {!isCompleted && latestStatus === 'rejected' && (
+              <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-md bg-red-600/90 text-white text-[9px] font-semibold">
+                Rechazado
+              </div>
+            )}
           </div>
 
           {/* ── Cara trasera ─────────────────────────────────────────────── */}
@@ -218,10 +279,11 @@ export default function ChallengeFlipCard({ challenge, className }: ChallengeFli
                     <button
                       type="button"
                       onClick={handlePhotoClick}
+                      disabled={submitting}
                       className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold text-white bg-primary-500 hover:bg-primary-600 transition-colors"
                     >
                       <Camera className="w-3 h-3" />
-                      Subir foto
+                      {submitting ? 'Subiendo...' : 'Subir foto'}
                     </button>
                   </>
                 )}
@@ -235,7 +297,8 @@ export default function ChallengeFlipCard({ challenge, className }: ChallengeFli
                       e.stopPropagation();
                       setShowLinkInput(true);
                     }}
-                    className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold text-[#FC4C02] border border-[#FC4C02]/30 bg-[#FC4C02]/5 hover:bg-[#FC4C02]/10 transition-colors"
+                    disabled={submitting}
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold text-[#FC4C02] border border-[#FC4C02]/30 bg-[#FC4C02]/5 hover:bg-[#FC4C02]/10 transition-colors disabled:opacity-60"
                   >
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="#FC4C02">
                       <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169" />
@@ -249,6 +312,7 @@ export default function ChallengeFlipCard({ challenge, className }: ChallengeFli
                   <button
                     type="button"
                     onClick={handleCompleteClick}
+                    disabled={submitting}
                     className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold text-white bg-primary-500 hover:bg-primary-600 transition-colors"
                   >
                     <CheckCircle className="w-3 h-3" />
@@ -295,9 +359,10 @@ export default function ChallengeFlipCard({ challenge, className }: ChallengeFli
                 <button
                   type="button"
                   onClick={handleLinkSubmit}
-                  className="w-full py-1.5 rounded-lg bg-[#FC4C02] text-white text-[10px] font-bold hover:bg-[#e04400] transition-colors"
+                  disabled={submitting}
+                  className="w-full py-1.5 rounded-lg bg-[#FC4C02] text-white text-[10px] font-bold hover:bg-[#e04400] transition-colors disabled:opacity-60"
                 >
-                  Confirmar
+                  {submitting ? 'Enviando...' : 'Confirmar'}
                 </button>
               </div>
             )}

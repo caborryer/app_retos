@@ -1,48 +1,45 @@
 'use client';
 
-import { useState } from 'react';
-import { useAppStore } from '@/store/useAppStore';
-import type { Challenge, ChallengeTask } from '@/types';
-import {
-  CheckCircle,
-  XCircle,
-  Clock,
-  Link as LinkIcon,
-  Image as ImageIcon,
-  Search,
-  Filter,
-  ExternalLink,
-  X,
-} from 'lucide-react';
+import { useEffect, useState, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { CheckCircle, XCircle, Clock, ExternalLink, Search, Filter, RefreshCw, Trash2 } from 'lucide-react';
+import Image from 'next/image';
 
-type FilterStatus = 'all' | 'pending' | 'approved' | 'rejected';
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type ValidationStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
 interface Submission {
-  task: ChallengeTask;
-  challenge: Challenge;
+  id: string;
+  userId: string;
+  taskId: string;
+  completed: boolean;
+  photoUrl: string | null;
+  linkUrl: string | null;
+  completedAt: string | null;
+  validationStatus: ValidationStatus;
+  rejectionReason: string | null;
+  user: { id: string; name: string; email: string; avatar: string | null };
+  task: {
+    id: string;
+    title: string;
+    challenge: { id: string; title: string; category: string; icon: string };
+  };
 }
 
-function StatusBadge({ status }: { status?: string }) {
-  if (!status || status === 'pending') {
-    return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/15 text-amber-400 border border-amber-500/20">
-        <Clock className="w-3 h-3" />
-        Pendiente
-      </span>
-    );
-  }
-  if (status === 'approved') {
-    return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
-        <CheckCircle className="w-3 h-3" />
-        Aprobado
-      </span>
-    );
-  }
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function StatusBadge({ status }: { status: ValidationStatus }) {
+  const map: Record<ValidationStatus, { label: string; className: string; Icon: typeof CheckCircle }> = {
+    PENDING: { label: 'Pendiente', className: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20', Icon: Clock },
+    APPROVED: { label: 'Aprobado', className: 'bg-green-500/10 text-green-400 border-green-500/20', Icon: CheckCircle },
+    REJECTED: { label: 'Rechazado', className: 'bg-red-500/10 text-red-400 border-red-500/20', Icon: XCircle },
+  };
+  const { label, className, Icon } = map[status];
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-500/15 text-red-400 border border-red-500/20">
-      <XCircle className="w-3 h-3" />
-      Rechazado
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${className}`}>
+      <Icon className="w-3 h-3" />
+      {label}
     </span>
   );
 }
@@ -55,34 +52,27 @@ function RejectModal({
   onCancel: () => void;
 }) {
   const [reason, setReason] = useState('');
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-white font-semibold">Razón de rechazo</h3>
-          <button onClick={onCancel} className="text-slate-400 hover:text-white transition-colors">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+      <div className="bg-slate-800 rounded-2xl p-6 w-full max-w-sm space-y-4">
+        <h3 className="text-white font-semibold">Motivo de rechazo</h3>
         <textarea
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           placeholder="Explica por qué se rechaza este envío..."
-          rows={4}
-          className="w-full bg-slate-900/50 border border-slate-600 rounded-xl p-3 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none mb-4"
+          rows={3}
+          className="w-full bg-slate-700 text-white text-sm rounded-xl px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary-500/50 placeholder-slate-400"
         />
         <div className="flex gap-3">
           <button
             onClick={onCancel}
-            className="flex-1 py-2.5 rounded-xl border border-slate-600 text-slate-300 hover:text-white hover:border-slate-500 text-sm font-medium transition-all"
+            className="flex-1 py-2 rounded-xl bg-slate-700 text-slate-300 text-sm font-medium hover:bg-slate-600 transition-colors"
           >
             Cancelar
           </button>
           <button
             onClick={() => onConfirm(reason)}
-            disabled={!reason.trim()}
-            className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium transition-all"
+            className="flex-1 py-2 rounded-xl bg-red-500 text-white text-sm font-medium hover:bg-red-600 transition-colors"
           >
             Rechazar
           </button>
@@ -92,252 +82,333 @@ function RejectModal({
   );
 }
 
-function SubmissionCard({ submission }: { submission: Submission }) {
-  const validateTask = useAppStore((s) => s.validateTask);
+function DeleteConfirmModal({
+  onConfirm,
+  onCancel,
+}: {
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+      <div className="bg-slate-800 rounded-2xl p-6 w-full max-w-sm space-y-4 border border-slate-700">
+        <h3 className="text-white font-semibold">Eliminar envío</h3>
+        <p className="text-slate-300 text-sm">
+          ¿Seguro que deseas eliminar este envío? Esta acción no se puede deshacer.
+        </p>
+        <div className="flex gap-3">
+          <button
+            onClick={onCancel}
+            className="flex-1 py-2 rounded-xl bg-slate-700 text-slate-300 text-sm font-medium hover:bg-slate-600 transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={onConfirm}
+            className="flex-1 py-2 rounded-xl bg-red-500 text-white text-sm font-medium hover:bg-red-600 transition-colors"
+          >
+            Eliminar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SubmissionCard({
+  submission,
+  onValidate,
+  onDelete,
+}: {
+  submission: Submission;
+  onValidate: (taskId: string, userId: string, status: ValidationStatus, reason?: string) => void;
+  onDelete: (submissionId: string) => void;
+}) {
   const [showRejectModal, setShowRejectModal] = useState(false);
-  const [lightboxOpen, setLightboxOpen] = useState(false);
-
-  const { task, challenge } = submission;
-  const status = task.validationStatus;
-
-  function handleApprove() {
-    validateTask(challenge.id, task.id, 'approved');
-  }
-
-  function handleReject(reason: string) {
-    validateTask(challenge.id, task.id, 'rejected', reason);
-    setShowRejectModal(false);
-  }
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   return (
     <>
-      <div className="rounded-2xl border border-slate-700 bg-slate-800/50 overflow-hidden flex flex-col">
-        {/* Media preview */}
-        <div className="relative aspect-video bg-slate-900 overflow-hidden">
-          {task.photoUrl ? (
-            <>
-              <img
-                src={task.photoUrl}
-                alt={task.title}
-                className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform duration-300"
-                onClick={() => setLightboxOpen(true)}
-              />
-              <div className="absolute top-2 left-2">
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-black/60 text-white">
-                  <ImageIcon className="w-3 h-3" />
-                  Foto
-                </span>
-              </div>
-            </>
-          ) : task.linkUrl ? (
-            <div className="flex flex-col items-center justify-center h-full gap-3 p-4">
-              <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
-                <LinkIcon className="w-6 h-6 text-blue-400" />
-              </div>
-              <a
-                href={task.linkUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-blue-400 hover:text-blue-300 text-xs font-medium transition-colors break-all text-center"
-              >
-                <span className="truncate max-w-[200px]">{task.linkUrl}</span>
-                <ExternalLink className="w-3 h-3 shrink-0" />
-              </a>
-            </div>
-          ) : null}
-
-          {/* Status overlay */}
-          <div className="absolute top-2 right-2">
-            <StatusBadge status={status} />
+      <motion.div
+        layout
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -8 }}
+        className="bg-slate-800 rounded-2xl overflow-hidden border border-slate-700"
+      >
+        {/* Evidence */}
+        {submission.photoUrl ? (
+          <div className="relative aspect-video bg-slate-900">
+            <Image
+              src={submission.photoUrl}
+              alt="Evidencia"
+              fill
+              className="object-cover"
+              unoptimized
+            />
           </div>
-        </div>
+        ) : submission.linkUrl ? (
+          <a
+            href={submission.linkUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-4 py-5 bg-[#FC4C02]/10 hover:bg-[#FC4C02]/20 transition-colors"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#FC4C02">
+              <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169" />
+            </svg>
+            <span className="text-[#FC4C02] text-sm font-medium truncate">{submission.linkUrl}</span>
+            <ExternalLink className="w-4 h-4 text-[#FC4C02] shrink-0 ml-auto" />
+          </a>
+        ) : null}
 
         {/* Info */}
-        <div className="p-4 flex-1 flex flex-col gap-3">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-lg">{challenge.icon}</span>
-              <p className="text-white text-sm font-semibold line-clamp-1">{challenge.title}</p>
-            </div>
-            <p className="text-slate-400 text-xs line-clamp-1">{task.title}</p>
-            {task.completedAt && (
-              <p className="text-slate-500 text-xs mt-1">
-                {new Date(task.completedAt).toLocaleDateString('es-ES', {
-                  day: 'numeric',
-                  month: 'short',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
+        <div className="p-4 space-y-3">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="text-white text-sm font-semibold line-clamp-1">
+                {submission.task.challenge.icon} {submission.task.challenge.title}
               </p>
-            )}
+              <p className="text-slate-400 text-xs mt-0.5 line-clamp-1">{submission.task.title}</p>
+            </div>
+            <StatusBadge status={submission.validationStatus} />
           </div>
 
-          {/* Rejection reason */}
-          {status === 'rejected' && task.rejectionReason && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">
-              <p className="text-red-400 text-xs">{task.rejectionReason}</p>
+          <div className="flex items-center gap-2">
+            {submission.user.avatar ? (
+              <Image src={submission.user.avatar} alt="" width={24} height={24} className="rounded-full" unoptimized />
+            ) : (
+              <div className="w-6 h-6 rounded-full bg-slate-600 flex items-center justify-center text-xs text-white">
+                {submission.user.name[0]}
+              </div>
+            )}
+            <div>
+              <p className="text-slate-300 text-xs font-medium">{submission.user.name}</p>
+              <p className="text-slate-500 text-[10px]">{submission.user.email}</p>
             </div>
+          </div>
+
+          {submission.rejectionReason && (
+            <p className="text-red-400 text-xs bg-red-500/10 rounded-lg px-2 py-1.5">
+              {submission.rejectionReason}
+            </p>
           )}
 
           {/* Actions */}
-          {(!status || status === 'pending') && (
-            <div className="flex gap-2 mt-auto">
-              <button
-                onClick={handleApprove}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 text-xs font-medium border border-emerald-500/20 transition-all"
-              >
-                <CheckCircle className="w-3.5 h-3.5" />
-                Aprobar
-              </button>
-              <button
-                onClick={() => setShowRejectModal(true)}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-red-500/15 hover:bg-red-500/25 text-red-400 text-xs font-medium border border-red-500/20 transition-all"
-              >
-                <XCircle className="w-3.5 h-3.5" />
-                Rechazar
-              </button>
-            </div>
-          )}
-
-          {(status === 'approved' || status === 'rejected') && (
+          <div className="flex gap-2 pt-1">
             <button
-              onClick={() => validateTask(challenge.id, task.id, 'pending', undefined)}
-              className="mt-auto py-2 rounded-xl border border-slate-600 text-slate-400 hover:text-white hover:border-slate-500 text-xs font-medium transition-all"
+              onClick={() => onValidate(submission.taskId, submission.userId, 'APPROVED')}
+              className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl bg-green-500/10 text-green-400 text-xs font-medium hover:bg-green-500/20 transition-colors border border-green-500/20"
             >
-              Restablecer a pendiente
+              <CheckCircle className="w-3.5 h-3.5" />
+              Aprobar
             </button>
-          )}
+            <button
+              onClick={() => setShowRejectModal(true)}
+              className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl bg-red-500/10 text-red-400 text-xs font-medium hover:bg-red-500/20 transition-colors border border-red-500/20"
+            >
+              <XCircle className="w-3.5 h-3.5" />
+              Rechazar
+            </button>
+            {submission.validationStatus !== 'PENDING' && (
+              <button
+                onClick={() => onValidate(submission.taskId, submission.userId, 'PENDING')}
+                className="px-2.5 py-1.5 rounded-xl bg-yellow-500/10 text-yellow-400 text-xs hover:bg-yellow-500/20 transition-colors border border-yellow-500/20"
+                title="Marcar como pendiente"
+              >
+                <Clock className="w-3.5 h-3.5" />
+              </button>
+            )}
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="px-2.5 py-1.5 rounded-xl bg-slate-700/70 text-red-400 text-xs hover:bg-slate-700 transition-colors border border-slate-600"
+              title="Eliminar envío"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
-      </div>
-
-      {/* Lightbox */}
-      {lightboxOpen && task.photoUrl && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
-          onClick={() => setLightboxOpen(false)}
-        >
-          <button className="absolute top-4 right-4 text-white/60 hover:text-white transition-colors">
-            <X className="w-6 h-6" />
-          </button>
-          <img
-            src={task.photoUrl}
-            alt={task.title}
-            className="max-w-full max-h-full rounded-xl object-contain"
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
-      )}
+      </motion.div>
 
       {showRejectModal && (
-        <RejectModal onConfirm={handleReject} onCancel={() => setShowRejectModal(false)} />
+        <RejectModal
+          onConfirm={(reason) => {
+            onValidate(submission.taskId, submission.userId, 'REJECTED', reason);
+            setShowRejectModal(false);
+          }}
+          onCancel={() => setShowRejectModal(false)}
+        />
+      )}
+      {showDeleteModal && (
+        <DeleteConfirmModal
+          onConfirm={() => {
+            onDelete(submission.id);
+            setShowDeleteModal(false);
+          }}
+          onCancel={() => setShowDeleteModal(false)}
+        />
       )}
     </>
   );
 }
 
+// ─── Main component ───────────────────────────────────────────────────────────
+
 export default function SubmissionsGallery() {
-  const challenges = useAppStore((s) => s.challenges);
-  const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<'all' | 'PENDING' | 'APPROVED' | 'REJECTED'>('all');
   const [search, setSearch] = useState('');
 
-  const allSubmissions: Submission[] = challenges.flatMap((c) =>
-    c.tasks
-      .filter((t) => t.photoUrl || t.linkUrl)
-      .map((t) => ({ task: t, challenge: c }))
-  );
+  const fetchSubmissions = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ status: filter });
+      const res = await fetch(`/api/admin/submissions?${params}`);
+      const data = await res.json();
+      setSubmissions(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [filter]);
 
-  const filtered = allSubmissions.filter(({ task, challenge }) => {
-    const matchStatus =
-      filterStatus === 'all' ||
-      (filterStatus === 'pending' && (!task.validationStatus || task.validationStatus === 'pending')) ||
-      task.validationStatus === filterStatus;
+  useEffect(() => { fetchSubmissions(); }, [fetchSubmissions]);
 
+  const handleValidate = async (
+    taskId: string,
+    userId: string,
+    status: ValidationStatus,
+    rejectionReason?: string
+  ) => {
+    try {
+      await fetch(`/api/tasks/${taskId}/validate`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, status, rejectionReason }),
+      });
+      // Optimistic update
+      setSubmissions((prev) =>
+        prev.map((s) =>
+          s.taskId === taskId && s.userId === userId
+            ? { ...s, validationStatus: status, rejectionReason: rejectionReason ?? null }
+            : s
+        )
+      );
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDelete = async (submissionId: string) => {
+    try {
+      const res = await fetch(`/api/admin/submissions/${submissionId}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error('Delete failed');
+      setSubmissions((prev) => prev.filter((s) => s.id !== submissionId));
+    } catch (err) {
+      console.error(err);
+      alert('No se pudo eliminar el envío');
+    }
+  };
+
+  const filtered = submissions.filter((s) => {
+    if (!search) return true;
     const q = search.toLowerCase();
-    const matchSearch =
-      !q ||
-      challenge.title.toLowerCase().includes(q) ||
-      task.title.toLowerCase().includes(q);
-
-    return matchStatus && matchSearch;
+    return (
+      s.user.name.toLowerCase().includes(q) ||
+      s.task.challenge.title.toLowerCase().includes(q) ||
+      s.task.title.toLowerCase().includes(q)
+    );
   });
 
   const counts = {
-    all: allSubmissions.length,
-    pending: allSubmissions.filter((s) => !s.task.validationStatus || s.task.validationStatus === 'pending').length,
-    approved: allSubmissions.filter((s) => s.task.validationStatus === 'approved').length,
-    rejected: allSubmissions.filter((s) => s.task.validationStatus === 'rejected').length,
+    all: submissions.length,
+    PENDING: submissions.filter((s) => s.validationStatus === 'PENDING').length,
+    APPROVED: submissions.filter((s) => s.validationStatus === 'APPROVED').length,
+    REJECTED: submissions.filter((s) => s.validationStatus === 'REJECTED').length,
   };
 
-  const filters: { key: FilterStatus; label: string; count: number }[] = [
-    { key: 'all', label: 'Todos', count: counts.all },
-    { key: 'pending', label: 'Pendientes', count: counts.pending },
-    { key: 'approved', label: 'Aprobados', count: counts.approved },
-    { key: 'rejected', label: 'Rechazados', count: counts.rejected },
+  const FILTERS: { key: typeof filter; label: string }[] = [
+    { key: 'all', label: `Todos (${counts.all})` },
+    { key: 'PENDING', label: `Pendientes (${counts.PENDING})` },
+    { key: 'APPROVED', label: `Aprobados (${counts.APPROVED})` },
+    { key: 'REJECTED', label: `Rechazados (${counts.REJECTED})` },
   ];
 
   return (
     <div className="space-y-6">
-      {/* Toolbar */}
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Envíos</h1>
+          <p className="text-slate-400 text-sm mt-1">Revisa y valida las evidencias de los usuarios</p>
+        </div>
+        <button
+          onClick={fetchSubmissions}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-sm hover:bg-slate-700 transition-colors border border-slate-700"
+        >
+          <RefreshCw className="w-4 h-4" />
+          Actualizar
+        </button>
+      </div>
+
+      {/* Search + Filter */}
       <div className="flex flex-col sm:flex-row gap-3">
-        {/* Search */}
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
-            type="text"
-            placeholder="Buscar por reto o tarea..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            placeholder="Buscar por usuario o reto..."
+            className="w-full pl-9 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50"
           />
         </div>
-
-        {/* Status filters */}
-        <div className="flex items-center gap-1.5 bg-slate-800 border border-slate-700 rounded-xl p-1">
-          <Filter className="w-3.5 h-3.5 text-slate-500 ml-2" />
-          {filters.map((f) => (
-            <button
-              key={f.key}
-              onClick={() => setFilterStatus(f.key)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
-                filterStatus === f.key
-                  ? 'bg-primary-500 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              {f.label}
-              <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
-                filterStatus === f.key ? 'bg-white/20' : 'bg-slate-700'
-              }`}>
-                {f.count}
-              </span>
-            </button>
-          ))}
+        <div className="flex items-center gap-2">
+          <Filter className="w-4 h-4 text-slate-400 shrink-0" />
+          <div className="flex gap-1 overflow-x-auto">
+            {FILTERS.map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => setFilter(key)}
+                className={`shrink-0 px-3 py-2 rounded-xl text-xs font-medium transition-colors ${
+                  filter === key
+                    ? 'bg-primary-500 text-white'
+                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* Grid */}
-      {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-slate-800 flex items-center justify-center mb-4">
-            <ImageIcon className="w-8 h-8 text-slate-600" />
-          </div>
-          <p className="text-slate-400 font-medium">No hay envíos</p>
-          <p className="text-slate-600 text-sm mt-1">
-            {allSubmissions.length === 0
-              ? 'Los usuarios aún no han subido fotos o links'
-              : 'No hay envíos que coincidan con el filtro'}
-          </p>
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <div className="w-8 h-8 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-20 text-slate-500">
+          <p className="text-4xl mb-3">📭</p>
+          <p>No hay envíos que coincidan con el filtro</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filtered.map(({ task, challenge }) => (
-            <SubmissionCard
-              key={`${challenge.id}-${task.id}`}
-              submission={{ task, challenge }}
-            />
-          ))}
-        </div>
+        <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <AnimatePresence>
+            {filtered.map((s) => (
+              <SubmissionCard
+                key={`${s.taskId}-${s.userId}`}
+                submission={s}
+                onValidate={handleValidate}
+                onDelete={handleDelete}
+              />
+            ))}
+          </AnimatePresence>
+        </motion.div>
       )}
     </div>
   );

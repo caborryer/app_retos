@@ -11,6 +11,7 @@ interface BingoBoardProps {
   challenges: Challenge[];
   boardTitle: string;
   boardNumber: number;
+  boardColor?: string;
   onBingoContinue: () => void;
 }
 
@@ -40,7 +41,7 @@ function buildCells(challenges: Challenge[]): (Challenge | null)[] {
   ];
 }
 
-export function BingoBoard({ challenges, boardTitle, boardNumber, onBingoContinue }: BingoBoardProps) {
+export function BingoBoard({ challenges, boardTitle, boardNumber, boardColor = '#FC0230', onBingoContinue }: BingoBoardProps) {
   const [showBingo, setShowBingo] = useState(false);
 
   // Cerrar modal cuando cambia el tablero
@@ -74,7 +75,7 @@ export function BingoBoard({ challenges, boardTitle, boardNumber, onBingoContinu
         transition={{ duration: 0.3 }}
         className="rounded-[15px] overflow-hidden w-full mx-auto"
         style={{
-          background: 'linear-gradient(180deg, #FC0230 0%, #FF3B1D 100%)',
+          background: `linear-gradient(180deg, ${boardColor} 0%, ${boardColor}CC 100%)`,
           maxWidth: 326,
         }}
       >

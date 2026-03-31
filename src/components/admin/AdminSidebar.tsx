@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useAppStore } from '@/store/useAppStore';
+import { useSession, signOut } from 'next-auth/react';
 import {
   LayoutDashboard,
   Image,
@@ -43,11 +43,11 @@ interface AdminSidebarProps {
 export default function AdminSidebar({ mobileOpen = false, onMobileClose }: AdminSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const currentUser = useAppStore((s) => s.currentUser);
-  const logout = useAppStore((s) => s.logout);
+  const { data: session } = useSession();
+  const currentUser = session?.user;
 
-  function handleLogout() {
-    logout();
+  async function handleLogout() {
+    await signOut({ redirect: false });
     router.push('/login');
   }
 
@@ -106,7 +106,7 @@ export default function AdminSidebar({ mobileOpen = false, onMobileClose }: Admi
           <div className="flex items-center gap-3 px-3 py-2 rounded-xl bg-slate-800/50">
             <div className="w-8 h-8 rounded-full bg-primary-500/20 flex items-center justify-center shrink-0">
               <span className="text-primary-400 text-xs font-bold">
-                {currentUser.name.charAt(0).toUpperCase()}
+                {(currentUser.name ?? 'A').charAt(0).toUpperCase()}
               </span>
             </div>
             <div className="min-w-0">

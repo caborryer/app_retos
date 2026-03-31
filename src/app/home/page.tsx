@@ -1,77 +1,94 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import Layout from '@/components/layout/Layout';
 import { BingoBoard } from '@/components/bingo/BingoBoard';
 import InfoAccordion from '@/components/bingo/InfoAccordion';
 import { useAppStore } from '@/store/useAppStore';
-import { mockChallenges, mockChallengesBoard2 } from '@/lib/mockData';
 import type { Challenge } from '@/types';
 import { ChallengeStatus } from '@/types';
 
-// Todos los tableros disponibles
-const ALL_BOARDS: Challenge[][] = [
-  mockChallenges.slice(0, 9),
-  mockChallengesBoard2.slice(0, 9),
-];
-
-function makeFreshBoard(template: Challenge[]): Challenge[] {
-  return template.map((c) => ({
-    ...c,
-    status: ChallengeStatus.NOT_STARTED,
-    progress: 0,
-    tasks: c.tasks.map((t) => ({
-      ...t,
-      completed: false,
-      completedAt: undefined,
-      photoUrl: undefined,
-    })),
-  }));
-}
-
 export default function HomePage() {
-  const router = useRouter();
-  const { challenges, resetChallenges, setIsLoading } = useAppStore();
-  const [boardIndex, setBoardIndex] = useState(0);
-  const [mounted, setMounted] = useState(false);
-  // Ref para saber si ya inicializamos (evita doble init en StrictMode)
-  const initialized = useRef(false);
+  const { status } = useSession();
+  const { challenges, setChallenges, setIsLoading } = useAppStore();
 
+  const [boards, setBoards] = useState<{ id: string; title: string; emoji: string; color: string }[]>([]);
+  const [activeBoardId, setActiveBoardId] = useState<string | null>(null);
+  const [loadingBoard, setLoadingBoard] = useState(true);
+  const boardCache = useRef<Record<string, Challenge[]>>({});
+
+  // Fetch boards list on mount
   useEffect(() => {
-    const init = () => {
-      const { currentUser } = useAppStore.getState();
-      if (!currentUser) {
-        router.replace('/login');
-        return;
-      }
-      setMounted(true);
-      if (initialized.current) return;
-      initialized.current = true;
-      setIsLoading(false);
-      if (challenges.length === 0) {
-        resetChallenges(makeFreshBoard(ALL_BOARDS[0]));
-      }
-    };
+    if (status !== 'authenticated') return;
+    fetch('/api/boards')
+      .then((r) => r.json())
+      .then((data: { id: string; title: string; emoji: string; color: string }[]) => {
+        setBoards(data);
+        if (data.length > 0) setActiveBoardId(data[0].id);
+      })
+      .catch(console.error);
+  }, [status]);
 
-    if (useAppStore.persist.hasHydrated()) {
-      init();
+  // Fetch challenges for active board
+  useEffect(() => {
+    if (!activeBoardId || status !== 'authenticated') return;
+
+    setIsLoading(true);
+
+    // Instant switch with cached board data (no full-screen loading flash)
+    const cached = boardCache.current[activeBoardId];
+    if (cached) {
+      setChallenges(cached);
+      setLoadingBoard(false);
     } else {
-      const unsub = useAppStore.persist.onFinishHydration(init);
-      return unsub;
+      setLoadingBoard(true);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+
+    fetch(`/api/challenges?boardId=${activeBoardId}`)
+      .then((r) => r.json())
+      .then((data: Challenge[]) => {
+        boardCache.current[activeBoardId] = data;
+        setChallenges(data);
+      })
+      .catch(console.error)
+      .finally(() => {
+        setIsLoading(false);
+        setLoadingBoard(false);
+      });
+  }, [activeBoardId, status]);
+
+  // Background refresh so approval states update without manual reload
+  useEffect(() => {
+    if (!activeBoardId || status !== 'authenticated') return;
+    const interval = setInterval(() => {
+      fetch(`/api/challenges?boardId=${activeBoardId}`)
+        .then((r) => r.json())
+        .then((data: Challenge[]) => {
+          boardCache.current[activeBoardId] = data;
+          setChallenges(data);
+        })
+        .catch(() => {
+          // Silent fail: keep current UI if a poll tick fails.
+        });
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [activeBoardId, status, setChallenges]);
 
   const handleBingoContinue = useCallback(() => {
-    setBoardIndex((prev) => {
-      const next = prev + 1 < ALL_BOARDS.length ? prev + 1 : 0;
-      resetChallenges(makeFreshBoard(ALL_BOARDS[next]));
-      return next;
-    });
-  }, [resetChallenges]);
+    const currentIdx = boards.findIndex((b) => b.id === activeBoardId);
+    const nextBoard = boards[(currentIdx + 1) % boards.length];
+    if (!nextBoard) return;
 
-  if (!mounted) {
+    setActiveBoardId(nextBoard.id);
+  }, [activeBoardId, boards]);
+
+  const switchBoard = useCallback((boardId: string) => {
+    if (boardId === activeBoardId) return;
+    setActiveBoardId(boardId);
+  }, [activeBoardId]);
+
+  if (status === 'loading' || loadingBoard) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-secondary-50 to-white flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
@@ -79,19 +96,43 @@ export default function HomePage() {
     );
   }
 
+  const activeBoard = boards.find((b) => b.id === activeBoardId);
+
   return (
     <Layout title="BingoChallenge">
       <div className="min-h-full pb-8">
-        {/* Título */}
+        {/* Título + selector de tablero */}
         <div className="pt-1 pb-0" style={{ paddingLeft: '8.53%', paddingRight: 17 }}>
           <div className="flex items-center justify-between">
             <h1 className="text-[#1E1E22] font-semibold text-xl tracking-tight">
               Retos
             </h1>
-            <span className="text-xs text-secondary-400 font-medium">
-              Tablero {boardIndex + 1}
-            </span>
+            {boards.length > 1 && activeBoard && (
+              <span className="text-xs text-secondary-400 font-medium">
+                {activeBoard.emoji} {activeBoard.title}
+              </span>
+            )}
           </div>
+
+          {/* Board tabs (if multiple boards) */}
+          {boards.length > 1 && (
+            <div className="flex gap-2 mt-2 overflow-x-auto pb-1">
+              {boards.map((board) => (
+                <button
+                  key={board.id}
+                  onClick={() => switchBoard(board.id)}
+                  className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                    board.id === activeBoardId
+                      ? 'text-white'
+                      : 'bg-secondary-100 text-secondary-600 hover:bg-secondary-200'
+                  }`}
+                  style={board.id === activeBoardId ? { backgroundColor: board.color } : undefined}
+                >
+                  {board.emoji} {board.title}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Tablero */}
@@ -99,8 +140,9 @@ export default function HomePage() {
           {challenges.length > 0 && (
             <BingoBoard
               challenges={challenges}
-              boardTitle={`Tablero ${boardIndex + 1}`}
-              boardNumber={boardIndex + 1}
+              boardTitle={activeBoard?.title ?? 'Tablero'}
+              boardNumber={boards.findIndex((b) => b.id === activeBoardId) + 1}
+              boardColor={activeBoard?.color}
               onBingoContinue={handleBingoContinue}
             />
           )}

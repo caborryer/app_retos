@@ -11,7 +11,7 @@ import { useAuthGuard } from '@/hooks/useAuthGuard';
 
 export default function ActivityPage() {
   const ready = useAuthGuard();
-  const { user, activeChallenges, completedChallenges } = useAppStore();
+  const { activeChallenges, completedChallenges } = useAppStore();
 
   if (!ready) {
     return (

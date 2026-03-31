@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { DM_Sans } from 'next/font/google';
 import './globals.css';
+import SessionProvider from '@/components/providers/SessionProvider';
 
 const dmSans = DM_Sans({ subsets: ['latin'] });
 
@@ -37,7 +38,7 @@ export default function RootLayout({
   return (
     <html lang="es" className={inter.variable}>
       <body className="font-sans antialiased">
-        {children}
+        <SessionProvider>{children}</SessionProvider>
       </body>
     </html>
   );

@@ -1,51 +1,53 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAppStore } from '@/store/useAppStore';
+import { signIn, useSession } from 'next-auth/react';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
+import { useEffect } from 'react';
 
 export default function LoginPage() {
   const router = useRouter();
-  const login = useAppStore((s) => s.login);
+  const { data: session, status } = useSession();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Redirect already-authenticated users
   useEffect(() => {
-    // If already logged in, redirect on mount (using getState to avoid hydration race)
-    const check = () => {
-      const { currentUser } = useAppStore.getState();
-      if (currentUser?.role === 'admin') router.replace('/admin');
-      else if (currentUser?.role === 'user') router.replace('/home');
-    };
-    if (useAppStore.persist.hasHydrated()) {
-      check();
-    } else {
-      useAppStore.persist.onFinishHydration(check);
+    if (status === 'authenticated' && session?.user) {
+      router.replace(session.user.role === 'ADMIN' ? '/admin' : '/home');
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [status, session, router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    await new Promise((r) => setTimeout(r, 400));
+    const result = await signIn('credentials', {
+      email: email.trim(),
+      password,
+      redirect: false,
+    });
 
-    const ok = login(email.trim(), password);
-
-    if (ok) {
-      // Read directly from store — no stale closure
-      const { currentUser } = useAppStore.getState();
-      router.push(currentUser?.role === 'admin' ? '/admin' : '/home');
+    if (result?.ok) {
+      // Session will update via useSession; the useEffect above handles the redirect
     } else {
       setError('Credenciales incorrectas. Verifica tu email y contraseña.');
+      setLoading(false);
     }
-    setLoading(false);
+  }
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#FAFAF9]">
+        <div className="w-8 h-8 border-4 border-[#FC0230] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
   }
 
   return (
@@ -139,12 +141,6 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="text-center text-xs text-[#9B9B95] mt-4">
-            ¿Quieres ver primero cómo funciona?{' '}
-            <button onClick={() => router.push('/')} className="text-[#FC0230] hover:underline font-medium">
-              Ver demo
-            </button>
-          </p>
         </div>
       </div>
     </div>

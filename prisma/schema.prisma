@@ -1,0 +1,171 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum ChallengeCategory {
+  RUNNING
+  CYCLING
+  GYM
+  SWIMMING
+  YOGA
+  TEAM_SPORTS
+  OUTDOOR
+  MIXED
+  PETS
+}
+
+enum ChallengeDifficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+enum ChallengeStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  EXPIRED
+  ABANDONED
+}
+
+enum ValidationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum BadgeRarity {
+  COMMON
+  RARE
+  EPIC
+  LEGENDARY
+}
+
+// ─── Models ──────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(USER)
+  avatar    String?
+  level     Int      @default(1)
+  points    Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  completedChallenges Int @default(0)
+
+  badges           Badge[]
+  challengeProgress UserChallengeProgress[]
+  taskProgress     UserTaskProgress[]
+}
+
+model Badge {
+  id          String      @id @default(cuid())
+  name        String
+  description String
+  icon        String
+  rarity      BadgeRarity @default(COMMON)
+  earnedAt    DateTime    @default(now())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Board {
+  id          String      @id @default(cuid())
+  title       String
+  emoji       String
+  color       String
+  description String?
+  coverImage  String?
+  active      Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  challenges Challenge[]
+}
+
+model Challenge {
+  id           String              @id @default(cuid())
+  title        String
+  description  String
+  category     ChallengeCategory
+  difficulty   ChallengeDifficulty
+  points       Int
+  duration     Int
+  icon         String
+  color        String
+  images       String[]
+  participants Int                 @default(0)
+  boardId      String
+  createdAt    DateTime            @default(now())
+
+  board        Board                  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  tasks        ChallengeTask[]
+  userProgress UserChallengeProgress[]
+}
+
+model ChallengeTask {
+  id            String   @id @default(cuid())
+  title         String
+  description   String
+  photoRequired Boolean  @default(false)
+  challengeId   String
+  createdAt     DateTime @default(now())
+
+  challenge    Challenge         @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  userProgress UserTaskProgress[]
+}
+
+// Per-user progress on a challenge
+model UserChallengeProgress {
+  id          String          @id @default(cuid())
+  userId      String
+  challengeId String
+  status      ChallengeStatus @default(NOT_STARTED)
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, challengeId])
+}
+
+// Per-user submission for a task
+model UserTaskProgress {
+  id               String           @id @default(cuid())
+  userId           String
+  taskId           String
+  completed        Boolean          @default(false)
+  photoUrl         String?
+  linkUrl          String?
+  completedAt      DateTime?
+  validationStatus ValidationStatus @default(PENDING)
+  rejectionReason  String?
+  validatedById    String?
+  validatedAt      DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  user User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task ChallengeTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, taskId])
+}

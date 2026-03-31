@@ -1,45 +1,24 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Settings, LogOut, ChevronRight, ShieldCheck } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import Card from '@/components/ui/Card';
 import ProgressBar from '@/components/ui/ProgressBar';
 import Button from '@/components/ui/Button';
-import { useAppStore } from '@/store/useAppStore';
+import { useSession, signOut } from 'next-auth/react';
 import { calculateLevel, getLevelProgress } from '@/lib/utils';
 
 export default function ProfilePage() {
   const router = useRouter();
-  const logout = useAppStore((s) => s.logout);
-  // Prefer currentUser (set by login), fall back to user (legacy mock)
-  const currentUser = useAppStore((s) => s.currentUser);
-  const legacyUser = useAppStore((s) => s.user);
-  const user = currentUser ?? legacyUser;
+  const { data: session, status } = useSession();
 
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    const check = () => {
-      const { currentUser: cu, user: u } = useAppStore.getState();
-      if (!cu && !u) {
-        router.replace('/login');
-      } else {
-        setReady(true);
-      }
-    };
-    if (useAppStore.persist.hasHydrated()) check();
-    else useAppStore.persist.onFinishHydration(check);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  function handleLogout() {
-    logout();
+  async function handleLogout() {
+    await signOut({ redirect: false });
     router.push('/login');
   }
 
-  if (!ready || !user) {
+  if (status === 'loading') {
     return (
       <div className="min-h-screen bg-gradient-to-b from-secondary-50 to-white flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
@@ -47,9 +26,13 @@ export default function ProfilePage() {
     );
   }
 
-  const level = calculateLevel(user.points ?? 0);
-  const levelProgress = getLevelProgress(user.points ?? 0);
-  const pointsToNext = 200 - ((user.points ?? 0) % 200);
+  const user = session?.user;
+  if (!user) return null;
+
+  const points = 0; // Will come from API in a future iteration
+  const level = calculateLevel(points);
+  const levelProgress = getLevelProgress(points);
+  const pointsToNext = 200 - (points % 200);
 
   return (
     <Layout title="Perfil">
@@ -57,10 +40,10 @@ export default function ProfilePage() {
         {/* Profile Header */}
         <Card variant="gradient" className="p-6">
           <div className="flex items-center gap-4 mb-4">
-            {user.avatar ? (
+            {user.image ? (
               <img
-                src={user.avatar}
-                alt={user.name}
+                src={user.image}
+                alt={user.name ?? ''}
                 className="w-20 h-20 rounded-full border-4 border-white/30 object-cover"
               />
             ) : (
@@ -76,7 +59,7 @@ export default function ProfilePage() {
               <p className="text-white/80 text-sm">
                 {user.email}
               </p>
-              {user.role === 'admin' && (
+              {user.role === 'ADMIN' && (
                 <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-xs font-medium bg-white/20 text-white">
                   <ShieldCheck className="w-3 h-3" />
                   Admin
@@ -114,14 +97,14 @@ export default function ProfilePage() {
 
           <Card variant="elevated" className="p-4 text-center">
             <div className="text-3xl font-bold text-green-500 mb-1">
-              {user.completedChallenges}
+              —
             </div>
             <div className="text-xs text-secondary-600">Completados</div>
           </Card>
 
           <Card variant="elevated" className="p-4 text-center">
             <div className="text-3xl font-bold text-yellow-500 mb-1">
-              {user.badges.length}
+              —
             </div>
             <div className="text-xs text-secondary-600">Insignias</div>
           </Card>
@@ -204,7 +187,7 @@ export default function ProfilePage() {
             </button> */}
           </Card>
 
-          {user.role === 'admin' && (
+          {user.role === 'ADMIN' && (
             <button
               onClick={() => router.push('/admin')}
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-primary-200 bg-primary-50 text-primary-700 font-medium text-sm hover:bg-primary-100 transition-colors"
