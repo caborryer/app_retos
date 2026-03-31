@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
+  secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
   pages: {
     signIn: '/login',
   },
@@ -16,29 +17,34 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        try {
+          if (!credentials?.email || !credentials?.password) return null;
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string },
-        });
+          const user = await prisma.user.findUnique({
+            where: { email: credentials.email as string },
+          });
 
-        if (!user) return null;
+          if (!user) return null;
 
-        const passwordMatch = await bcrypt.compare(
-          credentials.password as string,
-          user.password
-        );
+          const passwordMatch = await bcrypt.compare(
+            credentials.password as string,
+            user.password
+          );
 
-        if (!passwordMatch) return null;
+          if (!passwordMatch) return null;
 
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          image: user.avatar ?? null,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          role: (user.role as any) as 'USER' | 'ADMIN',
-        };
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            image: user.avatar ?? null,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            role: (user.role as any) as 'USER' | 'ADMIN',
+          };
+        } catch (error) {
+          console.error('NextAuth authorize error:', error);
+          return null;
+        }
       },
     }),
   ],
