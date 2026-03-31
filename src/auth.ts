@@ -19,17 +19,32 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       async authorize(credentials) {
         try {
           if (!credentials?.email || !credentials?.password) return null;
+          const email = credentials.email as string;
+          const inputPassword = credentials.password as string;
 
           const user = await prisma.user.findUnique({
-            where: { email: credentials.email as string },
+            where: { email },
           });
 
           if (!user) return null;
 
-          const passwordMatch = await bcrypt.compare(
-            credentials.password as string,
-            user.password
-          );
+          let passwordMatch = false;
+
+          // Current path: hashed password
+          if (user.password?.startsWith('$2')) {
+            passwordMatch = await bcrypt.compare(inputPassword, user.password);
+          } else {
+            // Legacy fallback: plain-text password stored in DB.
+            // If it matches, migrate it immediately to bcrypt hash.
+            passwordMatch = user.password === inputPassword;
+            if (passwordMatch) {
+              const rehashed = await bcrypt.hash(inputPassword, 12);
+              await prisma.user.update({
+                where: { id: user.id },
+                data: { password: rehashed },
+              });
+            }
+          }
 
           if (!passwordMatch) return null;
 
