@@ -27,29 +27,37 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
+    try {
+      const result = await signIn('credentials', {
+        email: email.trim(),
+        password,
+        redirect: false,
+      });
 
-    const result = await signIn('credentials', {
-      email: email.trim(),
-      password,
-      redirect: false,
-    });
-
-    if (result?.ok) {
-      try {
-        const sessionRes = await fetch('/api/auth/session', { cache: 'no-store' });
-        const nextSession = await sessionRes.json();
-        const role = nextSession?.user?.role as string | undefined;
-        router.replace(role === 'ADMIN' ? '/admin' : '/home');
-        router.refresh();
-      } catch {
-        // Fallback in case session endpoint is delayed
-        router.replace('/home');
-        router.refresh();
-      } finally {
-        setLoading(false);
+      if (result?.ok) {
+        try {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 7000);
+          const sessionRes = await fetch('/api/auth/session', {
+            cache: 'no-store',
+            signal: controller.signal,
+          });
+          clearTimeout(timeout);
+          const nextSession = await sessionRes.json();
+          const role = nextSession?.user?.role as string | undefined;
+          router.replace(role === 'ADMIN' ? '/admin' : '/home');
+          router.refresh();
+        } catch {
+          // Fallback in case session endpoint is delayed
+          router.replace('/home');
+          router.refresh();
+        }
+      } else {
+        setError(result?.error ? `No se pudo iniciar sesión (${result.error}).` : 'Credenciales incorrectas. Verifica tu email y contraseña.');
       }
-    } else {
-      setError('Credenciales incorrectas. Verifica tu email y contraseña.');
+    } catch {
+      setError('No se pudo conectar al servicio de autenticación. Intenta nuevamente.');
+    } finally {
       setLoading(false);
     }
   }
