@@ -2,72 +2,43 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { signIn, useSession } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
+import { useFormState, useFormStatus } from 'react-dom';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
+import { credentialsSignInAction } from '@/app/actions/credentials-sign-in';
+
+function AdminSubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="w-full py-3 rounded-xl bg-primary-500 text-white font-semibold text-sm hover:bg-primary-600 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+    >
+      {pending ? (
+        <>
+          <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+          Ingresando...
+        </>
+      ) : (
+        'Acceder al panel'
+      )}
+    </button>
+  );
+}
 
 export default function AdminLoginPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
-
-  const [email, setEmail] = useState('admin@sport.com');
-  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+
+  const [state, formAction] = useFormState(credentialsSignInAction, undefined);
 
   useEffect(() => {
     if (status === 'authenticated' && session?.user?.role === 'ADMIN') {
       router.replace('/admin');
     }
   }, [status, session, router]);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-    try {
-      const result = await Promise.race([
-        signIn('credentials', {
-          email: email.trim(),
-          password,
-          redirect: false,
-        }),
-        new Promise<null>((resolve) => setTimeout(() => resolve(null), 10000)),
-      ]);
-
-      if (result?.ok) {
-        try {
-          const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 7000);
-          const sessionRes = await fetch('/api/auth/session', {
-            cache: 'no-store',
-            signal: controller.signal,
-          });
-          clearTimeout(timeout);
-          const nextSession = await sessionRes.json();
-          const role = nextSession?.user?.role as string | undefined;
-          if (role === 'ADMIN') {
-            router.replace('/admin');
-          } else {
-            setError('Tu cuenta no tiene permisos de administrador.');
-            router.replace('/home');
-          }
-          router.refresh();
-        } catch {
-          router.replace('/admin');
-          router.refresh();
-        }
-      } else if (result === null) {
-        setError('Tiempo de espera agotado al autenticar. Reintenta en unos segundos.');
-      } else {
-        setError(result?.error ? `No se pudo iniciar sesión (${result.error}).` : 'Credenciales incorrectas o no tienes permisos de administrador.');
-      }
-    } catch {
-      setError('No se pudo conectar al servicio de autenticación. Intenta nuevamente.');
-    } finally {
-      setLoading(false);
-    }
-  }
 
   if (status === 'loading') {
     return (
@@ -88,68 +59,65 @@ export default function AdminLoginPage() {
           <p className="text-slate-400 text-sm mt-1">Acceso exclusivo para administradores</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form action={formAction} className="space-y-4">
+          <input type="hidden" name="intent" value="admin" />
+
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">Email</label>
+            <label htmlFor="admin-email" className="block text-sm font-medium text-slate-300 mb-1.5">
+              Email
+            </label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
               <input
+                id="admin-email"
+                name="email"
                 type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
                 required
+                autoComplete="email"
+                defaultValue="admin@sport.com"
                 className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-4 py-3 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">Contraseña</label>
+            <label htmlFor="admin-password" className="block text-sm font-medium text-slate-300 mb-1.5">
+              Contraseña
+            </label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
               <input
+                id="admin-password"
+                name="password"
                 type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
+                autoComplete="current-password"
                 className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-11 py-3 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
           </div>
 
-          {error && (
+          {state?.error && (
             <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-400 text-sm">
-              {error}
+              {state.error}
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 rounded-xl bg-primary-500 text-white font-semibold text-sm hover:bg-primary-600 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <>
-                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Ingresando...
-              </>
-            ) : (
-              'Acceder al panel'
-            )}
-          </button>
+          <AdminSubmitButton />
         </form>
 
         <p className="text-center text-slate-500 text-xs">
           ¿Usuario regular?{' '}
-          <button onClick={() => router.push('/login')} className="text-primary-400 hover:text-primary-300">
+          <button type="button" onClick={() => router.push('/login')} className="text-primary-400 hover:text-primary-300">
             Ir al login normal
           </button>
         </p>
