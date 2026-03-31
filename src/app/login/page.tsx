@@ -35,7 +35,19 @@ export default function LoginPage() {
     });
 
     if (result?.ok) {
-      // Session will update via useSession; the useEffect above handles the redirect
+      try {
+        const sessionRes = await fetch('/api/auth/session', { cache: 'no-store' });
+        const nextSession = await sessionRes.json();
+        const role = nextSession?.user?.role as string | undefined;
+        router.replace(role === 'ADMIN' ? '/admin' : '/home');
+        router.refresh();
+      } catch {
+        // Fallback in case session endpoint is delayed
+        router.replace('/home');
+        router.refresh();
+      } finally {
+        setLoading(false);
+      }
     } else {
       setError('Credenciales incorrectas. Verifica tu email y contraseña.');
       setLoading(false);

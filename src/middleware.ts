@@ -6,7 +6,10 @@ const ADMIN_ROUTES = ['/admin'];
 
 export default async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  const token = await getToken({
+    req,
+    secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
+  });
 
   const isPublic = PUBLIC_ROUTES.some((r) => pathname === r);
   const isAdminRoute = ADMIN_ROUTES.some((r) => pathname.startsWith(r)) && pathname !== '/admin/login';

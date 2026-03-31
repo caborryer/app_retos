@@ -33,7 +33,23 @@ export default function AdminLoginPage() {
     });
 
     if (result?.ok) {
-      // useEffect will redirect once session updates
+      try {
+        const sessionRes = await fetch('/api/auth/session', { cache: 'no-store' });
+        const nextSession = await sessionRes.json();
+        const role = nextSession?.user?.role as string | undefined;
+        if (role === 'ADMIN') {
+          router.replace('/admin');
+        } else {
+          setError('Tu cuenta no tiene permisos de administrador.');
+          router.replace('/home');
+        }
+        router.refresh();
+      } catch {
+        router.replace('/admin');
+        router.refresh();
+      } finally {
+        setLoading(false);
+      }
     } else {
       setError('Credenciales incorrectas o no tienes permisos de administrador.');
       setLoading(false);
