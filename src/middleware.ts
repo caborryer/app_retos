@@ -14,7 +14,8 @@ export default async function middleware(req: NextRequest) {
   const isPublic = PUBLIC_ROUTES.some((r) => pathname === r);
   const isAdminRoute = ADMIN_ROUTES.some((r) => pathname.startsWith(r)) && pathname !== '/admin/login';
   const isApiAuth = pathname.startsWith('/api/auth');
-  const isHealthEndpoint = pathname === '/api/health/auth';
+  const isHealthEndpoint =
+    pathname === '/api/health/auth' || pathname === '/api/health/auth-check';
 
   // Always allow auth API routes
   if (isApiAuth) return NextResponse.next();

@@ -28,11 +28,14 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      const result = await signIn('credentials', {
-        email: email.trim(),
-        password,
-        redirect: false,
-      });
+      const result = await Promise.race([
+        signIn('credentials', {
+          email: email.trim(),
+          password,
+          redirect: false,
+        }),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 10000)),
+      ]);
 
       if (result?.ok) {
         try {
@@ -52,6 +55,8 @@ export default function LoginPage() {
           router.replace('/home');
           router.refresh();
         }
+      } else if (result === null) {
+        setError('Tiempo de espera agotado al autenticar. Reintenta en unos segundos.');
       } else {
         setError(result?.error ? `No se pudo iniciar sesión (${result.error}).` : 'Credenciales incorrectas. Verifica tu email y contraseña.');
       }
