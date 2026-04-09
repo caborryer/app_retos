@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, XCircle, Clock, ExternalLink, Search, Filter, RefreshCw, Trash2 } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, ExternalLink, Search, Filter, RefreshCw, Trash2, Layers } from 'lucide-react';
 import Image from 'next/image';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -23,7 +23,13 @@ interface Submission {
   task: {
     id: string;
     title: string;
-    challenge: { id: string; title: string; category: string; icon: string };
+    challenge: {
+      id: string;
+      title: string;
+      category: string;
+      icon: string;
+      board: { title: string; emoji: string; folder: string | null } | null;
+    };
   };
 }
 
@@ -259,6 +265,7 @@ export default function SubmissionsGallery() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'PENDING' | 'APPROVED' | 'REJECTED'>('all');
   const [search, setSearch] = useState('');
+  const [groupByFolder, setGroupByFolder] = useState(true);
 
   const fetchSubmissions = useCallback(async () => {
     setLoading(true);
@@ -338,6 +345,24 @@ export default function SubmissionsGallery() {
     { key: 'REJECTED', label: `Rechazados (${counts.REJECTED})` },
   ];
 
+  // Group filtered submissions by board folder (or board title as fallback)
+  const grouped: { label: string; items: Submission[] }[] = groupByFolder
+    ? (() => {
+        const map = new Map<string, Submission[]>();
+        for (const s of filtered) {
+          const board = s.task.challenge.board;
+          const key = board?.folder
+            ? `📁 ${board.folder}`
+            : board
+            ? `${board.emoji ?? ''} ${board.title}`.trim()
+            : 'Sin tablero';
+          if (!map.has(key)) map.set(key, []);
+          map.get(key)!.push(s);
+        }
+        return Array.from(map.entries()).map(([label, items]) => ({ label, items }));
+      })()
+    : [{ label: '', items: filtered }];
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -346,13 +371,27 @@ export default function SubmissionsGallery() {
           <h1 className="text-2xl font-bold text-white">Envíos</h1>
           <p className="text-slate-400 text-sm mt-1">Revisa y valida las evidencias de los usuarios</p>
         </div>
-        <button
-          onClick={fetchSubmissions}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-sm hover:bg-slate-700 transition-colors border border-slate-700"
-        >
-          <RefreshCw className="w-4 h-4" />
-          Actualizar
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setGroupByFolder((v) => !v)}
+            title={groupByFolder ? 'Quitar agrupación' : 'Agrupar por carpeta'}
+            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors border ${
+              groupByFolder
+                ? 'bg-primary-500/10 text-primary-400 border-primary-500/30'
+                : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'
+            }`}
+          >
+            <Layers className="w-4 h-4" />
+            <span className="hidden sm:inline">Carpetas</span>
+          </button>
+          <button
+            onClick={fetchSubmissions}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-sm hover:bg-slate-700 transition-colors border border-slate-700"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Actualizar
+          </button>
+        </div>
       </div>
 
       {/* Search + Filter */}
@@ -397,18 +436,32 @@ export default function SubmissionsGallery() {
           <p>No hay envíos que coincidan con el filtro</p>
         </div>
       ) : (
-        <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          <AnimatePresence>
-            {filtered.map((s) => (
-              <SubmissionCard
-                key={`${s.taskId}-${s.userId}`}
-                submission={s}
-                onValidate={handleValidate}
-                onDelete={handleDelete}
-              />
-            ))}
-          </AnimatePresence>
-        </motion.div>
+        <div className="space-y-8">
+          {grouped.map(({ label, items }) => (
+            <div key={label || 'all'}>
+              {/* Folder heading */}
+              {label && (
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-slate-300 text-sm font-semibold">{label}</span>
+                  <div className="flex-1 h-px bg-slate-700" />
+                  <span className="text-slate-500 text-xs">{items.length} envío{items.length !== 1 ? 's' : ''}</span>
+                </div>
+              )}
+              <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <AnimatePresence>
+                  {items.map((s) => (
+                    <SubmissionCard
+                      key={`${s.taskId}-${s.userId}`}
+                      submission={s}
+                      onValidate={handleValidate}
+                      onDelete={handleDelete}
+                    />
+                  ))}
+                </AnimatePresence>
+              </motion.div>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );

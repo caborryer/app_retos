@@ -5,25 +5,13 @@ import { Camera, CheckCircle, X } from 'lucide-react';
 import { userFacingApiError } from '@/lib/user-facing-api-error';
 import { normalizeEvidenceLink } from '@/lib/normalize-evidence-link';
 import type { Challenge } from '@/types';
-import { ChallengeCategory, ChallengeStatus } from '@/types';
+import { ChallengeStatus } from '@/types';
 import { useAppStore } from '@/store/useAppStore';
 import Button from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-
-// Categorías que permiten link de Strava
-const STRAVA_CATEGORIES: ChallengeCategory[] = [
-  ChallengeCategory.RUNNING,
-  ChallengeCategory.CYCLING,
-  ChallengeCategory.GYM,
-  ChallengeCategory.SWIMMING,
-  ChallengeCategory.YOGA,
-  ChallengeCategory.TEAM_SPORTS,
-  ChallengeCategory.OUTDOOR,
-  ChallengeCategory.MIXED,
-];
 
 interface ChallengeFlipCardProps {
   challenge: Challenge;
@@ -94,9 +82,9 @@ export default function ChallengeFlipCard({ challenge, className }: ChallengeFli
 
   const imageUrl = challenge.images?.[0] ?? null;
   const isCompleted = challenge.status === ChallengeStatus.COMPLETED;
-  const hasPhotoTask = challenge.tasks?.some((t) => t.photoRequired) ?? false;
+  const hasPhotoTask = challenge.tasks?.some((t) => !t.completed && t.photoRequired) ?? false;
+  const hasLinkTask = challenge.tasks?.some((t) => !t.completed && !!t.linkRequired) ?? false;
   const hasNoTasks = !challenge.tasks || challenge.tasks.length === 0;
-  const supportsStrava = STRAVA_CATEGORIES.includes(challenge.category);
   const latestEvidenceTask = [...challenge.tasks]
     .reverse()
     .find((t) => t.completed && (t.photoUrl || t.linkUrl));
@@ -289,8 +277,8 @@ export default function ChallengeFlipCard({ challenge, className }: ChallengeFli
                   </>
                 )}
 
-                {/* Strava / link deportivo */}
-                {!isCompleted && supportsStrava && (
+                {/* Link (Strava u otro) — solo si al menos una tarea pendiente lo requiere */}
+                {!isCompleted && hasLinkTask && (
                   <button
                     type="button"
                     onClick={(e) => {

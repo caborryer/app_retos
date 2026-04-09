@@ -31,6 +31,7 @@ export interface Challenge {
   participants: number;
   icon: string;
   color: string;
+  boardId?: string;
 }
 
 export interface ChallengeTask {
@@ -39,6 +40,7 @@ export interface ChallengeTask {
   description: string;
   completed: boolean;
   photoRequired: boolean;
+  linkRequired?: boolean;
   photoUrl?: string;
   linkUrl?: string;
   completedAt?: Date;

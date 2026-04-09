@@ -29,7 +29,14 @@ export async function GET(req: Request) {
       task: {
         include: {
           challenge: {
-            select: { id: true, title: true, category: true, icon: true, boardId: true },
+            select: {
+              id: true,
+              title: true,
+              category: true,
+              icon: true,
+              boardId: true,
+              board: { select: { title: true, emoji: true, folder: true } },
+            },
           },
         },
       },

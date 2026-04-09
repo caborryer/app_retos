@@ -13,7 +13,7 @@ export default function HomePage() {
   const { status } = useSession();
   const { challenges, setChallenges, setIsLoading } = useAppStore();
 
-  const [boards, setBoards] = useState<{ id: string; title: string; emoji: string; color: string }[]>([]);
+  const [boards, setBoards] = useState<{ id: string; title: string; emoji: string; color: string; coverImage: string | null }[]>([]);
   const [activeBoardId, setActiveBoardId] = useState<string | null>(null);
   const [loadingBoard, setLoadingBoard] = useState(true);
   const boardCache = useRef<Record<string, Challenge[]>>({});
@@ -23,7 +23,7 @@ export default function HomePage() {
     if (status !== 'authenticated') return;
     fetch('/api/boards')
       .then((r) => r.json())
-      .then((data: { id: string; title: string; emoji: string; color: string }[]) => {
+      .then((data: { id: string; title: string; emoji: string; color: string; coverImage: string | null }[]) => {
         setBoards(data);
         if (data.length > 0) setActiveBoardId(data[0].id);
       })
@@ -143,6 +143,7 @@ export default function HomePage() {
               boardTitle={activeBoard?.title ?? 'Tablero'}
               boardNumber={boards.findIndex((b) => b.id === activeBoardId) + 1}
               boardColor={activeBoard?.color}
+              boardCoverImage={activeBoard?.coverImage}
               onBingoContinue={handleBingoContinue}
             />
           )}

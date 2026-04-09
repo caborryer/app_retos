@@ -44,6 +44,7 @@ export async function GET(req: Request) {
         title: t.title,
         description: t.description,
         photoRequired: t.photoRequired,
+        linkRequired: t.linkRequired,
         completed: up?.completed ?? false,
         photoUrl: up?.photoUrl ?? null,
         linkUrl: up?.linkUrl ?? null,

@@ -13,7 +13,7 @@ export async function PATCH(
   }
 
   const body = await req.json();
-  const { title, emoji, color, description, coverImage, active } = body;
+  const { title, emoji, color, description, coverImage, active, folder, startDate, endDate } = body;
 
   const board = await prisma.board.update({
     where: { id: params.id },
@@ -24,6 +24,9 @@ export async function PATCH(
       ...(description !== undefined && { description }),
       ...(coverImage !== undefined && { coverImage }),
       ...(active !== undefined && { active }),
+      ...(folder !== undefined && { folder: folder ?? null }),
+      ...(startDate !== undefined && { startDate: startDate ? new Date(startDate) : null }),
+      ...(endDate !== undefined && { endDate: endDate ? new Date(endDate) : null }),
     },
   });
 

@@ -6,26 +6,36 @@ import type { Challenge } from '@/types';
 import { ChallengeStatus } from '@/types';
 import ChallengeFlipCard from '@/components/challenges/ChallengeFlipCard';
 import BingoModal from './BingoModal';
-import Image from 'next/image'; 
 interface BingoBoardProps {
   challenges: Challenge[];
   boardTitle: string;
   boardNumber: number;
   boardColor?: string;
+  boardCoverImage?: string | null;
   onBingoContinue: () => void;
 }
 
-function EmptyCell() {
+function EmptyCell({ coverImage }: { coverImage?: string | null }) {
+  if (coverImage) {
+    return (
+      <div className="w-full aspect-square rounded-[16px] overflow-hidden relative">
+        <img
+          src={coverImage}
+          alt="Casilla especial"
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{ borderRadius: 16 }}
+          loading="lazy"
+          decoding="async"
+        />
+      </div>
+    );
+  }
   return (
-    <div className="w-full aspect-square rounded-[16px] overflow-hidden relative">
-      <Image
-        src="https://i.ibb.co/C3wDYt0T/Whats-App-Image-2026-03-25-at-12-34-56-PM.jpg"
-        alt="Casilla especial"
-        fill
-        className="object-cover"
-        sizes="100px"
-        style={{ borderRadius: 16 }}
-      />
+    <div
+      className="w-full aspect-square rounded-[16px] flex items-center justify-center text-white/30 text-3xl"
+      style={{ background: 'rgba(255,255,255,0.12)' }}
+    >
+      ⭐
     </div>
   );
 }
@@ -41,7 +51,7 @@ function buildCells(challenges: Challenge[]): (Challenge | null)[] {
   ];
 }
 
-export function BingoBoard({ challenges, boardTitle, boardNumber, boardColor = '#FC0230', onBingoContinue }: BingoBoardProps) {
+export function BingoBoard({ challenges, boardTitle, boardNumber, boardColor = '#FC0230', boardCoverImage, onBingoContinue }: BingoBoardProps) {
   const [showBingo, setShowBingo] = useState(false);
 
   // Cerrar modal cuando cambia el tablero
@@ -92,7 +102,7 @@ export function BingoBoard({ challenges, boardTitle, boardNumber, boardColor = '
                 <ChallengeFlipCard challenge={challenge} />
               </motion.div>
             ) : (
-              <EmptyCell key={`empty-${index}`} />
+              <EmptyCell key={`empty-${index}`} coverImage={boardCoverImage} />
             )
           )}
         </div>
