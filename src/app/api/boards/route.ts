@@ -2,10 +2,13 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 
-// GET /api/boards — list active boards only (users)
+// GET /api/boards — admins see all boards; regular users see only active ones
 export async function GET() {
+  const session = await auth();
+  const isAdmin = session?.user?.role === 'ADMIN';
+
   const boards = await prisma.board.findMany({
-    where: { active: true },
+    where: isAdmin ? undefined : { active: true },
     orderBy: { createdAt: 'asc' },
     include: { _count: { select: { challenges: true } } },
   });
