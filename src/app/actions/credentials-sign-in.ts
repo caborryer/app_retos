@@ -9,6 +9,21 @@ export type CredentialsSignInState =
   | { ok: true; redirectTo: string }
   | undefined;
 
+/** Only allow same-origin paths for post-login navigation (avoids odd absolute URLs in Flight payloads). */
+function toSafeAppPath(value: string, fallback: string): string {
+  const fb = fallback.startsWith('/') ? fallback : `/${fallback}`;
+  try {
+    if (value.startsWith('/')) {
+      const path = value.split('?')[0] ?? fb;
+      return path.length > 0 ? path : fb;
+    }
+    const u = new URL(value);
+    return u.pathname || fb;
+  } catch {
+    return fb;
+  }
+}
+
 /** useFormState may submit names like `1_email` / `1_password` on the wire. */
 function getFormField(formData: FormData, field: string): string {
   const direct = formData.get(field);
@@ -56,8 +71,9 @@ export async function credentialsSignInAction(
       redirectTo,
       redirect: false,
     });
-    const target =
+    const raw =
       typeof nextUrl === 'string' && nextUrl.length > 0 ? nextUrl : redirectTo;
+    const target = toSafeAppPath(raw, redirectTo);
     return { ok: true, redirectTo: target };
   } catch (e) {
     if (e instanceof CredentialsSignin) {

@@ -14,6 +14,8 @@ import { useAppStore } from '@/store/useAppStore';
 import { formatDuration, formatNumber, getDifficultyName, formatRelativeTime } from '@/lib/utils';
 import type { Challenge, ChallengeTask } from '@/types';
 import { ChallengeCategory } from '@/types';
+import { userFacingApiError } from '@/lib/user-facing-api-error';
+import { normalizeEvidenceLink } from '@/lib/normalize-evidence-link';
 
 const STRAVA_CATEGORIES: ChallengeCategory[] = [
   ChallengeCategory.RUNNING, ChallengeCategory.CYCLING, ChallengeCategory.GYM,
@@ -33,11 +35,12 @@ function StravaLinkInput({ task, challengeId, onSubmit }: {
   if (task.completed) return null;
 
   const handleSubmit = () => {
-    const trimmed = value.trim();
-    if (!trimmed) { setError('Ingresa un link'); return; }
-    try { new URL(trimmed); } catch { setError('URL inválida'); return; }
-    if (!trimmed.startsWith('https://')) { setError('El link debe comenzar con https://'); return; }
-    onSubmit(task.id, trimmed);
+    const normalized = normalizeEvidenceLink(value);
+    if (!normalized) {
+      setError('Ingresa un link válido (Strava u otra URL https).');
+      return;
+    }
+    onSubmit(task.id, normalized);
     setOpen(false);
     setError('');
   };
@@ -204,17 +207,24 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
     try {
       const fd = new FormData();
       fd.append('file', file);
-      const res = await fetch('/api/upload', { method: 'POST', body: fd });
-      let photoUrl: string | undefined;
-      if (res.ok) {
-        const { url } = await res.json();
-        photoUrl = url;
+      const res = await fetch('/api/upload', { method: 'POST', body: fd, credentials: 'include' });
+      if (!res.ok) {
+        alert(await userFacingApiError(res, 'upload'));
+        event.target.value = '';
+        return;
       }
-      await fetch(`/api/tasks/${taskId}/submit`, {
+      const { url: photoUrl } = await res.json();
+      const submitRes = await fetch(`/api/tasks/${taskId}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ photoUrl }),
       });
+      if (!submitRes.ok) {
+        alert(await userFacingApiError(submitRes, 'submit'));
+        event.target.value = '';
+        return;
+      }
       updateChallenge(challenge.id, {
         tasks: challenge.tasks.map((t) =>
           t.id === taskId ? { ...t, completed: true, photoUrl, validationStatus: 'pending' as never } : t
@@ -230,11 +240,16 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
   };
 
   const handlePhotoUpload = async (taskId: string, photoUrl: string) => {
-    await fetch(`/api/tasks/${taskId}/submit`, {
+    const submitRes = await fetch(`/api/tasks/${taskId}/submit`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ photoUrl }),
     });
+    if (!submitRes.ok) {
+      alert(await userFacingApiError(submitRes, 'submit'));
+      return;
+    }
     updateChallenge(challenge.id, {
       tasks: challenge.tasks.map((t) =>
         t.id === taskId ? { ...t, completed: true, photoUrl, validationStatus: 'pending' as never } : t
@@ -243,11 +258,16 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
   };
 
   const handleStravaLink = async (taskId: string, linkUrl: string) => {
-    await fetch(`/api/tasks/${taskId}/submit`, {
+    const submitRes = await fetch(`/api/tasks/${taskId}/submit`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ linkUrl }),
     });
+    if (!submitRes.ok) {
+      alert(await userFacingApiError(submitRes, 'submit'));
+      return;
+    }
     updateChallenge(challenge.id, {
       tasks: challenge.tasks.map((t) =>
         t.id === taskId ? { ...t, completed: true, linkUrl, validationStatus: 'pending' as never } : t

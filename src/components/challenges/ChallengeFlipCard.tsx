@@ -1,8 +1,9 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import Image from 'next/image';
-import { Camera, CheckCircle, Link as LinkIcon, X } from 'lucide-react';
+import { Camera, CheckCircle, X } from 'lucide-react';
+import { userFacingApiError } from '@/lib/user-facing-api-error';
+import { normalizeEvidenceLink } from '@/lib/normalize-evidence-link';
 import type { Challenge } from '@/types';
 import { ChallengeCategory, ChallengeStatus } from '@/types';
 import { useAppStore } from '@/store/useAppStore';
@@ -23,16 +24,6 @@ const STRAVA_CATEGORIES: ChallengeCategory[] = [
   ChallengeCategory.OUTDOOR,
   ChallengeCategory.MIXED,
 ];
-
-function isValidStravaOrSportsLink(url: string): boolean {
-  try {
-    const u = new URL(url);
-    // Acepta strava.com/activities/... o cualquier URL https
-    return u.protocol === 'https:';
-  } catch {
-    return false;
-  }
-}
 
 interface ChallengeFlipCardProps {
   challenge: Challenge;
@@ -62,22 +53,29 @@ export default function ChallengeFlipCard({ challenge, className }: ChallengeFli
     if (photoFile) {
       const fd = new FormData();
       fd.append('file', photoFile);
-      const res = await fetch('/api/upload', { method: 'POST', body: fd });
-      if (res.ok) {
-        const { url } = await res.json();
-        photoUrl = url;
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: fd,
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        setSubmitting(false);
+        alert(await userFacingApiError(res, 'upload'));
+        return;
       }
+      const { url } = await res.json();
+      photoUrl = url;
     }
 
-    // Submit to task endpoint
     const submitRes = await fetch(`/api/tasks/${firstTask.id}/submit`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ photoUrl, linkUrl }),
     });
     if (!submitRes.ok) {
       setSubmitting(false);
-      alert('No pudimos enviar tu evidencia. Intenta nuevamente.');
+      alert(await userFacingApiError(submitRes, 'submit'));
       return;
     }
 
@@ -145,11 +143,12 @@ export default function ChallengeFlipCard({ challenge, className }: ChallengeFli
       setLinkError('Ingresa un link válido');
       return;
     }
-    if (!isValidStravaOrSportsLink(trimmed)) {
-      setLinkError('El link debe comenzar con https://');
+    const normalized = normalizeEvidenceLink(trimmed);
+    if (!normalized) {
+      setLinkError('El link no es válido. Usa una URL completa (ej. Strava).');
       return;
     }
-    await submitEvidence(undefined, trimmed);
+    await submitEvidence(undefined, normalized);
     setLinkValue('');
     setLinkError('');
     setShowLinkInput(false);
@@ -187,13 +186,15 @@ export default function ChallengeFlipCard({ challenge, className }: ChallengeFli
           >
             {imageUrl ? (
               <>
-                <Image
+                {/* Native img: works for any HTTPS URL without next/image remotePatterns / optimizer issues (strict networks, new CDNs). */}
+                <img
                   src={imageUrl}
                   alt={challenge.title}
-                  fill
-                  className="object-cover"
-                  sizes="100px"
+                  className="absolute inset-0 w-full h-full object-cover"
                   style={{ borderRadius: 16 }}
+                  loading="lazy"
+                  decoding="async"
+                  referrerPolicy="no-referrer"
                 />
                 <div
                   className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"
