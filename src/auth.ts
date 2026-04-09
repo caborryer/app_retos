@@ -18,24 +18,29 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
       async authorize(credentials) {
         try {
-          if (!credentials?.email || !credentials?.password) return null;
+          if (!credentials?.email || !credentials?.password) {
+            console.error('[authorize] missing credentials');
+            return null;
+          }
           const email = credentials.email as string;
           const inputPassword = credentials.password as string;
 
-          const user = await prisma.user.findUnique({
-            where: { email },
-          });
+          console.log('[authorize] attempting login for:', email);
 
-          if (!user) return null;
+          const user = await prisma.user.findUnique({ where: { email } });
+
+          if (!user) {
+            console.error('[authorize] user not found:', email);
+            return null;
+          }
+
+          console.log('[authorize] user found, role:', user.role, 'passwordMode:', user.password?.startsWith('$2') ? 'bcrypt' : 'plaintext');
 
           let passwordMatch = false;
 
-          // Current path: hashed password
           if (user.password?.startsWith('$2')) {
             passwordMatch = await bcrypt.compare(inputPassword, user.password);
           } else {
-            // Legacy fallback: plain-text password stored in DB.
-            // If it matches, migrate it immediately to bcrypt hash.
             passwordMatch = user.password === inputPassword;
             if (passwordMatch) {
               const rehashed = await bcrypt.hash(inputPassword, 12);
@@ -45,6 +50,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               });
             }
           }
+
+          console.log('[authorize] passwordMatch:', passwordMatch);
 
           if (!passwordMatch) return null;
 
@@ -57,7 +64,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             role: (user.role as any) as 'USER' | 'ADMIN',
           };
         } catch (error) {
-          console.error('NextAuth authorize error:', error);
+          console.error('[authorize] unexpected error:', error);
           return null;
         }
       },

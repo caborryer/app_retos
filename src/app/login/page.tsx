@@ -39,7 +39,11 @@ export default function LoginPage() {
         email: email.trim(),
         password,
         redirect: false,
+        callbackUrl: '/home',
       });
+
+      // Temporary debug — remove after login is stable
+      console.debug('[login] signIn result:', JSON.stringify(result));
 
       if (!result) {
         setError('Sin respuesta del servidor. Intenta nuevamente.');
@@ -47,9 +51,6 @@ export default function LoginPage() {
       }
 
       if (result.ok) {
-        // Hard navigation so the browser sends the session cookie on the next request.
-        // Do NOT use result.url — it defaults to window.location.href (/login) which
-        // would loop back to the login page. Always go to /home explicitly.
         window.location.assign('/home');
         return;
       }
@@ -57,9 +58,10 @@ export default function LoginPage() {
       setError(
         result.error === 'CredentialsSignin'
           ? 'Credenciales incorrectas. Verifica tu email y contraseña.'
-          : `No se pudo iniciar sesión. Intenta nuevamente.`,
+          : `Error al iniciar sesión (${result.error ?? 'desconocido'}). Intenta nuevamente.`,
       );
-    } catch {
+    } catch (err) {
+      console.error('[login] signIn threw:', err);
       setError('No se pudo conectar al servicio de autenticación. Intenta nuevamente.');
     } finally {
       setLoading(false);
