@@ -2,52 +2,24 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
-import { useFormState, useFormStatus } from 'react-dom';
+import { signIn, useSession } from 'next-auth/react';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
-import { credentialsSignInAction } from '@/app/actions/credentials-sign-in';
-
-function AdminSubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="w-full py-3 rounded-xl bg-primary-500 text-white font-semibold text-sm hover:bg-primary-600 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
-    >
-      {pending ? (
-        <>
-          <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-          Ingresando...
-        </>
-      ) : (
-        'Acceder al panel'
-      )}
-    </button>
-  );
-}
 
 export default function AdminLoginPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
+
+  const [email, setEmail] = useState('admin@sport.com');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-
-  const [state, formAction] = useFormState(credentialsSignInAction, undefined);
-
-  useEffect(() => {
-    if (state && 'ok' in state && state.ok && state.redirectTo) {
-      const url = state.redirectTo.startsWith('http')
-        ? state.redirectTo
-        : `${window.location.origin}${state.redirectTo.startsWith('/') ? '' : '/'}${state.redirectTo}`;
-      window.location.assign(url);
-    }
-  }, [state]);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (status === 'authenticated' && session?.user?.role === 'ADMIN') {
-      router.replace('/admin');
+      window.location.assign('/admin');
     }
-  }, [status, session, router]);
+  }, [status, session]);
 
   if (status === 'loading') {
     return (
@@ -55,6 +27,51 @@ export default function AdminLoginPage() {
         <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const result = await signIn('credentials', {
+        email: email.trim(),
+        password,
+        redirect: false,
+      });
+
+      if (!result) {
+        setError('Sin respuesta del servidor. Intenta nuevamente.');
+        return;
+      }
+
+      if (result.ok) {
+        // Fetch session to verify ADMIN role before navigating.
+        try {
+          const s = await fetch('/api/auth/session', { cache: 'no-store' }).then((r) => r.json());
+          const role = s?.user?.role as string | undefined;
+          if (role !== 'ADMIN') {
+            setError('Tu cuenta no tiene permisos de administrador.');
+            return;
+          }
+        } catch {
+          // If session fetch fails, still navigate — the admin layout will guard.
+        }
+        window.location.assign(result.url ?? '/admin');
+        return;
+      }
+
+      setError(
+        result.error === 'CredentialsSignin'
+          ? 'Credenciales incorrectas o sin permisos de administrador.'
+          : 'No se pudo iniciar sesión. Intenta nuevamente.',
+      );
+    } catch {
+      setError('No se pudo conectar al servicio de autenticación. Intenta nuevamente.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -68,9 +85,7 @@ export default function AdminLoginPage() {
           <p className="text-slate-400 text-sm mt-1">Acceso exclusivo para administradores</p>
         </div>
 
-        <form action={formAction} className="space-y-4">
-          <input type="hidden" name="intent" value="admin" />
-
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="admin-email" className="block text-sm font-medium text-slate-300 mb-1.5">
               Email
@@ -79,11 +94,11 @@ export default function AdminLoginPage() {
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
               <input
                 id="admin-email"
-                name="email"
                 type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
                 autoComplete="email"
-                defaultValue="admin@sport.com"
                 className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-4 py-3 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
               />
             </div>
@@ -97,8 +112,9 @@ export default function AdminLoginPage() {
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
               <input
                 id="admin-password"
-                name="password"
                 type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
                 autoComplete="current-password"
@@ -115,18 +131,35 @@ export default function AdminLoginPage() {
             </div>
           </div>
 
-          {state && 'error' in state && state.error && (
+          {error && (
             <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-400 text-sm">
-              {state.error}
+              {error}
             </div>
           )}
 
-          <AdminSubmitButton />
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 rounded-xl bg-primary-500 text-white font-semibold text-sm hover:bg-primary-600 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <>
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Ingresando...
+              </>
+            ) : (
+              'Acceder al panel'
+            )}
+          </button>
         </form>
 
         <p className="text-center text-slate-500 text-xs">
           ¿Usuario regular?{' '}
-          <button type="button" onClick={() => router.push('/login')} className="text-primary-400 hover:text-primary-300">
+          <button
+            type="button"
+            onClick={() => router.push('/login')}
+            className="text-primary-400 hover:text-primary-300"
+          >
             Ir al login normal
           </button>
         </p>

@@ -2,53 +2,24 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
-import { useFormState, useFormStatus } from 'react-dom';
+import { signIn, useSession } from 'next-auth/react';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
-import { credentialsSignInAction } from '@/app/actions/credentials-sign-in';
-
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="w-full py-3 rounded-xl text-white font-semibold text-sm transition-all disabled:opacity-60 flex items-center justify-center gap-2"
-      style={{ background: '#FC0230' }}
-    >
-      {pending ? (
-        <>
-          <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-          Ingresando...
-        </>
-      ) : (
-        'Entrar al tablero →'
-      )}
-    </button>
-  );
-}
 
 export default function LoginPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-
-  const [state, formAction] = useFormState(credentialsSignInAction, undefined);
-
-  useEffect(() => {
-    if (state && 'ok' in state && state.ok && state.redirectTo) {
-      const url = state.redirectTo.startsWith('http')
-        ? state.redirectTo
-        : `${window.location.origin}${state.redirectTo.startsWith('/') ? '' : '/'}${state.redirectTo}`;
-      window.location.assign(url);
-    }
-  }, [state]);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (status === 'authenticated' && session?.user) {
-      router.replace(session.user.role === 'ADMIN' ? '/admin' : '/home');
+      window.location.assign(session.user.role === 'ADMIN' ? '/admin' : '/home');
     }
-  }, [status, session, router]);
+  }, [status, session]);
 
   if (status === 'loading') {
     return (
@@ -56,6 +27,41 @@ export default function LoginPage() {
         <div className="w-8 h-8 border-4 border-[#FC0230] border-t-transparent rounded-full animate-spin" />
       </div>
     );
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const result = await signIn('credentials', {
+        email: email.trim(),
+        password,
+        redirect: false,
+      });
+
+      if (!result) {
+        setError('Sin respuesta del servidor. Intenta nuevamente.');
+        return;
+      }
+
+      if (result.ok) {
+        // Hard navigation so the browser sends the session cookie on the next request.
+        window.location.assign(result.url ?? '/home');
+        return;
+      }
+
+      setError(
+        result.error === 'CredentialsSignin'
+          ? 'Credenciales incorrectas. Verifica tu email y contraseña.'
+          : `No se pudo iniciar sesión. Intenta nuevamente.`,
+      );
+    } catch {
+      setError('No se pudo conectar al servicio de autenticación. Intenta nuevamente.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -83,9 +89,7 @@ export default function LoginPage() {
             <p className="text-[#6B6B67] text-sm mt-1">Accede a tu tablero de retos</p>
           </div>
 
-          <form action={formAction} className="space-y-4">
-            <input type="hidden" name="intent" value="user" />
-
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-[#444441] mb-1.5">
                 Email
@@ -94,8 +98,9 @@ export default function LoginPage() {
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#B8B6AF]" />
                 <input
                   id="email"
-                  name="email"
                   type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   placeholder="tu@email.com"
                   required
                   autoComplete="email"
@@ -112,8 +117,9 @@ export default function LoginPage() {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#B8B6AF]" />
                 <input
                   id="password"
-                  name="password"
                   type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
                   autoComplete="current-password"
@@ -130,13 +136,27 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {state && 'error' in state && state.error && (
+            {error && (
               <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-600 text-sm">
-                {state.error}
+                {error}
               </div>
             )}
 
-            <SubmitButton />
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 rounded-xl text-white font-semibold text-sm transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+              style={{ background: '#FC0230' }}
+            >
+              {loading ? (
+                <>
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Ingresando...
+                </>
+              ) : (
+                'Entrar al tablero →'
+              )}
+            </button>
           </form>
         </div>
       </div>
