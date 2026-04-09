@@ -84,6 +84,15 @@ export async function credentialsSignInAction(
             : 'Credenciales incorrectas. Verifica tu email y contraseña.',
       };
     }
-    throw e;
+
+    // Any other Auth.js error (CallbackRouteError, UntrustedHost, etc.) or
+    // unexpected exception — log server-side and return a safe message so the
+    // Server Action never throws (which would produce "Application error").
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error('[credentialsSignInAction] unexpected error:', msg, e);
+    return {
+      error:
+        'No se pudo completar el inicio de sesión. Intenta nuevamente o contacta al administrador.',
+    };
   }
 }
