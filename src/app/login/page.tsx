@@ -48,7 +48,9 @@ export default function LoginPage() {
 
       if (result.ok) {
         // Hard navigation so the browser sends the session cookie on the next request.
-        window.location.assign(result.url ?? '/home');
+        // Do NOT use result.url — it defaults to window.location.href (/login) which
+        // would loop back to the login page. Always go to /home explicitly.
+        window.location.assign('/home');
         return;
       }
 

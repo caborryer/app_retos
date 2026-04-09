@@ -47,7 +47,7 @@ export default function AdminLoginPage() {
       }
 
       if (result.ok) {
-        // Fetch session to verify ADMIN role before navigating.
+        // Verify ADMIN role before navigating (session cookie is now set).
         try {
           const s = await fetch('/api/auth/session', { cache: 'no-store' }).then((r) => r.json());
           const role = s?.user?.role as string | undefined;
@@ -56,9 +56,10 @@ export default function AdminLoginPage() {
             return;
           }
         } catch {
-          // If session fetch fails, still navigate — the admin layout will guard.
+          // If the session fetch fails, still navigate — the admin layout will guard.
         }
-        window.location.assign(result.url ?? '/admin');
+        // Hard navigation — do NOT use result.url (it defaults to /admin/login).
+        window.location.assign('/admin');
         return;
       }
 
