@@ -161,6 +161,13 @@ export default function LoginPage() {
                 'Entrar al tablero →'
               )}
             </button>
+
+            <p className="text-center text-sm text-[#9B9B95] pt-1">
+              ¿No tienes cuenta?{' '}
+              <a href="/register" className="text-[#FC0230] font-medium hover:opacity-80 transition-opacity">
+                Regístrate aquí
+              </a>
+            </p>
           </form>
         </div>
       </div>

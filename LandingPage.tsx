@@ -330,20 +330,41 @@ export default function LandingPage() {
           </div>
 
           {/* CTA */}
-          <button
-            onClick={() => router.push('/login')}
-            style={{
-              background: c, color: '#fff', border: 'none',
-              borderRadius: 12, padding: '14px 24px',
-              fontSize: 14, fontWeight: 600, cursor: 'pointer',
-              letterSpacing: '-.01em', width: '100%',
-              transition: 'background .3s, transform .15s',
-            }}
-            onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-2px)')}
-            onMouseLeave={e => (e.currentTarget.style.transform = 'translateY(0)')}
-          >
-            Comenzar — es gratis →
-          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{
+              background: '#F7F6F2', borderRadius: 12, padding: '14px 16px',
+              display: 'flex', alignItems: 'center', gap: 10,
+            }}>
+              <div style={{ fontSize: 22 }}>🎯</div>
+              <div>
+                <p style={{ margin: 0, fontWeight: 600, fontSize: 13, color: '#1C1C1A' }}>¿Quieres participar?</p>
+                <p style={{ margin: 0, fontSize: 12, color: '#9B9B95', marginTop: 1 }}>Regístrate gratis y empieza a completar retos</p>
+              </div>
+            </div>
+            <button
+              onClick={() => router.push('/register')}
+              style={{
+                background: c, color: '#fff', border: 'none',
+                borderRadius: 12, padding: '14px 24px',
+                fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                letterSpacing: '-.01em', width: '100%',
+                transition: 'background .3s, transform .15s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-2px)')}
+              onMouseLeave={e => (e.currentTarget.style.transform = 'translateY(0)')}
+            >
+              Crear cuenta — es gratis →
+            </button>
+            <p style={{ textAlign: 'center', fontSize: 12, color: '#9B9B95', margin: 0 }}>
+              ¿Ya tienes cuenta?{' '}
+              <button
+                onClick={() => router.push('/login')}
+                style={{ background: 'none', border: 'none', padding: 0, color: c, fontWeight: 500, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}
+              >
+                Inicia sesión
+              </button>
+            </p>
+          </div>
         </div>
 
         {/* ── Columna derecha: tablero ───────────────────────────────── */}

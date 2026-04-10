@@ -1,7 +1,7 @@
 import { getToken } from 'next-auth/jwt';
 import { NextRequest, NextResponse } from 'next/server';
 
-const PUBLIC_ROUTES = ['/', '/login', '/admin/login'];
+const PUBLIC_ROUTES = ['/', '/login', '/admin/login', '/register'];
 const ADMIN_ROUTES = ['/admin'];
 
 function isRequestHttps(req: NextRequest) {
@@ -31,6 +31,9 @@ export default async function middleware(req: NextRequest) {
   // Always allow auth API routes
   if (isApiAuth) return NextResponse.next();
   if (isHealthEndpoint) return NextResponse.next();
+
+  // Allow the public registration API endpoint
+  if (pathname === '/api/register') return NextResponse.next();
 
   // Always allow public routes
   if (isPublic) return NextResponse.next();
