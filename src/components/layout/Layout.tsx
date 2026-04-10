@@ -4,6 +4,7 @@ import { ReactNode } from 'react';
 import Header from './Header';
 import BottomNav from './BottomNav';
 import { cn } from '@/lib/utils';
+import { useNotificationSync } from '@/hooks/useNotificationSync';
 
 interface LayoutProps {
   children: ReactNode;
@@ -22,6 +23,8 @@ export default function Layout({
   showBottomNav = true,
   className,
 }: LayoutProps) {
+  useNotificationSync();
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-secondary-50 to-white">
       <Header

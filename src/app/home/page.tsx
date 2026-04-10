@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import Layout from '@/components/layout/Layout';
 import { BingoBoard } from '@/components/bingo/BingoBoard';
@@ -13,7 +13,7 @@ export default function HomePage() {
   const { status } = useSession();
   const { challenges, setChallenges, setIsLoading } = useAppStore();
 
-  const [boards, setBoards] = useState<{ id: string; title: string; emoji: string; color: string; coverImage: string | null }[]>([]);
+  const [boards, setBoards] = useState<{ id: string; title: string; emoji: string; color: string; coverImage: string | null; active: boolean }[]>([]);
   const [activeBoardId, setActiveBoardId] = useState<string | null>(null);
   const [loadingBoard, setLoadingBoard] = useState(true);
   const boardCache = useRef<Record<string, Challenge[]>>({});
@@ -23,7 +23,7 @@ export default function HomePage() {
     if (status !== 'authenticated') return;
     fetch('/api/boards')
       .then((r) => r.json())
-      .then((data: { id: string; title: string; emoji: string; color: string; coverImage: string | null }[]) => {
+      .then((data: { id: string; title: string; emoji: string; color: string; coverImage: string | null; active: boolean }[]) => {
         setBoards(data);
         if (data.length > 0) setActiveBoardId(data[0].id);
       })
@@ -116,12 +116,15 @@ export default function HomePage() {
 
           {/* Board tabs (if multiple boards) */}
           {boards.length > 1 && (
-            <div className="flex gap-2 mt-2 overflow-x-auto pb-1">
+            <div
+              className="flex gap-2 mt-2 overflow-x-auto [&::-webkit-scrollbar]:hidden"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
+            >
               {boards.map((board) => (
                 <button
                   key={board.id}
                   onClick={() => switchBoard(board.id)}
-                  className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                  className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                     board.id === activeBoardId
                       ? 'text-white'
                       : 'bg-secondary-100 text-secondary-600 hover:bg-secondary-200'
@@ -140,6 +143,7 @@ export default function HomePage() {
           {challenges.length > 0 && (
             <BingoBoard
               challenges={challenges}
+              boardId={activeBoardId ?? ''}
               boardTitle={activeBoard?.title ?? 'Tablero'}
               boardNumber={boards.findIndex((b) => b.id === activeBoardId) + 1}
               boardColor={activeBoard?.color}

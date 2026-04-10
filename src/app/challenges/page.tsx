@@ -148,6 +148,7 @@ export default function HomePage() {
               {challenges.length > 0 && (
                 <BingoBoard
                   challenges={challenges}
+                  boardId={activeBoard.id}
                   boardTitle={activeBoard.title}
                   boardNumber={1}
                   onBingoContinue={handleBingoContinue}

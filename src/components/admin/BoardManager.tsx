@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Upload, Save, X, RefreshCw, ChevronDown, ChevronUp,
-  Trash2, Edit2, GripVertical, Camera, Link as LinkIcon, ImageIcon,
+  Trash2, Edit2, GripVertical, Camera, Link as LinkIcon, ImageIcon, RotateCcw,
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -695,6 +695,8 @@ function BoardCard({ board, onSave, onDelete }: { board: Board; onSave: (b: Part
   const [draft, setDraft] = useState<Partial<Board>>({});
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState(false);
 
   function startEdit() {
     setDraft({
@@ -723,6 +725,24 @@ function BoardCard({ board, onSave, onDelete }: { board: Board; onSave: (b: Part
     setDeleting(true);
     await onDelete();
     setDeleting(false);
+  }
+
+  async function handleReset() {
+    if (!confirm(`¿Reiniciar todo el progreso del tablero "${board.title}"? Se borrarán los envíos y el avance de todos los usuarios. Esta acción no se puede deshacer.`)) return;
+    setResetting(true);
+    try {
+      const res = await fetch(`/api/admin/boards/${board.id}/reset`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Reset failed');
+      setResetSuccess(true);
+      setTimeout(() => setResetSuccess(false), 3000);
+    } catch {
+      alert('No se pudo reiniciar el tablero');
+    } finally {
+      setResetting(false);
+    }
   }
 
   const challengeCount = board._count?.challenges ?? 0;
@@ -882,6 +902,14 @@ function BoardCard({ board, onSave, onDelete }: { board: Board; onSave: (b: Part
               )}
               <div className="flex gap-1.5">
                 <button
+                  onClick={handleReset}
+                  disabled={resetting || deleting}
+                  className="p-1.5 rounded-lg bg-slate-700 text-slate-400 hover:bg-orange-500/20 hover:text-orange-400 transition-colors disabled:opacity-50"
+                  title="Reiniciar progreso de usuarios"
+                >
+                  <RotateCcw className={`w-3.5 h-3.5 ${resetting ? 'animate-spin' : ''}`} />
+                </button>
+                <button
                   onClick={handleDelete}
                   disabled={deleting}
                   className="p-1.5 rounded-lg bg-slate-700 text-slate-400 hover:bg-red-600/20 hover:text-red-400 transition-colors"
@@ -897,6 +925,13 @@ function BoardCard({ board, onSave, onDelete }: { board: Board; onSave: (b: Part
                 </button>
               </div>
             </div>
+
+            {/* Reset success feedback */}
+            {resetSuccess && (
+              <p className="text-xs text-green-400 bg-green-500/10 rounded-lg px-2 py-1.5 border border-green-500/20">
+                Progreso reiniciado correctamente
+              </p>
+            )}
 
             {/* Toggle challenge panel */}
             <button

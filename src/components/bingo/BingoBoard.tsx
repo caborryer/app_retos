@@ -8,6 +8,7 @@ import ChallengeFlipCard from '@/components/challenges/ChallengeFlipCard';
 import BingoModal from './BingoModal';
 interface BingoBoardProps {
   challenges: Challenge[];
+  boardId: string;
   boardTitle: string;
   boardNumber: number;
   boardColor?: string;
@@ -51,23 +52,30 @@ function buildCells(challenges: Challenge[]): (Challenge | null)[] {
   ];
 }
 
-export function BingoBoard({ challenges, boardTitle, boardNumber, boardColor = '#FC0230', boardCoverImage, onBingoContinue }: BingoBoardProps) {
+const BINGO_SEEN_PREFIX = 'bingo-seen-';
+
+export function BingoBoard({ challenges, boardId, boardTitle, boardNumber, boardColor = '#FC0230', boardCoverImage, onBingoContinue }: BingoBoardProps) {
   const [showBingo, setShowBingo] = useState(false);
 
   // Cerrar modal cuando cambia el tablero
   useEffect(() => {
     setShowBingo(false);
-  }, [boardNumber, boardTitle]);
+  }, [boardId]);
 
-  // Detectar todos los retos completados
+  // Detectar todos los retos completados — solo mostrar si aún no fue visto
   useEffect(() => {
-    if (challenges.length === 0 || showBingo) return;
+    if (challenges.length === 0 || showBingo || !boardId) return;
     const allDone = challenges.every((c) => c.status === ChallengeStatus.COMPLETED);
-    if (allDone) {
-      const timer = setTimeout(() => setShowBingo(true), 600);
-      return () => clearTimeout(timer);
-    }
-  }, [challenges, showBingo]);
+    if (!allDone) return;
+
+    const key = BINGO_SEEN_PREFIX + boardId;
+    if (localStorage.getItem(key) === '1') return;
+
+    // Marcar como visto ANTES del timeout para que recargas no retriggereen el modal
+    localStorage.setItem(key, '1');
+    const timer = setTimeout(() => setShowBingo(true), 600);
+    return () => clearTimeout(timer);
+  }, [challenges, showBingo, boardId]);
 
   const totalPoints = challenges.reduce((acc, c) => acc + c.points, 0);
   const cells = buildCells(challenges);

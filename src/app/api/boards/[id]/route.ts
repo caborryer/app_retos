@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { notifyNewBoard } from '@/lib/notifyNewBoard';
 
 // PATCH /api/boards/:id — update a board (admin only)
 export async function PATCH(
@@ -14,6 +15,12 @@ export async function PATCH(
 
   const body = await req.json();
   const { title, emoji, color, description, coverImage, active, folder, startDate, endDate } = body;
+
+  // Check previous active state to detect activation
+  const previous = await prisma.board.findUnique({
+    where: { id: params.id },
+    select: { active: true },
+  });
 
   const board = await prisma.board.update({
     where: { id: params.id },
@@ -29,6 +36,11 @@ export async function PATCH(
       ...(endDate !== undefined && { endDate: endDate ? new Date(endDate) : null }),
     },
   });
+
+  // Notify when a board transitions from inactive to active
+  if (active === true && previous?.active === false) {
+    notifyNewBoard(board.id, board.title, board.folder).catch(console.error);
+  }
 
   return NextResponse.json(board);
 }

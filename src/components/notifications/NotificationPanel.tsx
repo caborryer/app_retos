@@ -17,15 +17,24 @@ export default function NotificationPanel({ isOpen, onClose }: NotificationPanel
 
   const handleMarkAllAsRead = () => {
     notifications.forEach((notification) => {
-      if (!notification.read) {
-        markAsRead(notification.id);
-      }
+      if (!notification.read) markAsRead(notification.id);
     });
+    // Sync to server
+    fetch('/api/notifications/read', { method: 'PATCH', body: JSON.stringify({}), headers: { 'Content-Type': 'application/json' } }).catch(() => {});
+  };
+
+  const handleMarkOneAsRead = (id: string) => {
+    markAsRead(id);
+    fetch('/api/notifications/read', { method: 'PATCH', body: JSON.stringify({ ids: [id] }), headers: { 'Content-Type': 'application/json' } }).catch(() => {});
+  };
+
+  const handleClearAll = () => {
+    clearNotifications();
+    fetch('/api/notifications/read', { method: 'PATCH', body: JSON.stringify({}), headers: { 'Content-Type': 'application/json' } }).catch(() => {});
   };
 
   const handleDelete = (id: string) => {
-    // In a real app, this would call a delete action
-    markAsRead(id);
+    handleMarkOneAsRead(id);
   };
 
   return (
@@ -91,7 +100,7 @@ export default function NotificationPanel({ isOpen, onClose }: NotificationPanel
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={clearNotifications}
+                  onClick={handleClearAll}
                   leftIcon={<Trash2 className="w-4 h-4" />}
                 >
                   Limpiar todas
@@ -117,7 +126,7 @@ export default function NotificationPanel({ isOpen, onClose }: NotificationPanel
                     <NotificationItem
                       key={notification.id}
                       notification={notification}
-                      onMarkAsRead={markAsRead}
+                      onMarkAsRead={handleMarkOneAsRead}
                       onDelete={handleDelete}
                     />
                   ))}

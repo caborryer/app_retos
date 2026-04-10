@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { notifyNewBoard } from '@/lib/notifyNewBoard';
 
 // GET /api/boards — admins see all boards; regular users see only active ones
 export async function GET() {
@@ -42,6 +43,11 @@ export async function POST(req: Request) {
       endDate: endDate ? new Date(endDate) : null,
     },
   });
+
+  // Notify users when a board is created already active
+  if (board.active) {
+    notifyNewBoard(board.id, board.title, board.folder).catch(console.error);
+  }
 
   return NextResponse.json(board, { status: 201 });
 }
