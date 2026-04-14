@@ -7,6 +7,11 @@ import {
   Trash2, Edit2, GripVertical, Camera, Link as LinkIcon, ImageIcon, RotateCcw,
 } from 'lucide-react';
 import Image from 'next/image';
+import {
+  canActivateBoard,
+  getBoardActivationBlockReasons,
+  type ChallengeLikeForActivation,
+} from '@/lib/board-activation-rules';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -708,6 +713,35 @@ function BoardCard({
   const [resetting, setResetting] = useState(false);
   const [resetSuccess, setResetSuccess] = useState(false);
   const [addingNewFolder, setAddingNewFolder] = useState(false);
+  const [activationChallenges, setActivationChallenges] = useState<ChallengeLikeForActivation[]>([]);
+  const [activationLoading, setActivationLoading] = useState(false);
+
+  useEffect(() => {
+    if (!editing) {
+      setActivationChallenges([]);
+      return;
+    }
+    let cancelled = false;
+    setActivationLoading(true);
+    fetch(`/api/admin/challenges?boardId=${board.id}`, { credentials: 'include' })
+      .then((r) => r.json())
+      .then((data: unknown) => {
+        if (cancelled) return;
+        setActivationChallenges(Array.isArray(data) ? (data as ChallengeLikeForActivation[]) : []);
+      })
+      .catch(() => {
+        if (!cancelled) setActivationChallenges([]);
+      })
+      .finally(() => {
+        if (!cancelled) setActivationLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [editing, board.id]);
+
+  const activationBlockReasons = getBoardActivationBlockReasons(activationChallenges);
+  const canEnableActive = canActivateBoard(activationChallenges);
 
   function startEdit() {
     setDraft({
@@ -726,6 +760,17 @@ function BoardCard({
   }
 
   async function handleSave() {
+    if (draft.active) {
+      if (activationLoading) {
+        alert('Espera a que termine de cargar la lista de retos e inténtalo de nuevo.');
+        return;
+      }
+      const reasons = getBoardActivationBlockReasons(activationChallenges);
+      if (reasons.length > 0) {
+        alert(`No se puede guardar como activo:\n\n${reasons.slice(0, 15).join('\n')}`);
+        return;
+      }
+    }
     setSaving(true);
     await onSave(draft);
     setSaving(false);
@@ -874,16 +919,53 @@ function BoardCard({
               </div>
             </div>
 
-            {/* Active */}
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={draft.active ?? false}
-                onChange={(e) => setDraft((d) => ({ ...d, active: e.target.checked }))}
-                className="rounded"
-              />
-              <span className="text-slate-300 text-sm">Tablero activo</span>
-            </label>
+            {/* Active — only when all 8 challenges are fully configured */}
+            <div className="space-y-2 rounded-xl border border-slate-600 bg-slate-800/80 p-3">
+              <label
+                className={`flex items-center gap-2 ${activationLoading || (!canEnableActive && !(draft.active ?? false)) ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'}`}
+              >
+                <input
+                  type="checkbox"
+                  checked={draft.active ?? false}
+                  disabled={activationLoading}
+                  onChange={(e) => {
+                    const next = e.target.checked;
+                    if (!next) {
+                      setDraft((d) => ({ ...d, active: false }));
+                      return;
+                    }
+                    if (activationLoading) return;
+                    if (!canEnableActive) return;
+                    setDraft((d) => ({ ...d, active: true }));
+                  }}
+                  className="rounded disabled:opacity-50"
+                />
+                <span className="text-slate-300 text-sm font-medium">Tablero activo</span>
+              </label>
+              {activationLoading && (
+                <p className="text-slate-500 text-xs">Comprobando retos…</p>
+              )}
+              {!activationLoading && !(draft.active ?? false) && !canEnableActive && (
+                <div className="text-xs text-amber-200/90 space-y-1.5">
+                  <p className="font-medium text-amber-100">
+                    No puedes activarlo todavía por:
+                  </p>
+                  <ul className="list-disc pl-4 space-y-0.5 max-h-32 overflow-y-auto">
+                    {activationBlockReasons.slice(0, 12).map((r, i) => (
+                      <li key={i}>{r}</li>
+                    ))}
+                  </ul>
+                  {activationBlockReasons.length > 12 && (
+                    <p className="text-amber-200/70">…y más. Corrige los retos y vuelve a abrir edición.</p>
+                  )}
+                </div>
+              )}
+              {!activationLoading && canEnableActive && !(draft.active ?? false) && (
+                <p className="text-xs text-emerald-400/90">
+                  Los 8 retos están listos; puedes marcar el tablero como activo.
+                </p>
+              )}
+            </div>
 
             <div className="flex gap-2">
               <button
@@ -1015,7 +1097,6 @@ function NewBoardModal({ onClose, onCreate, existingFolders }: {
     emoji: '🏆',
     color: '#FC0230',
     description: '',
-    active: false,
     folder: '',
     startDate: '',
     endDate: '',
@@ -1036,7 +1117,11 @@ function NewBoardModal({ onClose, onCreate, existingFolders }: {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          ...form,
+          title: form.title,
+          emoji: form.emoji,
+          color: form.color,
+          description: form.description || null,
+          active: false,
           folder: form.folder || null,
           startDate: form.startDate || null,
           endDate: form.endDate || null,
@@ -1149,16 +1234,11 @@ function NewBoardModal({ onClose, onCreate, existingFolders }: {
           </div>
         </div>
 
-        {/* Active */}
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={form.active}
-            onChange={(e) => set('active', e.target.checked)}
-            className="rounded"
-          />
-          <span className="text-slate-300 text-sm">Marcar como activo</span>
-        </label>
+        <p className="text-slate-500 text-xs leading-relaxed">
+          El tablero se crea <strong className="text-slate-400">inactivo</strong>. Cuando tenga los 8 retos
+          con título, descripción, imagen, tareas y evidencia (foto o link) configuradas, podrás activarlo
+          al editar el tablero.
+        </p>
 
         <div className="flex gap-3 pt-1">
           <button
@@ -1213,9 +1293,17 @@ export default function BoardManager() {
         credentials: 'include',
         body: JSON.stringify(updates),
       });
-      if (!res.ok) throw new Error();
-      const updated = await res.json();
-      setBoards((prev) => prev.map((b) => (b.id === id ? { ...b, ...updated } : b)));
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const reasons = Array.isArray(body.reasons) ? body.reasons as string[] : [];
+        const msg =
+          reasons.length > 0
+            ? `${body.error ?? 'No se pudo guardar.'}\n\n${reasons.slice(0, 15).join('\n')}`
+            : (typeof body.error === 'string' ? body.error : 'Error al guardar los cambios');
+        alert(msg);
+        return;
+      }
+      setBoards((prev) => prev.map((b) => (b.id === id ? { ...b, ...body } : b)));
     } catch {
       alert('Error al guardar los cambios');
     }

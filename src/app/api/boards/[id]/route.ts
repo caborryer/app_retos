@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { notifyNewBoard } from '@/lib/notifyNewBoard';
+import { getBoardActivationBlockReasons } from '@/lib/board-activation-rules';
 
 // PATCH /api/boards/:id — update a board (admin only)
 export async function PATCH(
@@ -16,14 +17,20 @@ export async function PATCH(
   const body = await req.json();
   const { title, emoji, color, description, coverImage, active, folder, startDate, endDate } = body;
 
-  // Enforce full board setup before activation
+  // Enforce full board setup + complete challenge data before activation
   if (active === true) {
-    const challengeCount = await prisma.challenge.count({
+    const challenges = await prisma.challenge.findMany({
       where: { boardId: params.id },
+      include: { tasks: { orderBy: { createdAt: 'asc' } } },
+      orderBy: { createdAt: 'asc' },
     });
-    if (challengeCount < 8) {
+    const reasons = getBoardActivationBlockReasons(challenges);
+    if (reasons.length > 0) {
       return NextResponse.json(
-        { error: `Para activar el tablero debes completar los 8 retos (actual: ${challengeCount}/8).` },
+        {
+          error: 'No se puede activar el tablero hasta que todos los retos estén completos.',
+          reasons,
+        },
         { status: 400 }
       );
     }
