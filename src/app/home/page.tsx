@@ -1,38 +1,88 @@
 'use client';
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import Layout from '@/components/layout/Layout';
 import { BingoBoard } from '@/components/bingo/BingoBoard';
-import InfoAccordion from '@/components/bingo/InfoAccordion';
 import { useAppStore } from '@/store/useAppStore';
 import type { Challenge } from '@/types';
 import { ChallengeStatus } from '@/types';
+import { isChallengeNotStarted } from '@/lib/utils';
 
 export default function HomePage() {
   const { status } = useSession();
   const { challenges, setChallenges, setIsLoading } = useAppStore();
+  const UNCATEGORIZED = 'Sin categoria';
 
-  const [boards, setBoards] = useState<{ id: string; title: string; emoji: string; color: string; coverImage: string | null; active: boolean }[]>([]);
+  type HomeBoard = {
+    id: string;
+    title: string;
+    emoji: string;
+    color: string;
+    coverImage: string | null;
+    active: boolean;
+    folder: string | null;
+    description?: string | null;
+  };
+
+  const [boards, setBoards] = useState<HomeBoard[]>([]);
   const [activeBoardId, setActiveBoardId] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<string>(UNCATEGORIZED);
   const [loadingBoard, setLoadingBoard] = useState(true);
+  const [startingBoardPlay, setStartingBoardPlay] = useState(false);
   const boardCache = useRef<Record<string, Challenge[]>>({});
+  const activeBoardIdRef = useRef<string | null>(null);
+  activeBoardIdRef.current = activeBoardId;
+
+  const playLocked = useMemo(() => {
+    if (!activeBoardId || challenges.length === 0) return false;
+    const sameBoard = challenges.every((c) => !c.boardId || c.boardId === activeBoardId);
+    if (!sameBoard) return false;
+    return challenges.every((c) => isChallengeNotStarted(c.status));
+  }, [challenges, activeBoardId]);
 
   // Fetch boards list on mount
   useEffect(() => {
     if (status !== 'authenticated') return;
     fetch('/api/boards')
       .then((r) => r.json())
-      .then((data: { id: string; title: string; emoji: string; color: string; coverImage: string | null; active: boolean }[]) => {
+      .then((data: HomeBoard[]) => {
         setBoards(data);
-        if (data.length > 0) setActiveBoardId(data[0].id);
+        if (data.length > 0) {
+          setActiveBoardId(data[0].id);
+          setActiveCategory(data[0].folder?.trim() || UNCATEGORIZED);
+        }
       })
       .catch(console.error);
   }, [status]);
 
+  const categories = useMemo(
+    () => Array.from(new Set(boards.map((b) => b.folder?.trim() || UNCATEGORIZED))),
+    [boards]
+  );
+
+  const boardsInActiveCategory = useMemo(
+    () => boards.filter((b) => (b.folder?.trim() || UNCATEGORIZED) === activeCategory),
+    [boards, activeCategory]
+  );
+
+  // Keep category in sync if board changes from other flows
+  useEffect(() => {
+    if (!activeBoardId) return;
+    const board = boards.find((b) => b.id === activeBoardId);
+    if (!board) return;
+    const boardCategory = board.folder?.trim() || UNCATEGORIZED;
+    if (boardCategory !== activeCategory) {
+      setActiveCategory(boardCategory);
+    }
+  }, [activeBoardId, boards, activeCategory]);
+
   // Fetch challenges for active board
   useEffect(() => {
     if (!activeBoardId || status !== 'authenticated') return;
+
+    const boardIdForRequest = activeBoardId;
+    let cancelled = false;
 
     setIsLoading(true);
 
@@ -47,26 +97,42 @@ export default function HomePage() {
 
     fetch(`/api/challenges?boardId=${activeBoardId}`)
       .then((r) => r.json())
-      .then((data: Challenge[]) => {
-        boardCache.current[activeBoardId] = data;
-        setChallenges(data);
+      .then((data: unknown) => {
+        if (cancelled || activeBoardIdRef.current !== boardIdForRequest) return;
+        if (!Array.isArray(data)) {
+          console.error('[home] Invalid challenges response', data);
+          return;
+        }
+        const list = data as Challenge[];
+        boardCache.current[boardIdForRequest] = list;
+        setChallenges(list);
       })
       .catch(console.error)
       .finally(() => {
+        if (cancelled || activeBoardIdRef.current !== boardIdForRequest) return;
         setIsLoading(false);
         setLoadingBoard(false);
       });
-  }, [activeBoardId, status]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeBoardId, status, setChallenges, setIsLoading]);
 
   // Background refresh so approval states update without manual reload
   useEffect(() => {
     if (!activeBoardId || status !== 'authenticated') return;
     const interval = setInterval(() => {
-      fetch(`/api/challenges?boardId=${activeBoardId}`)
+      const boardId = activeBoardIdRef.current;
+      if (!boardId) return;
+      fetch(`/api/challenges?boardId=${boardId}`)
         .then((r) => r.json())
-        .then((data: Challenge[]) => {
-          boardCache.current[activeBoardId] = data;
-          setChallenges(data);
+        .then((data: unknown) => {
+          if (activeBoardIdRef.current !== boardId) return;
+          if (!Array.isArray(data)) return;
+          const list = data as Challenge[];
+          boardCache.current[boardId] = list;
+          setChallenges(list);
         })
         .catch(() => {
           // Silent fail: keep current UI if a poll tick fails.
@@ -75,18 +141,57 @@ export default function HomePage() {
     return () => clearInterval(interval);
   }, [activeBoardId, status, setChallenges]);
 
+  const handleStartBoardPlay = useCallback(async () => {
+    const boardId = activeBoardIdRef.current;
+    if (!boardId) return;
+    setStartingBoardPlay(true);
+    try {
+      const res = await fetch(`/api/boards/${boardId}/start`, { method: 'POST' });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(typeof body.error === 'string' ? body.error : 'No se pudo iniciar el tablero.');
+        return;
+      }
+      if (activeBoardIdRef.current !== boardId) return;
+      const r = await fetch(`/api/challenges?boardId=${boardId}`);
+      const data: unknown = await r.json();
+      if (activeBoardIdRef.current !== boardId) return;
+      if (!r.ok || !Array.isArray(data)) {
+        alert('El tablero se inició pero no se pudieron cargar los retos. Recarga la página.');
+        return;
+      }
+      const list = data as Challenge[];
+      boardCache.current[boardId] = list;
+      setChallenges(list);
+    } catch {
+      alert('Error de red al iniciar el tablero.');
+    } finally {
+      setStartingBoardPlay(false);
+    }
+  }, [setChallenges]);
+
   const handleBingoContinue = useCallback(() => {
-    const currentIdx = boards.findIndex((b) => b.id === activeBoardId);
-    const nextBoard = boards[(currentIdx + 1) % boards.length];
+    if (boardsInActiveCategory.length === 0) return;
+    const currentIdx = boardsInActiveCategory.findIndex((b) => b.id === activeBoardId);
+    const nextBoard = boardsInActiveCategory[(currentIdx + 1) % boardsInActiveCategory.length];
     if (!nextBoard) return;
 
     setActiveBoardId(nextBoard.id);
-  }, [activeBoardId, boards]);
+  }, [activeBoardId, boardsInActiveCategory]);
 
   const switchBoard = useCallback((boardId: string) => {
     if (boardId === activeBoardId) return;
     setActiveBoardId(boardId);
   }, [activeBoardId]);
+
+  const switchCategory = useCallback((category: string) => {
+    if (category === activeCategory) return;
+    setActiveCategory(category);
+    const firstBoardInCategory = boards.find(
+      (b) => (b.folder?.trim() || UNCATEGORIZED) === category
+    );
+    if (firstBoardInCategory) setActiveBoardId(firstBoardInCategory.id);
+  }, [activeCategory, boards]);
 
   if (status === 'loading' || loadingBoard) {
     return (
@@ -107,31 +212,32 @@ export default function HomePage() {
             <h1 className="text-[#1E1E22] font-semibold text-xl tracking-tight">
               Retos
             </h1>
-            {boards.length > 1 && activeBoard && (
+            {activeBoard && (
               <span className="text-xs text-secondary-400 font-medium">
                 {activeBoard.emoji} {activeBoard.title}
               </span>
             )}
           </div>
 
-          {/* Board tabs (if multiple boards) */}
-          {boards.length > 1 && (
+          {/* Category tabs */}
+          {categories.length > 0 && (
             <div
               className="flex gap-2 mt-2 overflow-x-auto [&::-webkit-scrollbar]:hidden"
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
             >
-              {boards.map((board) => (
+              {categories.map((category) => (
                 <button
-                  key={board.id}
-                  onClick={() => switchBoard(board.id)}
+                  key={category}
+                  onClick={() => switchCategory(category)}
+                  aria-pressed={category === activeCategory}
                   className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                    board.id === activeBoardId
+                    category === activeCategory
                       ? 'text-white'
                       : 'bg-secondary-100 text-secondary-600 hover:bg-secondary-200'
                   }`}
-                  style={board.id === activeBoardId ? { backgroundColor: board.color } : undefined}
+                  style={category === activeCategory ? { backgroundColor: activeBoard?.color ?? '#FC0230' } : undefined}
                 >
-                  {board.emoji} {board.title}
+                  {category}
                 </button>
               ))}
             </div>
@@ -149,6 +255,9 @@ export default function HomePage() {
               boardColor={activeBoard?.color}
               boardCoverImage={activeBoard?.coverImage}
               onBingoContinue={handleBingoContinue}
+              playLocked={playLocked}
+              onStartPlay={handleStartBoardPlay}
+              startingPlay={startingBoardPlay}
             />
           )}
         </div>
@@ -160,12 +269,62 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Info / Reglas / TyC / FAQ */}
+        {/* Board thumbnails for selected category */}
+        {boardsInActiveCategory.length > 0 && (
+          <div className="w-full flex justify-center mt-4 px-6">
+            <div className="w-full space-y-2" style={{ maxWidth: 326 }}>
+              <p className="text-[#1E1E22] font-semibold text-xl tracking-tight px-0.5">
+                Accede a mas tableros relacionados
+              </p>
+              <div className="w-full grid grid-cols-3 gap-3">
+                {boardsInActiveCategory.map((board) => {
+                  const selected = board.id === activeBoardId;
+                  return (
+                    <button
+                      key={board.id}
+                      onClick={() => switchBoard(board.id)}
+                      aria-pressed={selected}
+                      className={`rounded-xl overflow-hidden border transition-all text-left ${
+                        selected
+                          ? 'border-primary-500 ring-2 ring-primary-500/20'
+                          : 'border-secondary-200 hover:border-secondary-300'
+                      }`}
+                    >
+                      <div className="relative aspect-square bg-secondary-100">
+                        {board.coverImage ? (
+                          <img
+                            src={board.coverImage}
+                            alt={board.title}
+                            className="absolute inset-0 w-full h-full object-cover object-center"
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center text-2xl text-secondary-400">
+                            {board.emoji || '■'}
+                          </div>
+                        )}
+                      </div>
+                      <div className="px-2.5 py-2 bg-white">
+                        <p className="text-[11px] font-semibold text-secondary-900 truncate">
+                          {board.emoji} {board.title}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Info / Reglas / TyC / FAQ
         <div className="w-full flex justify-center mt-6 px-6">
           <div className="w-full" style={{ maxWidth: 326 }}>
             <InfoAccordion />
           </div>
         </div>
+        */}
       </div>
     </Layout>
   );

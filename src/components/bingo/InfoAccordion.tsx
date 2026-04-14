@@ -67,50 +67,50 @@ const SECTIONS: Section[] = [
       </ol>
     ),
   },
-  {
-    id: 'tyc',
-    title: 'Términos y Condiciones',
-    content: (
-      <div className="space-y-3 text-sm text-secondary-600 leading-relaxed">
-        <p>
-          Al participar en SportBingo aceptas los siguientes términos:
-        </p>
-        <div className="space-y-2">
-          <div>
-            <p className="font-semibold text-secondary-800">1. Uso de la plataforma</p>
-            <p>
-              El uso de SportBingo está destinado exclusivamente a personas mayores de 16 años.
-              La plataforma es de uso personal e intransferible.
-            </p>
-          </div>
-          <div>
-            <p className="font-semibold text-secondary-800">2. Privacidad</p>
-            <p>
-              Las fotos e información compartida en los retos son visibles para el equipo
-              organizador con fines de validación. No se compartirán con terceros.
-            </p>
-          </div>
-          <div>
-            <p className="font-semibold text-secondary-800">3. Modificaciones</p>
-            <p>
-              Los organizadores se reservan el derecho de modificar reglas, tableros y
-              puntuaciones con previo aviso a los participantes.
-            </p>
-          </div>
-          <div>
-            <p className="font-semibold text-secondary-800">4. Responsabilidad</p>
-            <p>
-              Cada participante es responsable de su propia seguridad al realizar los retos.
-              SportBingo no se hace responsable de lesiones o daños derivados de la práctica deportiva.
-            </p>
-          </div>
-        </div>
-        <p className="text-xs text-secondary-400 mt-2">
-          Última actualización: Marzo 2026
-        </p>
-      </div>
-    ),
-  },
+  // {
+  //   id: 'tyc',
+  //   title: 'Términos y Condiciones',
+  //   content: (
+  //     <div className="space-y-3 text-sm text-secondary-600 leading-relaxed">
+  //       <p>
+  //         Al participar en SportBingo aceptas los siguientes términos:
+  //       </p>
+  //       <div className="space-y-2">
+  //         <div>
+  //           <p className="font-semibold text-secondary-800">1. Uso de la plataforma</p>
+  //           <p>
+  //             El uso de SportBingo está destinado exclusivamente a personas mayores de 16 años.
+  //             La plataforma es de uso personal e intransferible.
+  //           </p>
+  //         </div>
+  //         <div>
+  //           <p className="font-semibold text-secondary-800">2. Privacidad</p>
+  //           <p>
+  //             Las fotos e información compartida en los retos son visibles para el equipo
+  //             organizador con fines de validación. No se compartirán con terceros.
+  //           </p>
+  //         </div>
+  //         <div>
+  //           <p className="font-semibold text-secondary-800">3. Modificaciones</p>
+  //           <p>
+  //             Los organizadores se reservan el derecho de modificar reglas, tableros y
+  //             puntuaciones con previo aviso a los participantes.
+  //           </p>
+  //         </div>
+  //         <div>
+  //           <p className="font-semibold text-secondary-800">4. Responsabilidad</p>
+  //           <p>
+  //             Cada participante es responsable de su propia seguridad al realizar los retos.
+  //             SportBingo no se hace responsable de lesiones o daños derivados de la práctica deportiva.
+  //           </p>
+  //         </div>
+  //       </div>
+  //       <p className="text-xs text-secondary-400 mt-2">
+  //         Última actualización: Marzo 2026
+  //       </p>
+  //     </div>
+  //   ),
+  // },
   {
     id: 'faq',
     title: 'FAQ',

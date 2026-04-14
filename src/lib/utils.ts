@@ -148,3 +148,15 @@ export function isValidImageUrl(url: string): boolean {
   return /\.(jpg|jpeg|png|webp|avif|gif|svg)$/.test(url.toLowerCase());
 }
 
+/** Normalizes challenge status from API/Prisma for safe comparisons */
+export function normalizeChallengeStatus(status: unknown): string {
+  return String(status ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '_');
+}
+
+export function isChallengeNotStarted(status: unknown): boolean {
+  return normalizeChallengeStatus(status) === 'not_started';
+}
+

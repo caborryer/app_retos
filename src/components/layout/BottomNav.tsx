@@ -1,6 +1,6 @@
 'use client';
 
-import { Home, Trophy, Calendar, User } from 'lucide-react';
+import { Home, Calendar, User } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
@@ -17,14 +17,13 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { icon: Home, label: 'Home', path: '/home', tab: 'home' },
-  { icon: Trophy, label: 'Retos', path: '/challenges', tab: 'challenges' },
   { icon: Calendar, label: 'Actividad', path: '/activity', tab: 'activity' },
   { icon: User, label: 'Perfil', path: '/profile', tab: 'profile' },
 ];
 
 export default function BottomNav() {
   const pathname = usePathname();
-  const { activeTab, setActiveTab } = useAppStore();
+  const { setActiveTab } = useAppStore();
 
   const handleTabClick = (tab: TabType) => {
     setActiveTab(tab);

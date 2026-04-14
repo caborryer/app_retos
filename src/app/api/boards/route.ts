@@ -13,7 +13,13 @@ export async function GET() {
     orderBy: { createdAt: 'asc' },
     include: { _count: { select: { challenges: true } } },
   });
-  return NextResponse.json(boards);
+
+  // Public users only see boards that are fully configured (8 challenges)
+  const visibleBoards = isAdmin
+    ? boards
+    : boards.filter((b) => (b._count?.challenges ?? 0) >= 8);
+
+  return NextResponse.json(visibleBoards);
 }
 
 // POST /api/boards — create a new board (admin only)
@@ -28,6 +34,13 @@ export async function POST(req: Request) {
 
   if (!title || !emoji || !color) {
     return NextResponse.json({ error: 'title, emoji and color are required' }, { status: 400 });
+  }
+
+  if (active === true) {
+    return NextResponse.json(
+      { error: 'No puedes activar un tablero al crearlo. Primero carga los 8 retos.' },
+      { status: 400 }
+    );
   }
 
   const board = await prisma.board.create({

@@ -16,6 +16,19 @@ export async function PATCH(
   const body = await req.json();
   const { title, emoji, color, description, coverImage, active, folder, startDate, endDate } = body;
 
+  // Enforce full board setup before activation
+  if (active === true) {
+    const challengeCount = await prisma.challenge.count({
+      where: { boardId: params.id },
+    });
+    if (challengeCount < 8) {
+      return NextResponse.json(
+        { error: `Para activar el tablero debes completar los 8 retos (actual: ${challengeCount}/8).` },
+        { status: 400 }
+      );
+    }
+  }
+
   // Check previous active state to detect activation
   const previous = await prisma.board.findUnique({
     where: { id: params.id },

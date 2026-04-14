@@ -689,7 +689,17 @@ function ChallengeEditorPanel({ board }: { board: Board }) {
 
 // ─── Board card ───────────────────────────────────────────────────────────────
 
-function BoardCard({ board, onSave, onDelete }: { board: Board; onSave: (b: Partial<Board>) => Promise<void>; onDelete: () => Promise<void> }) {
+function BoardCard({
+  board,
+  onSave,
+  onDelete,
+  existingFolders,
+}: {
+  board: Board;
+  onSave: (b: Partial<Board>) => Promise<void>;
+  onDelete: () => Promise<void>;
+  existingFolders: string[];
+}) {
   const [editing, setEditing] = useState(false);
   const [showChallenges, setShowChallenges] = useState(false);
   const [draft, setDraft] = useState<Partial<Board>>({});
@@ -697,6 +707,7 @@ function BoardCard({ board, onSave, onDelete }: { board: Board; onSave: (b: Part
   const [deleting, setDeleting] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [resetSuccess, setResetSuccess] = useState(false);
+  const [addingNewFolder, setAddingNewFolder] = useState(false);
 
   function startEdit() {
     setDraft({
@@ -710,6 +721,7 @@ function BoardCard({ board, onSave, onDelete }: { board: Board; onSave: (b: Part
       startDate: board.startDate ? board.startDate.split('T')[0] : '',
       endDate: board.endDate ? board.endDate.split('T')[0] : '',
     });
+    setAddingNewFolder(false);
     setEditing(true);
   }
 
@@ -809,12 +821,36 @@ function BoardCard({ board, onSave, onDelete }: { board: Board; onSave: (b: Part
             />
 
             {/* Folder */}
-            <input
-              value={draft.folder ?? ''}
-              onChange={(e) => setDraft((d) => ({ ...d, folder: e.target.value }))}
-              className="w-full bg-slate-700 text-white text-sm rounded-lg px-3 py-2 placeholder-slate-400"
-              placeholder="Carpeta / categoría (ej. Fitness 2026)"
-            />
+            <div className="space-y-2">
+              <label className="text-slate-400 text-xs block">Categoría / carpeta</label>
+              <select
+                value={addingNewFolder ? '__new__' : (draft.folder ?? '')}
+                onChange={(e) => {
+                  if (e.target.value === '__new__') {
+                    setAddingNewFolder(true);
+                    setDraft((d) => ({ ...d, folder: '' }));
+                    return;
+                  }
+                  setAddingNewFolder(false);
+                  setDraft((d) => ({ ...d, folder: e.target.value }));
+                }}
+                className="w-full bg-slate-700 text-white text-sm rounded-lg px-3 py-2"
+              >
+                <option value="">Sin categoria</option>
+                {existingFolders.map((f) => (
+                  <option key={f} value={f}>{f}</option>
+                ))}
+                <option value="__new__">+ Agregar nueva categoría</option>
+              </select>
+              {addingNewFolder && (
+                <input
+                  value={draft.folder ?? ''}
+                  onChange={(e) => setDraft((d) => ({ ...d, folder: e.target.value }))}
+                  className="w-full bg-slate-700 text-white text-sm rounded-lg px-3 py-2 placeholder-slate-400 border border-slate-600"
+                  placeholder="Escribe nueva categoría"
+                />
+              )}
+            </div>
 
             {/* Dates */}
             <div className="grid grid-cols-2 gap-2">
@@ -985,7 +1021,7 @@ function NewBoardModal({ onClose, onCreate, existingFolders }: {
     endDate: '',
   });
   const [saving, setSaving] = useState(false);
-  const [showFolderSuggestions, setShowFolderSuggestions] = useState(false);
+  const [addingNewFolder, setAddingNewFolder] = useState(false);
 
   function set<K extends keyof typeof form>(key: K, val: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: val }));
@@ -1016,10 +1052,6 @@ function NewBoardModal({ onClose, onCreate, existingFolders }: {
       setSaving(false);
     }
   }
-
-  const filteredFolders = existingFolders.filter(
-    (f) => f.toLowerCase().includes(form.folder.toLowerCase()) && f !== form.folder,
-  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
@@ -1063,30 +1095,35 @@ function NewBoardModal({ onClose, onCreate, existingFolders }: {
           className="w-full bg-slate-700 text-white text-sm rounded-lg px-3 py-2 resize-none placeholder-slate-400"
         />
 
-        {/* Folder with suggestions */}
-        <div className="relative">
-          <label className="text-slate-400 text-xs mb-1 block">Carpeta / categoría</label>
-          <input
-            value={form.folder}
-            onChange={(e) => { set('folder', e.target.value); setShowFolderSuggestions(true); }}
-            onFocus={() => setShowFolderSuggestions(true)}
-            onBlur={() => setTimeout(() => setShowFolderSuggestions(false), 150)}
-            className="w-full bg-slate-700 text-white text-sm rounded-lg px-3 py-2 placeholder-slate-400"
-            placeholder="ej. Fitness 2026 (opcional)"
-          />
-          {showFolderSuggestions && filteredFolders.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-slate-700 rounded-xl border border-slate-600 shadow-lg z-10">
-              {filteredFolders.map((f) => (
-                <button
-                  key={f}
-                  type="button"
-                  onMouseDown={() => set('folder', f)}
-                  className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-600 transition-colors first:rounded-t-xl last:rounded-b-xl"
-                >
-                  📁 {f}
-                </button>
-              ))}
-            </div>
+        {/* Folder dropdown */}
+        <div className="space-y-2">
+          <label className="text-slate-400 text-xs mb-1 block">Categoría / carpeta</label>
+          <select
+            value={addingNewFolder ? '__new__' : form.folder}
+            onChange={(e) => {
+              if (e.target.value === '__new__') {
+                setAddingNewFolder(true);
+                set('folder', '');
+                return;
+              }
+              setAddingNewFolder(false);
+              set('folder', e.target.value);
+            }}
+            className="w-full bg-slate-700 text-white text-sm rounded-lg px-3 py-2"
+          >
+            <option value="">Sin categoria</option>
+            {existingFolders.map((f) => (
+              <option key={f} value={f}>{f}</option>
+            ))}
+            <option value="__new__">+ Agregar nueva categoría</option>
+          </select>
+          {addingNewFolder && (
+            <input
+              value={form.folder}
+              onChange={(e) => set('folder', e.target.value)}
+              className="w-full bg-slate-700 text-white text-sm rounded-lg px-3 py-2 placeholder-slate-400 border border-slate-600"
+              placeholder="Escribe nueva categoría"
+            />
           )}
         </div>
 
@@ -1245,7 +1282,7 @@ export default function BoardManager() {
               {/* Folder heading */}
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-slate-400 text-sm font-medium">
-                  {folder ? `📁 ${folder}` : '📋 Sin carpeta'}
+                  {folder ? `📁 ${folder}` : '📋 Sin categoria'}
                 </span>
                 <div className="flex-1 h-px bg-slate-700" />
                 <span className="text-slate-600 text-xs">{groupBoards.length} tablero{groupBoards.length !== 1 ? 's' : ''}</span>
@@ -1258,6 +1295,7 @@ export default function BoardManager() {
                     board={board}
                     onSave={(updates) => handleSave(board.id, updates)}
                     onDelete={() => handleDelete(board.id)}
+                    existingFolders={existingFolders}
                   />
                 ))}
               </div>
