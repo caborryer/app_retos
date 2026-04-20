@@ -116,7 +116,7 @@ export default function LocationConsentPrompt() {
         // 1 = denied, 2 = unavailable, 3 = timeout
         if (err.code === 1) {
           setError(
-            'Permiso de ubicación denegado. Actívalo en la configuración del navegador si cambias de idea.'
+            'Permiso de ubicación denegado. Para activarlo: 1) haz clic en el candado junto a la URL, 2) en "Ubicación" selecciona "Permitir", 3) recarga la página. También puedes ir a Configuración del navegador > Privacidad y seguridad > Configuración del sitio > Ubicación.'
           );
           return;
         }
@@ -229,6 +229,14 @@ export default function LocationConsentPrompt() {
               Tras pulsar aceptar, tu navegador te pedirá permiso de ubicación. Puedes revocarlo cuando quieras
               en los ajustes del sitio.
             </p>
+            {error?.toLowerCase().includes('denegado') && (
+              <div className="px-5 pb-4">
+                <div className="rounded-xl border border-secondary-200 bg-secondary-50 p-3 text-[11px] text-secondary-700 leading-snug">
+                  Si ya lo bloqueaste antes, el navegador no vuelve a preguntar automáticamente.
+                  Actualiza el permiso del sitio y recarga para intentar de nuevo.
+                </div>
+              </div>
+            )}
           </motion.div>
         </motion.div>
       )}

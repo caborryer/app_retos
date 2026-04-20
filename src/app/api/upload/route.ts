@@ -15,6 +15,8 @@ export async function POST(req: Request) {
 
   const formData = await req.formData();
   const file = formData.get('file') as File | null;
+  const folderRaw = formData.get('folder');
+  const folder = typeof folderRaw === 'string' ? folderRaw.trim().toLowerCase() : 'task-submissions';
 
   if (!file) {
     return NextResponse.json({ error: 'No file provided' }, { status: 400 });
@@ -31,7 +33,8 @@ export async function POST(req: Request) {
   }
 
   const ext = file.name.split('.').pop() ?? 'jpg';
-  const filename = `${session.user.id}/${Date.now()}.${ext}`;
+  const baseFolder = folder === 'avatars' ? 'avatars' : 'task-submissions';
+  const filename = `${baseFolder}/${session.user.id}/${Date.now()}.${ext}`;
 
   const buffer = Buffer.from(await file.arrayBuffer());
   const supabase = getSupabaseAdmin();

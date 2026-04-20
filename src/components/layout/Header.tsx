@@ -1,10 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Bell, ChevronLeft } from 'lucide-react';
+import { Bell, ChevronLeft, Settings } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
 import NotificationPanel from '../notifications/NotificationPanel';
 
 interface HeaderProps {
@@ -31,13 +30,12 @@ export default function Header({
             {/* Left Side */}
             <div className="flex items-center gap-3">
               {showBack && (
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
+                <button
                   onClick={() => router.back()}
                   className="p-2 -ml-2 rounded-full hover:bg-secondary-100 transition-colors"
                 >
                   <ChevronLeft className="w-6 h-6 text-secondary-900" />
-                </motion.button>
+                </button>
               )}
               
               {title && (
@@ -48,26 +46,32 @@ export default function Header({
             </div>
 
             {/* Right Side */}
-            {showNotifications && (
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setIsPanelOpen(true)}
-                className="relative p-2 -mr-2 rounded-full hover:bg-secondary-100 transition-colors"
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => router.push('/profile/settings')}
+                className="p-2 rounded-full hover:bg-secondary-100 transition-colors"
+                aria-label="Ir a configuración del perfil"
+                title="Configuración"
               >
-                <Bell className="w-6 h-6 text-secondary-900" />
-                {unreadCount > 0 && (
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="absolute -top-1 -right-1 w-5 h-5 bg-primary-500 rounded-full flex items-center justify-center"
-                  >
-                    <span className="text-xs font-bold text-white">
-                      {unreadCount > 9 ? '9+' : unreadCount}
-                    </span>
-                  </motion.div>
-                )}
-              </motion.button>
-            )}
+                <Settings className="w-5 h-5 text-secondary-900" />
+              </button>
+
+              {showNotifications && (
+                <button
+                  onClick={() => setIsPanelOpen(true)}
+                  className="relative p-2 -mr-2 rounded-full hover:bg-secondary-100 transition-colors"
+                >
+                  <Bell className="w-6 h-6 text-secondary-900" />
+                  {unreadCount > 0 && (
+                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary-500 rounded-full flex items-center justify-center">
+                      <span className="text-xs font-bold text-white">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    </div>
+                  )}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </header>

@@ -1,17 +1,77 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Trophy, TrendingUp, Flame, Award } from 'lucide-react';
+import { Trophy, TrendingUp, Flame } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import Layout from '@/components/layout/Layout';
 import Card from '@/components/ui/Card';
-import Badge from '@/components/ui/Badge';
 import { useAppStore } from '@/store/useAppStore';
-import { formatRelativeTime, formatDate } from '@/lib/utils';
+import { formatRelativeTime } from '@/lib/utils';
 import { useAuthGuard } from '@/hooks/useAuthGuard';
+
+type ActivityStatResponse = {
+  stats: {
+    activeChallenges: number;
+    completedChallenges: number;
+    completedBoards: number;
+    streakDays: number;
+  };
+  recentActivity: Array<{
+    id: string;
+    type: 'start' | 'complete' | 'submission';
+    title: string;
+    icon: string;
+    color: string;
+    time: string;
+  }>;
+};
 
 export default function ActivityPage() {
   const ready = useAuthGuard();
   const { activeChallenges, completedChallenges } = useAppStore();
+  const [loading, setLoading] = useState(true);
+  const [apiData, setApiData] = useState<ActivityStatResponse | null>(null);
+
+  useEffect(() => {
+    if (!ready) return;
+    let mounted = true;
+
+    setLoading(true);
+    fetch('/api/user/activity', { credentials: 'include' })
+      .then(async (res) => {
+        if (!res.ok) {
+          throw new Error('No se pudo cargar la actividad.');
+        }
+        return (await res.json()) as ActivityStatResponse;
+      })
+      .then((data) => {
+        if (!mounted) return;
+        setApiData(data);
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setApiData(null);
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [ready]);
+
+  const stats = useMemo(
+    () => ({
+      activeChallenges: apiData?.stats.activeChallenges ?? activeChallenges.length,
+      completedChallenges: apiData?.stats.completedChallenges ?? completedChallenges.length,
+      completedBoards: apiData?.stats.completedBoards ?? 0,
+      streakDays: apiData?.stats.streakDays ?? 0,
+    }),
+    [apiData, activeChallenges.length, completedChallenges.length]
+  );
+
+  const recentActivity = apiData?.recentActivity ?? [];
 
   if (!ready) {
     return (
@@ -33,7 +93,7 @@ export default function ActivityPage() {
               </div>
               <div>
                 <div className="text-2xl font-bold text-secondary-900">
-                  {activeChallenges.length}
+                  {stats.activeChallenges}
                 </div>
                 <div className="text-xs text-secondary-600">Retos Activos</div>
               </div>
@@ -47,9 +107,23 @@ export default function ActivityPage() {
               </div>
               <div>
                 <div className="text-2xl font-bold text-secondary-900">
-                  {completedChallenges.length}
+                  {stats.completedChallenges}
                 </div>
                 <div className="text-xs text-secondary-600">Completados</div>
+              </div>
+            </div>
+          </Card>
+
+          <Card variant="elevated" className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-100">
+                <Trophy className="w-6 h-6 text-indigo-500" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-secondary-900">
+                  {stats.completedBoards}
+                </div>
+                <div className="text-xs text-secondary-600">Tableros completados</div>
               </div>
             </div>
           </Card>
@@ -69,7 +143,7 @@ export default function ActivityPage() {
             <div className="flex flex-col items-center gap-1">
               <div className="flex items-center gap-2 text-white">
                 <Flame className="w-8 h-8" />
-                <span className="text-4xl font-bold">12</span>
+                <span className="text-4xl font-bold">{stats.streakDays}</span>
               </div>
               <span className="text-xs text-white/80">días</span>
             </div>
@@ -130,33 +204,7 @@ export default function ActivityPage() {
           </h2>
 
           <div className="space-y-3">
-            {/* Sample activities */}
-            {[
-              {
-                id: '1',
-                type: 'complete',
-                title: 'Completaste "30 Días de Running"',
-                time: new Date(Date.now() - 1000 * 60 * 30),
-                icon: '🏃',
-                color: 'bg-green-100 text-green-600',
-              },
-              {
-                id: '2',
-                type: 'badge',
-                title: 'Ganaste la insignia "Corredor Inicial"',
-                time: new Date(Date.now() - 1000 * 60 * 60 * 2),
-                icon: '🏅',
-                color: 'bg-yellow-100 text-yellow-600',
-              },
-              {
-                id: '3',
-                type: 'start',
-                title: 'Comenzaste "Desafío de Flexiones"',
-                time: new Date(Date.now() - 1000 * 60 * 60 * 24),
-                icon: '💪',
-                color: 'bg-primary-100 text-primary-600',
-              },
-            ].map((activity, idx) => (
+            {recentActivity.map((activity, idx) => (
               <motion.div
                 key={activity.id}
                 initial={{ opacity: 0, x: -20 }}
@@ -173,7 +221,7 @@ export default function ActivityPage() {
                         {activity.title}
                       </h3>
                       <p className="text-sm text-secondary-600 mt-1">
-                        {formatRelativeTime(activity.time)}
+                        {formatRelativeTime(new Date(activity.time))}
                       </p>
                     </div>
                   </div>
@@ -183,8 +231,14 @@ export default function ActivityPage() {
           </div>
         </div>
 
+        {loading && (
+          <Card variant="bordered" className="p-4 text-center text-sm text-secondary-600">
+            Cargando actividad...
+          </Card>
+        )}
+
         {/* Empty State for no activity */}
-        {activeChallenges.length === 0 && completedChallenges.length === 0 && (
+        {!loading && recentActivity.length === 0 && stats.activeChallenges === 0 && stats.completedChallenges === 0 && (
           <Card variant="bordered" className="p-12 text-center">
             <div className="text-6xl mb-4">📊</div>
             <h3 className="text-lg font-bold text-secondary-900 mb-2">

@@ -38,6 +38,12 @@ export default async function middleware(req: NextRequest) {
   // Always allow public routes
   if (isPublic) return NextResponse.next();
 
+  // Legacy challenge routes are no longer user-accessible.
+  // Users should always play from /home (boards flow).
+  if (pathname === '/challenges' || pathname.startsWith('/challenges/')) {
+    return NextResponse.redirect(new URL('/home', req.url));
+  }
+
   // Not logged in → redirect to /login
   if (!token) {
     return NextResponse.redirect(new URL('/login', req.url));

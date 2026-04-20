@@ -269,54 +269,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Board thumbnails for selected category */}
-        {boardsInActiveCategory.length > 0 && (
-          <div className="w-full flex justify-center mt-4 px-6">
-            <div className="w-full space-y-2" style={{ maxWidth: 326 }}>
-              <p className="text-[#1E1E22] font-semibold text-xl tracking-tight px-0.5">
-                Accede a mas tableros relacionados
-              </p>
-              <div className="w-full grid grid-cols-3 gap-3">
-                {boardsInActiveCategory.map((board) => {
-                  const selected = board.id === activeBoardId;
-                  return (
-                    <button
-                      key={board.id}
-                      onClick={() => switchBoard(board.id)}
-                      aria-pressed={selected}
-                      className={`rounded-xl overflow-hidden border transition-all text-left ${
-                        selected
-                          ? 'border-primary-500 ring-2 ring-primary-500/20'
-                          : 'border-secondary-200 hover:border-secondary-300'
-                      }`}
-                    >
-                      <div className="relative aspect-square bg-secondary-100">
-                        {board.coverImage ? (
-                          <img
-                            src={board.coverImage}
-                            alt={board.title}
-                            className="absolute inset-0 w-full h-full object-cover object-center"
-                            loading="lazy"
-                            decoding="async"
-                          />
-                        ) : (
-                          <div className="absolute inset-0 flex items-center justify-center text-2xl text-secondary-400">
-                            {board.emoji || '■'}
-                          </div>
-                        )}
-                      </div>
-                      <div className="px-2.5 py-2 bg-white">
-                        <p className="text-[11px] font-semibold text-secondary-900 truncate">
-                          {board.emoji} {board.title}
-                        </p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
+        {/* The board gallery section was intentionally removed to keep Home focused */}
 
         {/* Info / Reglas / TyC / FAQ
         <div className="w-full flex justify-center mt-6 px-6">
