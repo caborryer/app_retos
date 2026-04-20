@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Trophy, TrendingUp, Flame } from 'lucide-react';
+import { Trophy, TrendingUp, Flame, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import Layout from '@/components/layout/Layout';
 import Card from '@/components/ui/Card';
@@ -24,6 +24,42 @@ type ActivityStatResponse = {
     color: string;
     time: string;
   }>;
+  boardRanking: null | {
+    boardId: string;
+    boardTitle: string;
+    boardEmoji: string;
+    yourPosition: number;
+    totalCompetitors: number;
+    entries: Array<{
+      userId: string;
+      name: string;
+      completedChallenges: number;
+      earnedPoints: number;
+      isCurrentUser: boolean;
+    }>;
+    trend: {
+      direction: 'up' | 'down' | 'same' | 'new';
+      delta: number;
+    };
+  };
+  globalRanking: null | {
+    boardId: string;
+    boardTitle: string;
+    boardEmoji: string;
+    yourPosition: number;
+    totalCompetitors: number;
+    entries: Array<{
+      userId: string;
+      name: string;
+      completedChallenges: number;
+      earnedPoints: number;
+      isCurrentUser: boolean;
+    }>;
+    trend: {
+      direction: 'up' | 'down' | 'same' | 'new';
+      delta: number;
+    };
+  };
 };
 
 export default function ActivityPage() {
@@ -31,6 +67,7 @@ export default function ActivityPage() {
   const { activeChallenges, completedChallenges } = useAppStore();
   const [loading, setLoading] = useState(true);
   const [apiData, setApiData] = useState<ActivityStatResponse | null>(null);
+  const [rankingMode, setRankingMode] = useState<'board' | 'global'>('board');
 
   useEffect(() => {
     if (!ready) return;
@@ -72,6 +109,20 @@ export default function ActivityPage() {
   );
 
   const recentActivity = apiData?.recentActivity ?? [];
+  const boardRanking = apiData?.boardRanking ?? null;
+  const globalRanking = apiData?.globalRanking ?? null;
+  const activeRanking =
+    rankingMode === 'global'
+      ? (globalRanking ?? boardRanking)
+      : (boardRanking ?? globalRanking);
+  const trendInfo =
+    activeRanking?.trend.direction === 'up'
+      ? { text: `Subiste ${activeRanking.trend.delta} puesto${activeRanking.trend.delta !== 1 ? 's' : ''} vs hace 7 días`, className: 'text-green-600', icon: ArrowUpRight }
+      : activeRanking?.trend.direction === 'down'
+      ? { text: `Bajaste ${activeRanking.trend.delta} puesto${activeRanking.trend.delta !== 1 ? 's' : ''} vs hace 7 días`, className: 'text-red-600', icon: ArrowDownRight }
+      : activeRanking?.trend.direction === 'same'
+      ? { text: 'Sin cambios vs hace 7 días', className: 'text-secondary-600', icon: Minus }
+      : { text: 'Nueva entrada en ranking', className: 'text-indigo-600', icon: TrendingUp };
 
   if (!ready) {
     return (
@@ -198,6 +249,87 @@ export default function ActivityPage() {
         )} */}
 
         {/* Recent Activity Timeline */}
+        {activeRanking && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-lg font-bold text-secondary-900">
+                Tu posición en el ranking
+              </h2>
+              <div className="inline-flex rounded-lg border border-secondary-200 bg-white p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setRankingMode('board')}
+                  className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
+                    rankingMode === 'board'
+                      ? 'bg-primary-500 text-white'
+                      : 'text-secondary-600 hover:bg-secondary-100'
+                  }`}
+                >
+                  Tablero
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRankingMode('global')}
+                  className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
+                    rankingMode === 'global'
+                      ? 'bg-primary-500 text-white'
+                      : 'text-secondary-600 hover:bg-secondary-100'
+                  }`}
+                >
+                  Global
+                </button>
+              </div>
+            </div>
+            <Card variant="elevated" className="p-4">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div className="min-w-0">
+                  <p className="text-xs text-secondary-500">Ranking actual</p>
+                  <p className="font-semibold text-secondary-900 truncate">
+                    {activeRanking.boardEmoji} {activeRanking.boardTitle}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-secondary-500">Tu posición</p>
+                  <p className="text-xl font-bold text-primary-600">
+                    #{activeRanking.yourPosition}
+                  </p>
+                  <div className={`mt-1 inline-flex items-center gap-1 text-[11px] font-medium ${trendInfo.className}`}>
+                    <trendInfo.icon className="w-3.5 h-3.5" />
+                    <span>{trendInfo.text}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {activeRanking.entries.map((entry, idx) => (
+                  <div
+                    key={entry.userId}
+                    className={`flex items-center justify-between rounded-xl px-3 py-2 ${
+                      entry.isCurrentUser ? 'bg-primary-50 border border-primary-200' : 'bg-secondary-50'
+                    }`}
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-secondary-900 truncate">
+                        {idx + 1}. {entry.name}
+                        {entry.isCurrentUser ? ' (Tú)' : ''}
+                      </p>
+                      <p className="text-[11px] text-secondary-600">
+                        {entry.completedChallenges} retos completados
+                      </p>
+                    </div>
+                    <p className="text-sm font-semibold text-secondary-800">
+                      {entry.earnedPoints} pts
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[11px] text-secondary-500 mt-3">
+                Compites con {activeRanking.totalCompetitors} jugador{activeRanking.totalCompetitors !== 1 ? 'es' : ''} en este ranking.
+              </p>
+            </Card>
+          </div>
+        )}
+
         <div className="space-y-4">
           <h2 className="text-lg font-bold text-secondary-900">
             Actividad Reciente

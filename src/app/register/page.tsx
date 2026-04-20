@@ -25,11 +25,11 @@ function TermsModal({ onClose }: { onClose: () => void }) {
         <div className="overflow-y-auto px-6 py-5 space-y-4 text-sm text-[#444441] leading-relaxed">
           <section>
             <h3 className="font-semibold text-[#1C1C1A] mb-1">1. Aceptación de los términos</h3>
-            <p>Al registrarte en SportBingo, aceptas cumplir y quedar vinculado por estos Términos y Condiciones. Si no estás de acuerdo con alguna parte de estos términos, no podrás acceder al servicio.</p>
+            <p>Al registrarte en Bingo, aceptas cumplir y quedar vinculado por estos Términos y Condiciones. Si no estás de acuerdo con alguna parte de estos términos, no podrás acceder al servicio.</p>
           </section>
           <section>
             <h3 className="font-semibold text-[#1C1C1A] mb-1">2. Uso de la plataforma</h3>
-            <p>SportBingo es una plataforma de retos deportivos y de bienestar. Te comprometes a utilizar la plataforma de forma lícita y respetuosa, sin subir contenido falso, ofensivo o que infrinja derechos de terceros.</p>
+            <p>Bingo es una plataforma de retos deportivos y de bienestar. Te comprometes a utilizar la plataforma de forma lícita y respetuosa, sin subir contenido falso, ofensivo o que infrinja derechos de terceros.</p>
           </section>
           <section>
             <h3 className="font-semibold text-[#1C1C1A] mb-1">3. Evidencias y validación</h3>
@@ -41,7 +41,7 @@ function TermsModal({ onClose }: { onClose: () => void }) {
           </section>
           <section>
             <h3 className="font-semibold text-[#1C1C1A] mb-1">5. Modificaciones</h3>
-            <p>SportBingo se reserva el derecho de modificar estos términos en cualquier momento. Los cambios serán notificados a través de la plataforma y entrarán en vigor a los 7 días de su publicación.</p>
+            <p>Bingo se reserva el derecho de modificar estos términos en cualquier momento. Los cambios serán notificados a través de la plataforma y entrarán en vigor a los 7 días de su publicación.</p>
           </section>
           <section>
             <h3 className="font-semibold text-[#1C1C1A] mb-1">6. Contacto</h3>
@@ -164,7 +164,7 @@ export default function RegisterPage() {
             <div className="w-7 h-7 rounded-lg bg-[#FC0230] flex items-center justify-center">
               <span className="text-sm">🏆</span>
             </div>
-            SportBingo
+            Bingo
           </button>
           <a
             href="/login"

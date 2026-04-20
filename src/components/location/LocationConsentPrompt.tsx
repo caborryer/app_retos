@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, X } from 'lucide-react';
 
-const STORAGE_KEY = 'sportbingo_location_consent_v1';
+const STORAGE_KEY = 'Bingo_location_consent_v1';
 
 type StoredConsent = {
   status: 'accepted' | 'declined';

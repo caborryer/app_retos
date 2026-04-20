@@ -18,8 +18,6 @@ export default function GoogleSignInButton({
   const [loading, setLoading] = useState(false);
   const enabled = process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED === 'true';
 
-  if (!enabled) return null;
-
   async function handleClick() {
     setLoading(true);
     try {
@@ -33,15 +31,16 @@ export default function GoogleSignInButton({
     <button
       type="button"
       onClick={handleClick}
-      disabled={loading}
-      className={`w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-[#E5E3DC] bg-white text-[#1C1C1A] font-semibold text-sm shadow-sm hover:bg-[#F7F6F2] transition-colors disabled:opacity-60 ${className}`}
+      disabled={loading || !enabled}
+      title={!enabled ? 'Inicio con Google no disponible en este entorno' : undefined}
+      className={`w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-[#E5E3DC] bg-white text-[#1C1C1A] font-semibold text-sm shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${enabled ? 'hover:bg-[#F7F6F2]' : ''} ${className}`}
     >
       {loading ? (
         <span className="w-5 h-5 border-2 border-[#B8B6AF] border-t-[#1C1C1A] rounded-full animate-spin" />
       ) : (
         <GoogleGlyph className="w-5 h-5 shrink-0" />
       )}
-      {loading ? 'Conectando…' : label}
+      {loading ? 'Conectando…' : enabled ? label : `${label} (no disponible)`}
     </button>
   );
 }

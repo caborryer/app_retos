@@ -18,7 +18,7 @@ const SECTIONS: Section[] = [
     content: (
       <div className="space-y-2 text-sm text-secondary-600 leading-relaxed">
         <p>
-          <span className="font-semibold text-secondary-900">SportBingo</span> es una plataforma de retos deportivos
+          <span className="font-semibold text-secondary-900">Bingo</span> es una plataforma de retos deportivos
           en formato tablero de bingo. Cada casilla del tablero representa un reto diferente que debes completar.
         </p>
         <p>
@@ -73,13 +73,13 @@ const SECTIONS: Section[] = [
   //   content: (
   //     <div className="space-y-3 text-sm text-secondary-600 leading-relaxed">
   //       <p>
-  //         Al participar en SportBingo aceptas los siguientes términos:
+  //         Al participar en Bingo aceptas los siguientes términos:
   //       </p>
   //       <div className="space-y-2">
   //         <div>
   //           <p className="font-semibold text-secondary-800">1. Uso de la plataforma</p>
   //           <p>
-  //             El uso de SportBingo está destinado exclusivamente a personas mayores de 16 años.
+  //             El uso de Bingo está destinado exclusivamente a personas mayores de 16 años.
   //             La plataforma es de uso personal e intransferible.
   //           </p>
   //         </div>
@@ -101,7 +101,7 @@ const SECTIONS: Section[] = [
   //           <p className="font-semibold text-secondary-800">4. Responsabilidad</p>
   //           <p>
   //             Cada participante es responsable de su propia seguridad al realizar los retos.
-  //             SportBingo no se hace responsable de lesiones o daños derivados de la práctica deportiva.
+  //             Bingo no se hace responsable de lesiones o daños derivados de la práctica deportiva.
   //           </p>
   //         </div>
   //       </div>

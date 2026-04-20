@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import styles from './page.module.css';
 
 const BOARDS = [
   { id: 'running',  emoji: '🏃', label: 'Running',  color: '#FC0230' },
@@ -147,51 +148,11 @@ export default function LandingPage() {
   const pct = Math.round((done / total) * 100);
   const c = activeBoard.color;
 
-  if (status === 'loading') return null;
-
   // Duplicar sponsors para loop continuo
   const marqueeItems = [...SPONSORS, ...SPONSORS, ...SPONSORS];
 
   return (
     <div style={{ minHeight: '100vh', background: '#FAFAF9', fontFamily: "'DM Sans','Helvetica Neue',sans-serif" }}>
-
-      {/* ── Estilos globales ─────────────────────────────────────────── */}
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
-        * { box-sizing: border-box; }
-        button { font-family: inherit; }
-        @keyframes marquee {
-          0%   { transform: translateX(0); }
-          100% { transform: translateX(-33.333%); }
-        }
-        @keyframes floatBadge {
-          0%,100% { transform: translateY(0) scale(1); }
-          50%     { transform: translateY(-5px) scale(1.02); }
-        }
-        @keyframes fadeUp {
-          from { opacity:0; transform:translateY(12px); }
-          to   { opacity:1; transform:translateY(0); }
-        }
-        .marquee-track {
-          display: flex;
-          align-items: center;
-          gap: 56px;
-          animation: marquee 22s linear infinite;
-          width: max-content;
-        }
-        .marquee-track:hover { animation-play-state: paused; }
-        .sponsor-item {
-          display: flex;
-          align-items: center;
-          opacity: 0.7;
-          transition: opacity .2s;
-          flex-shrink: 0;
-        }
-        .sponsor-item:hover { opacity: 1; }
-        .board-btn { border: none; background: transparent; cursor: pointer; font-family: inherit; }
-        .cell-item { transition: background .2s, transform .15s, outline .15s; }
-        .cell-item:hover { transform: scale(1.06); }
-      `}</style>
 
       {/* ── Nav ─────────────────────────────────────────────────────── */}
       <nav style={{
@@ -209,7 +170,7 @@ export default function LandingPage() {
             <span style={{ fontSize: 14 }}>🏆</span>
           </div>
           <span style={{ fontWeight: 700, fontSize: 15, color: '#1C1C1A', letterSpacing: '-.02em' }}>
-            SportBingo
+            Bingo
           </span>
         </div>
         <button
@@ -247,9 +208,9 @@ export default function LandingPage() {
             Sponsors
           </div>
           <div style={{ overflow: 'hidden', flex: 1 }}>
-            <div className="marquee-track">
+            <div className={styles.marqueeTrack}>
               {marqueeItems.map((s, i) => (
-                <div key={`${s.id}-${i}`} className="sponsor-item">
+                <div key={`${s.id}-${i}`} className={styles.sponsorItem}>
                   <s.Logo />
                 </div>
               ))}
@@ -269,7 +230,7 @@ export default function LandingPage() {
       }}>
 
         {/* ── Columna izquierda ──────────────────────────────────────── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', animation: 'fadeUp .5s ease both' }}>
+        <div className={styles.fadeUp} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -319,7 +280,7 @@ export default function LandingPage() {
               {BOARDS.map(b => (
                 <button
                   key={b.id}
-                  className="board-btn"
+                  className={styles.boardBtn}
                   onClick={() => handleBoardChange(b)}
                   style={{
                     fontSize: 11, padding: '5px 11px', borderRadius: 20,
@@ -353,9 +314,8 @@ export default function LandingPage() {
         </div>
 
         {/* ── Columna derecha: tablero ───────────────────────────────── */}
-        <div style={{
+        <div className={styles.fadeUpDelayed} style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14,
-          animation: 'fadeUp .5s ease .1s both',
         }}>
           <div style={{
             background: c, borderRadius: 16, padding: 7,
@@ -367,7 +327,7 @@ export default function LandingPage() {
               return (
                 <div
                   key={i}
-                  className="cell-item"
+                  className={styles.cellItem}
                   onClick={() => toggleCell(i)}
                   style={{
                     background: isDone ? 'rgba(255,255,255,0.25)' : 'rgba(243,246,251,0.18)',
@@ -413,9 +373,9 @@ export default function LandingPage() {
             <div style={{
               background: c, color: '#fff', borderRadius: 12,
               padding: '10px 20px', fontSize: 13, fontWeight: 600,
-              textAlign: 'center', animation: 'floatBadge 2s ease-in-out infinite',
+              textAlign: 'center',
               transition: 'background .3s',
-            }}>
+            }} className={styles.floatBadge}>
               ¡BINGO! +2,450 pts 🏆
             </div>
           )}
@@ -432,7 +392,7 @@ export default function LandingPage() {
         borderTop: '1px solid #EEECEA',
         fontSize: 12, color: '#9B9B95',
       }}>
-        SportBingo · Todos los retos, un tablero.
+        Bingo · Todos los retos, un tablero.
       </footer>
     </div>
   );

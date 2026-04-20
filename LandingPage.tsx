@@ -202,7 +202,7 @@ export default function LandingPage() {
             <span style={{ fontSize: 14 }}>🏆</span>
           </div>
           <span style={{ fontWeight: 700, fontSize: 15, color: '#1C1C1A', letterSpacing: '-.02em' }}>
-            SportBingo
+            Bingo
           </span>
         </div>
         <button
@@ -446,7 +446,7 @@ export default function LandingPage() {
         borderTop: '1px solid #EEECEA',
         fontSize: 12, color: '#9B9B95',
       }}>
-        SportBingo · Todos los retos, un tablero.
+        Bingo · Todos los retos, un tablero.
       </footer>
     </div>
   );

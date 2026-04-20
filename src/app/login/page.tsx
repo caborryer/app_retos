@@ -83,7 +83,7 @@ export default function LoginPage() {
           <div className="w-7 h-7 rounded-lg bg-[#FC0230] flex items-center justify-center">
             <span className="text-sm">🏆</span>
           </div>
-          SportBingo
+          Bingo
         </button>
       </nav>
 
