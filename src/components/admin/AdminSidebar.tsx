@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Image,
   LayoutGrid,
+  BarChart2,
   LogOut,
   Zap,
   ChevronRight,
@@ -31,6 +32,12 @@ const NAV_ITEMS = [
     href: '/admin/boards',
     label: 'Tableros',
     icon: LayoutGrid,
+    exact: false,
+  },
+  {
+    href: '/admin/analytics',
+    label: 'Analytics',
+    icon: BarChart2,
     exact: false,
   },
 ];

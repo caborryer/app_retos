@@ -16,6 +16,8 @@ import {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const MAX_CHALLENGES = 8;
+const ADMIN_CHALLENGE_IMAGE_MAX_MB = 8;
+const ADMIN_BOARD_COVER_MAX_MB = 10;
 
 const EMOJI_CATEGORIES: { label: string; emojis: string[] }[] = [
   {
@@ -200,18 +202,21 @@ function ImageUploader({
   label,
   currentImage,
   hint,
+  maxMb = ADMIN_CHALLENGE_IMAGE_MAX_MB,
   onUpload,
 }: {
   label: string;
   currentImage: string | null;
   hint?: string;
+  maxMb?: number;
   onUpload: (url: string) => void;
 }) {
   const [uploading, setUploading] = useState(false);
 
   async function handleFile(file: File) {
-    if (file.size > 5 * 1024 * 1024) {
-      alert('La imagen supera el tamaño máximo de 5 MB.');
+    const maxBytes = maxMb * 1024 * 1024;
+    if (file.size > maxBytes) {
+      alert(`La imagen supera el tamaño maximo de ${maxMb} MB.`);
       return;
     }
     const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
@@ -274,7 +279,7 @@ function ImageUploader({
         )}
       </div>
       <p className="text-slate-500 text-[10px] mt-1">
-        {hint ?? 'Recomendado: 800×400px · JPG o PNG · máx 5 MB'}
+        {hint ?? `Recomendado: 800×400px · JPG o PNG · max ${maxMb} MB`}
       </p>
     </div>
   );
@@ -525,7 +530,8 @@ function ChallengeFormModal({ boardId, challenge, onClose, onSaved }: ChallengeF
             <ImageUploader
               label="imagen del reto"
               currentImage={form.images[0] ?? null}
-              hint="Recomendado: 600×600px · JPG o PNG · máx 5 MB"
+              maxMb={ADMIN_CHALLENGE_IMAGE_MAX_MB}
+              hint={`Recomendado: 600×600px · JPG o PNG · max ${ADMIN_CHALLENGE_IMAGE_MAX_MB} MB`}
               onUpload={(url) => set('images', [url])}
             />
           </div>
@@ -812,7 +818,8 @@ function BoardCard({
           <ImageUploader
             label="portada del tablero"
             currentImage={draft.coverImage ?? board.coverImage}
-            hint="Recomendado: 800×400px · JPG o PNG · máx 5 MB"
+            maxMb={ADMIN_BOARD_COVER_MAX_MB}
+            hint={`Recomendado: 800×400px · JPG o PNG · max ${ADMIN_BOARD_COVER_MAX_MB} MB`}
             onUpload={(url) => setDraft((d) => ({ ...d, coverImage: url }))}
           />
         </div>
@@ -1304,8 +1311,12 @@ export default function BoardManager() {
         return;
       }
       setBoards((prev) => prev.map((b) => (b.id === id ? { ...b, ...body } : b)));
-    } catch {
-      alert('Error al guardar los cambios');
+    } catch (err) {
+      const message =
+        err instanceof Error && err.message.trim()
+          ? err.message
+          : 'Error al guardar los cambios';
+      alert(message);
     }
   }
 
