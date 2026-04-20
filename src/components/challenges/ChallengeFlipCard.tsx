@@ -1,13 +1,14 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { Camera, CheckCircle, X } from 'lucide-react';
+import { Camera, CheckCircle, Upload, X } from 'lucide-react';
 import { userFacingApiError } from '@/lib/user-facing-api-error';
 import { normalizeEvidenceLink } from '@/lib/normalize-evidence-link';
 import type { Challenge } from '@/types';
 import { ChallengeStatus } from '@/types';
 import { useAppStore } from '@/store/useAppStore';
-import Button from '@/components/ui/Button';
+import CameraCaptureModal from '@/components/ui/CameraCaptureModal';
+import { preferNativeCameraPicker } from '@/lib/native-camera-input';
 import { cn } from '@/lib/utils';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -24,7 +25,10 @@ export default function ChallengeFlipCard({ challenge, className }: ChallengeFli
   const [linkValue, setLinkValue] = useState('');
   const [linkError, setLinkError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  /** Abre la cámara del sistema (iOS/Android); más fiable que getUserMedia en el navegador */
+  const cameraCaptureInputRef = useRef<HTMLInputElement>(null);
   const { updateChallenge } = useAppStore();
 
   // Helper: call API to submit evidence for the first uncompleted task
@@ -95,10 +99,21 @@ export default function ChallengeFlipCard({ challenge, className }: ChallengeFli
     if (!showLinkInput) setIsFlipped((prev) => !prev);
   };
 
-  const handlePhotoClick = (e: React.MouseEvent) => {
+  const handleGalleryClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     fileInputRef.current?.click();
+  };
+
+  const handleOpenCamera = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Móvil/tablet: intento nativo (app Cámara). Escritorio: vista prevía con getUserMedia.
+    if (preferNativeCameraPicker()) {
+      cameraCaptureInputRef.current?.click();
+    } else {
+      setCameraOpen(true);
+    }
   };
 
   const handleCompleteClick = async (e: React.MouseEvent) => {
@@ -111,8 +126,12 @@ export default function ChallengeFlipCard({ challenge, className }: ChallengeFli
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!ACCEPTED_TYPES.includes(file.type)) {
-      alert('Formato no válido. Usa JPG, PNG, GIF o WebP.');
+    const mime = file.type || '';
+    const looksImage =
+      mime.startsWith('image/') ||
+      /\.(jpe?g|png|gif|webp|heic|heif)$/i.test(file.name);
+    if (!looksImage && !ACCEPTED_TYPES.includes(mime)) {
+      alert('Formato no válido. Usa una imagen (JPG, PNG, GIF, WebP).');
       return;
     }
     if (file.size > MAX_FILE_SIZE) {
@@ -265,15 +284,52 @@ export default function ChallengeFlipCard({ challenge, className }: ChallengeFli
                       onChange={handleFileSelect}
                       className="hidden"
                     />
-                    <button
-                      type="button"
-                      onClick={handlePhotoClick}
-                      disabled={submitting}
-                      className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold text-white bg-primary-500 hover:bg-primary-600 transition-colors"
-                    >
-                      <Camera className="w-3 h-3" />
-                      {submitting ? 'Subiendo...' : 'Subir foto'}
-                    </button>
+                    <input
+                      ref={cameraCaptureInputRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                      aria-hidden
+                    />
+                    <div className="flex gap-1 justify-center w-full">
+                      <button
+                        type="button"
+                        onClick={handleGalleryClick}
+                        disabled={submitting}
+                        title="Elegir imagen de la galería o archivos"
+                        className="flex flex-col items-center justify-center gap-0.5 min-w-[52px] px-1.5 py-1 rounded-lg text-[9px] font-semibold text-white bg-primary-500 hover:bg-primary-600 transition-colors disabled:opacity-60"
+                      >
+                        <Upload className="w-3 h-3 shrink-0" />
+                        Galería
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleOpenCamera}
+                        disabled={submitting}
+                        title="Abrir la cámara del dispositivo para tomar una foto"
+                        className="flex flex-col items-center justify-center gap-0.5 min-w-[52px] px-1.5 py-1 rounded-lg text-[9px] font-semibold text-white bg-primary-600 hover:bg-primary-700 transition-colors disabled:opacity-60"
+                      >
+                        <Camera className="w-3 h-3 shrink-0" />
+                        Cámara
+                      </button>
+                    </div>
+                    <CameraCaptureModal
+                      open={cameraOpen}
+                      onClose={() => setCameraOpen(false)}
+                      onCapture={(file) => {
+                        if (!ACCEPTED_TYPES.includes(file.type)) {
+                          alert('Formato no válido. La captura debe ser JPEG.');
+                          return;
+                        }
+                        if (file.size > MAX_FILE_SIZE) {
+                          alert('La imagen no debe superar 5MB.');
+                          return;
+                        }
+                        submitEvidence(file).then(() => setIsFlipped(false));
+                      }}
+                    />
                   </>
                 )}
 

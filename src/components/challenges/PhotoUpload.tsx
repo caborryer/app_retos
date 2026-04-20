@@ -5,7 +5,9 @@ import { Camera, Upload, X, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import Card from '../ui/Card';
-import Button from '../ui/Button';
+import CameraCaptureModal from '@/components/ui/CameraCaptureModal';
+import { preferNativeCameraPicker } from '@/lib/native-camera-input';
+import { userFacingApiError } from '@/lib/user-facing-api-error';
 
 interface PhotoUploadProps {
   taskId: string;
@@ -16,9 +18,11 @@ interface PhotoUploadProps {
   className?: string;
 }
 
+const MAX_BYTES = 5 * 1024 * 1024;
+
 export default function PhotoUpload({
   taskId,
-  challengeId,
+  challengeId: _challengeId,
   existingPhoto,
   onPhotoUpload,
   validationStatus = 'pending',
@@ -26,45 +30,49 @@ export default function PhotoUpload({
 }: PhotoUploadProps) {
   const [preview, setPreview] = useState<string | null>(existingPhoto || null);
   const [isUploading, setIsUploading] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraCaptureInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
+  const uploadFile = async (file: File) => {
     if (!file.type.startsWith('image/')) {
       alert('Por favor selecciona una imagen válida');
       return;
     }
-
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > MAX_BYTES) {
       alert('La imagen es muy grande. Máximo 5MB');
       return;
     }
 
     setIsUploading(true);
-
     try {
-      // Create preview
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
-        setPreview(result);
-        
-        // Simulate upload delay
-        setTimeout(() => {
-          onPhotoUpload(taskId, result);
-          setIsUploading(false);
-        }, 1000);
-      };
-      reader.readAsDataURL(file);
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: fd,
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        alert(await userFacingApiError(res, 'upload'));
+        return;
+      }
+      const { url } = await res.json();
+      setPreview(url);
+      onPhotoUpload(taskId, url);
     } catch (error) {
       console.error('Error uploading photo:', error);
-      setIsUploading(false);
       alert('Error al subir la foto. Intenta nuevamente.');
+    } finally {
+      setIsUploading(false);
     }
+  };
+
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    await uploadFile(file);
+    event.target.value = '';
   };
 
   const handleRemovePhoto = () => {
@@ -90,7 +98,7 @@ export default function PhotoUpload({
       case 'approved':
         return <Check className="w-5 h-5 text-green-600" />;
       case 'rejected':
-        return <X className="w-5 h-5 text-red-600" />;
+        return <X className="w-5 h-5 text-red-500" />;
       default:
         return null;
     }
@@ -105,35 +113,74 @@ export default function PhotoUpload({
         onChange={handleFileSelect}
         className="hidden"
       />
+      <input
+        ref={cameraCaptureInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleFileSelect}
+        className="hidden"
+        aria-hidden
+      />
+
+      <CameraCaptureModal
+        open={cameraOpen}
+        onClose={() => setCameraOpen(false)}
+        onCapture={(file) => uploadFile(file)}
+      />
 
       {!preview ? (
-        <motion.button
-          onClick={() => fileInputRef.current?.click()}
-          className={cn(
-            'w-full aspect-square rounded-2xl border-2 border-dashed',
-            'flex flex-col items-center justify-center gap-2',
-            'hover:border-primary-500 hover:bg-primary-50',
-            'transition-all duration-200',
-            'bg-secondary-50 border-secondary-300'
-          )}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          disabled={isUploading}
-        >
-          {isUploading ? (
-            <div className="flex flex-col items-center gap-2">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
-              <span className="text-xs text-secondary-600">Subiendo...</span>
-            </div>
-          ) : (
-            <>
-              <Camera className="w-8 h-8 text-secondary-400" />
-              <span className="text-xs text-secondary-600 font-medium">
-                Subir Foto
-              </span>
-            </>
-          )}
-        </motion.button>
+        <div className="flex flex-col gap-2">
+          <motion.button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className={cn(
+              'w-full aspect-square rounded-2xl border-2 border-dashed',
+              'flex flex-col items-center justify-center gap-1',
+              'hover:border-primary-500 hover:bg-primary-50',
+              'transition-all duration-200',
+              'bg-secondary-50 border-secondary-300'
+            )}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            disabled={isUploading}
+          >
+            {isUploading ? (
+              <div className="flex flex-col items-center gap-2">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
+                <span className="text-xs text-secondary-600">Subiendo...</span>
+              </div>
+            ) : (
+              <>
+                <Upload className="w-7 h-7 text-secondary-400" />
+                <span className="text-[10px] text-secondary-600 font-medium text-center px-1">
+                  Galería
+                </span>
+              </>
+            )}
+          </motion.button>
+          <motion.button
+            type="button"
+            onClick={() => {
+              if (preferNativeCameraPicker()) {
+                cameraCaptureInputRef.current?.click();
+              } else {
+                setCameraOpen(true);
+              }
+            }}
+            disabled={isUploading}
+            className={cn(
+              'w-full py-2 rounded-xl border-2 border-primary-500/40',
+              'flex items-center justify-center gap-2 text-xs font-semibold text-primary-600',
+              'bg-primary-50 hover:bg-primary-100 transition-colors',
+              'disabled:opacity-50'
+            )}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Camera className="w-4 h-4" />
+            Tomar foto
+          </motion.button>
+        </div>
       ) : (
         <Card variant="elevated" className={cn('p-0 overflow-hidden', getStatusColor())}>
           <div className="relative aspect-square">
@@ -142,22 +189,23 @@ export default function PhotoUpload({
               alt="Foto del reto"
               className="w-full h-full object-cover"
             />
-            
-            {/* Status Badge */}
+
             {validationStatus !== 'pending' && (
               <div className="absolute top-2 right-2">
-                <div className={cn(
-                  'rounded-full p-2',
-                  validationStatus === 'approved' ? 'bg-green-500' : 'bg-red-500'
-                )}>
+                <div
+                  className={cn(
+                    'rounded-full p-2',
+                    validationStatus === 'approved' ? 'bg-green-500' : 'bg-red-500'
+                  )}
+                >
                   {getStatusIcon()}
                 </div>
               </div>
             )}
 
-            {/* Remove Button */}
             {validationStatus === 'pending' && (
               <button
+                type="button"
                 onClick={handleRemovePhoto}
                 className="absolute top-2 left-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 transition-colors"
               >
@@ -165,21 +213,18 @@ export default function PhotoUpload({
               </button>
             )}
 
-            {/* Pending Badge */}
             {validationStatus === 'pending' && (
               <div className="absolute bottom-0 left-0 right-0 bg-yellow-500/90 text-white text-xs font-medium py-2 px-3 text-center">
                 Pendiente de validación
               </div>
             )}
 
-            {/* Approved Badge */}
             {validationStatus === 'approved' && (
               <div className="absolute bottom-0 left-0 right-0 bg-green-500/90 text-white text-xs font-medium py-2 px-3 text-center">
                 ✓ Aprobada
               </div>
             )}
 
-            {/* Rejected Badge */}
             {validationStatus === 'rejected' && (
               <div className="absolute bottom-0 left-0 right-0 bg-red-500/90 text-white text-xs font-medium py-2 px-3 text-center">
                 ✗ Rechazada

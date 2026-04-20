@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn, useSession } from 'next-auth/react';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
+import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -91,6 +92,15 @@ export default function LoginPage() {
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-[#1C1C1A] tracking-tight">Iniciar sesión</h1>
             <p className="text-[#6B6B67] text-sm mt-1">Accede a tu tablero de retos</p>
+          </div>
+
+          <div className="space-y-4 mb-6">
+            <GoogleSignInButton label="Continuar con Google" callbackUrl="/" />
+            <div className="relative flex items-center gap-3">
+              <div className="h-px flex-1 bg-[#E5E3DC]" />
+              <span className="text-xs text-[#9B9B95] shrink-0">o con email</span>
+              <div className="h-px flex-1 bg-[#E5E3DC]" />
+            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">

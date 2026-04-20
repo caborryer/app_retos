@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, Users, Trophy, Check, Camera, Link as LinkIcon, X } from 'lucide-react';
+import { Calendar, Users, Trophy, Check, Camera, Link as LinkIcon, X, Upload } from 'lucide-react';
 import { useAuthGuard } from '@/hooks/useAuthGuard';
 import Layout from '@/components/layout/Layout';
 import Card from '@/components/ui/Card';
@@ -16,6 +16,8 @@ import type { Challenge, ChallengeTask } from '@/types';
 import { ChallengeCategory } from '@/types';
 import { userFacingApiError } from '@/lib/user-facing-api-error';
 import { normalizeEvidenceLink } from '@/lib/normalize-evidence-link';
+import CameraCaptureModal from '@/components/ui/CameraCaptureModal';
+import { preferNativeCameraPicker } from '@/lib/native-camera-input';
 
 const STRAVA_CATEGORIES: ChallengeCategory[] = [
   ChallengeCategory.RUNNING, ChallengeCategory.CYCLING, ChallengeCategory.GYM,
@@ -98,6 +100,9 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
   const [challenge, setChallenge] = useState<Challenge | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const cameraCaptureInputRef = useRef<HTMLInputElement>(null);
+  const pendingNativeCameraTaskIdRef = useRef<string | null>(null);
+  const [cameraTaskId, setCameraTaskId] = useState<string | null>(null);
 
   useEffect(() => {
     if (challenges.length > 0) {
@@ -181,24 +186,16 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
   };
 
   const handlePhotoButtonClick = (taskId: string) => {
-    // Abrir el selector de archivos
     const input = fileInputRefs.current[taskId];
-    if (input) {
-      input.click();
-    }
+    if (input) input.click();
   };
 
-  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>, taskId: string) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    // Validar tipo de archivo
+  const uploadTaskPhoto = async (taskId: string, file: File) => {
+    if (!challenge) return;
     if (!file.type.startsWith('image/')) {
       alert('Por favor selecciona una imagen válida (JPG, PNG, GIF)');
       return;
     }
-
-    // Validar tamaño (máximo 5MB)
     if (file.size > 5 * 1024 * 1024) {
       alert('La imagen es muy grande. Máximo 5MB');
       return;
@@ -210,7 +207,6 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
       const res = await fetch('/api/upload', { method: 'POST', body: fd, credentials: 'include' });
       if (!res.ok) {
         alert(await userFacingApiError(res, 'upload'));
-        event.target.value = '';
         return;
       }
       const { url: photoUrl } = await res.json();
@@ -222,7 +218,6 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
       });
       if (!submitRes.ok) {
         alert(await userFacingApiError(submitRes, 'submit'));
-        event.target.value = '';
         return;
       }
       updateChallenge(challenge.id, {
@@ -235,8 +230,22 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
       console.error('Error al procesar la imagen:', error);
       alert('Error al procesar la imagen. Intenta nuevamente.');
     }
+  };
 
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>, taskId: string) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    await uploadTaskPhoto(taskId, file);
     event.target.value = '';
+  };
+
+  const handleNativeCameraFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const taskId = pendingNativeCameraTaskIdRef.current;
+    pendingNativeCameraTaskIdRef.current = null;
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!taskId || !file) return;
+    await uploadTaskPhoto(taskId, file);
   };
 
   const handlePhotoUpload = async (taskId: string, photoUrl: string) => {
@@ -455,13 +464,30 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
                           onChange={(e) => handleFileSelect(e, task.id)}
                           className="hidden"
                         />
-                        <Button
-                          size="sm"
-                          onClick={() => handlePhotoButtonClick(task.id)}
-                          leftIcon={<Camera className="w-4 h-4" />}
-                        >
-                          Foto
-                        </Button>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => handlePhotoButtonClick(task.id)}
+                            leftIcon={<Upload className="w-4 h-4" />}
+                          >
+                            Galería
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              if (preferNativeCameraPicker()) {
+                                pendingNativeCameraTaskIdRef.current = task.id;
+                                cameraCaptureInputRef.current?.click();
+                              } else {
+                                setCameraTaskId(task.id);
+                              }
+                            }}
+                            leftIcon={<Camera className="w-4 h-4" />}
+                          >
+                            Cámara
+                          </Button>
+                        </div>
                       </>
                     )}
 
@@ -533,6 +559,26 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
           )}
         </div>
       </div>
+
+      <input
+        ref={cameraCaptureInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        aria-hidden
+        onChange={handleNativeCameraFile}
+      />
+
+      <CameraCaptureModal
+        open={cameraTaskId !== null}
+        onClose={() => setCameraTaskId(null)}
+        onCapture={(file) => {
+          const id = cameraTaskId;
+          setCameraTaskId(null);
+          if (id) void uploadTaskPhoto(id, file);
+        }}
+      />
     </Layout>
   );
 }

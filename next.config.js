@@ -26,6 +26,9 @@ try {
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  env: {
+    NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: process.env.AUTH_GOOGLE_ID ? 'true' : 'false',
+  },
   reactStrictMode: true,
   images: {
     remotePatterns,
@@ -59,6 +62,10 @@ const nextConfig = {
           {
             key: 'Pragma',
             value: 'no-cache',
+          },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(self), geolocation=(self)',
           },
         ],
       },

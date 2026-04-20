@@ -1,7 +1,12 @@
 import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
+import Google from 'next-auth/providers/google';
 import bcrypt from 'bcryptjs';
+import { randomBytes } from 'node:crypto';
 import { prisma } from '@/lib/prisma';
+
+const googleConfigured =
+  Boolean(process.env.AUTH_GOOGLE_ID?.trim()) && Boolean(process.env.AUTH_GOOGLE_SECRET?.trim());
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
@@ -11,6 +16,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   session: { strategy: 'jwt' },
   providers: [
+    ...(googleConfigured
+      ? [
+          Google({
+            clientId: process.env.AUTH_GOOGLE_ID!,
+            clientSecret: process.env.AUTH_GOOGLE_SECRET!,
+            allowDangerousEmailAccountLinking: true,
+          }),
+        ]
+      : []),
     Credentials({
       credentials: {
         email: { label: 'Email', type: 'email' },
@@ -71,10 +85,43 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    jwt({ token, user }) {
+    async signIn({ user, account }) {
+      if (account?.provider !== 'google' || !user.email) {
+        return true;
+      }
+      const email = user.email;
+      const placeholderPassword = await bcrypt.hash(randomBytes(32).toString('hex'), 12);
+      await prisma.user.upsert({
+        where: { email },
+        create: {
+          email,
+          name: user.name?.trim() || 'Usuario',
+          password: placeholderPassword,
+          avatar: user.image ?? null,
+          role: 'USER',
+        },
+        update: {
+          name: user.name?.trim() || undefined,
+          avatar: user.image ?? undefined,
+        },
+      });
+      return true;
+    },
+    async jwt({ token, user, account }) {
       if (user) {
-        if (typeof user.id === 'string') token.id = user.id;
-        token.role = ((user as { role?: 'USER' | 'ADMIN' }).role ?? 'USER');
+        if (account?.provider === 'credentials') {
+          if (typeof user.id === 'string') token.id = user.id;
+          token.role = ((user as { role?: 'USER' | 'ADMIN' }).role ?? 'USER');
+        } else if (account?.provider === 'google' && user.email) {
+          const dbUser = await prisma.user.findUnique({
+            where: { email: user.email },
+            select: { id: true, role: true },
+          });
+          if (dbUser) {
+            token.id = dbUser.id;
+            token.role = dbUser.role;
+          }
+        }
       }
       return token;
     },

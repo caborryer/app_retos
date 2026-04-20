@@ -5,6 +5,7 @@ import Header from './Header';
 import BottomNav from './BottomNav';
 import { cn } from '@/lib/utils';
 import { useNotificationSync } from '@/hooks/useNotificationSync';
+import LocationConsentPrompt from '@/components/location/LocationConsentPrompt';
 
 interface LayoutProps {
   children: ReactNode;
@@ -43,6 +44,7 @@ export default function Layout({
       </main>
 
       {showBottomNav && <BottomNav />}
+      <LocationConsentPrompt />
     </div>
   );
 }

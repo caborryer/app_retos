@@ -69,10 +69,30 @@ model User {
 
   completedChallenges Int @default(0)
 
-  badges           Badge[]
+  /// When the user accepted in-app location tracking (modal + browser permission).
+  locationOptInAt DateTime?
+
+  badges            Badge[]
   challengeProgress UserChallengeProgress[]
-  taskProgress     UserTaskProgress[]
-  notifications    Notification[]
+  taskProgress      UserTaskProgress[]
+  notifications     Notification[]
+  locationPings     LocationPing[]
+}
+
+/// Snapshot when the user had the app open and consented; used for admin analytics (region / usage).
+model LocationPing {
+  id              String   @id @default(cuid())
+  userId          String
+  latitude        Float
+  longitude       Float
+  accuracyMeters  Float?
+  consentSnapshot Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([createdAt])
 }
 
 model Notification {

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn, useSession } from 'next-auth/react';
 import { Eye, EyeOff, Lock, Mail, User, X } from 'lucide-react';
+import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
 
 // ─── T&C Modal ────────────────────────────────────────────────────────────────
 
@@ -184,6 +185,19 @@ export default function RegisterPage() {
               </div>
               <h1 className="text-2xl font-bold text-[#1C1C1A] tracking-tight">Crear cuenta</h1>
               <p className="text-[#6B6B67] text-sm mt-1">Completa tus datos para empezar a retar</p>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              <GoogleSignInButton label="Registrarse con Google" callbackUrl="/" />
+              <p className="text-[11px] text-center text-[#9B9B95] leading-snug">
+                Si te registras con Google, damos por aceptados los mismos términos que al registrarte con
+                email.
+              </p>
+              <div className="relative flex items-center gap-3">
+                <div className="h-px flex-1 bg-[#E5E3DC]" />
+                <span className="text-xs text-[#9B9B95] shrink-0">o con email y contraseña</span>
+                <div className="h-px flex-1 bg-[#E5E3DC]" />
+              </div>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">

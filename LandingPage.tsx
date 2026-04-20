@@ -150,8 +150,7 @@ export default function LandingPage() {
     <div style={{ minHeight: '100vh', background: '#FAFAF9', fontFamily: "'DM Sans','Helvetica Neue',sans-serif" }}>
 
       {/* ── Estilos globales ─────────────────────────────────────────── */}
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+      <style suppressHydrationWarning>{`
         * { box-sizing: border-box; }
         button { font-family: inherit; }
         @keyframes marquee {
