@@ -57,6 +57,8 @@ function buildCells(challenges: Challenge[]): (Challenge | null)[] {
   ];
 }
 
+const BINGO_SEEN_PREFIX = 'bingo-seen-';
+
 export function BingoBoard({
   challenges,
   boardId,
@@ -70,7 +72,7 @@ export function BingoBoard({
   startingPlay = false,
 }: BingoBoardProps) {
   const [showBingo, setShowBingo] = useState(false);
-  const seenInSessionRef = useRef<Record<string, boolean>>({});
+  const openTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Cerrar modal cuando cambia el tablero
   useEffect(() => {
@@ -78,22 +80,41 @@ export function BingoBoard({
   }, [boardId]);
 
   // Detectar todos los retos completados.
-  // Se evita localStorage para no arrastrar estados "stale" entre tableros/sesiones.
-  // Mostramos una vez por tablero en la sesión actual y rearmamos si deja de estar completo.
+  // Debe mostrarse una sola vez por tablero (persistente entre recargas/sesiones).
   useEffect(() => {
+    if (openTimeoutRef.current) {
+      clearTimeout(openTimeoutRef.current);
+      openTimeoutRef.current = null;
+    }
+
     if (playLocked || challenges.length === 0 || showBingo || !boardId) return;
     const allDone = challenges.every((c) => c.status === ChallengeStatus.COMPLETED);
-    if (!allDone) {
-      seenInSessionRef.current[boardId] = false;
-      return;
-    }
-    if (seenInSessionRef.current[boardId]) return;
+    if (!allDone) return;
 
-    const timer = setTimeout(() => {
-      seenInSessionRef.current[boardId] = true;
+    const key = BINGO_SEEN_PREFIX + boardId;
+    let alreadySeen = false;
+    try {
+      alreadySeen = window.localStorage.getItem(key) === '1';
+    } catch {
+      alreadySeen = false;
+    }
+    if (alreadySeen) return;
+
+    openTimeoutRef.current = setTimeout(() => {
+      try {
+        window.localStorage.setItem(key, '1');
+      } catch {
+        // no-op: si localStorage falla, al menos mantenemos el flujo UI.
+      }
       setShowBingo(true);
+      openTimeoutRef.current = null;
     }, 600);
-    return () => clearTimeout(timer);
+    return () => {
+      if (openTimeoutRef.current) {
+        clearTimeout(openTimeoutRef.current);
+        openTimeoutRef.current = null;
+      }
+    };
   }, [challenges, showBingo, boardId, playLocked]);
 
   const totalPoints = challenges.reduce((acc, c) => acc + c.points, 0);
