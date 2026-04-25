@@ -1,13 +1,14 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { Camera, CheckCircle, Upload, X } from 'lucide-react';
+import { Camera, CheckCircle, Info, Upload, X } from 'lucide-react';
 import { userFacingApiError } from '@/lib/user-facing-api-error';
 import { normalizeEvidenceLink } from '@/lib/normalize-evidence-link';
 import type { Challenge } from '@/types';
 import { ChallengeStatus } from '@/types';
 import { useAppStore } from '@/store/useAppStore';
 import CameraCaptureModal from '@/components/ui/CameraCaptureModal';
+import ChallengeDetailSheet from '@/components/challenges/ChallengeDetailSheet';
 import { preferNativeCameraPicker } from '@/lib/native-camera-input';
 import { cn } from '@/lib/utils';
 
@@ -22,6 +23,7 @@ interface ChallengeFlipCardProps {
 export default function ChallengeFlipCard({ challenge, className }: ChallengeFlipCardProps) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [showLinkInput, setShowLinkInput] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
   const [linkValue, setLinkValue] = useState('');
   const [linkError, setLinkError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -99,6 +101,22 @@ export default function ChallengeFlipCard({ challenge, className }: ChallengeFli
     if (!showLinkInput) setIsFlipped((prev) => !prev);
   };
 
+  const handleOpenDetail = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowDetail(true);
+  };
+
+  const handlePrimaryDetailAction = async () => {
+    setShowDetail(false);
+    if (isCompleted) return;
+    if (hasNoTasks) {
+      await submitEvidence();
+      return;
+    }
+    setIsFlipped(true);
+  };
+
   const handleGalleryClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -163,11 +181,7 @@ export default function ChallengeFlipCard({ challenge, className }: ChallengeFli
   };
 
   return (
-    <div
-      className={cn('group/card w-full aspect-square', className)}
-      onMouseEnter={() => { if (!isCompleted && !showLinkInput) setIsFlipped(true); }}
-      onMouseLeave={() => { if (!showLinkInput) setIsFlipped(false); }}
-    >
+    <div className={cn('group/card w-full aspect-square', className)}>
       <button
         type="button"
         className="block w-full h-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
@@ -250,6 +264,15 @@ export default function ChallengeFlipCard({ challenge, className }: ChallengeFli
                 Rechazado
               </div>
             )}
+            <button
+              type="button"
+              onClick={handleOpenDetail}
+              title="Ver detalle del reto"
+              className="absolute z-10 top-1.5 left-1.5 p-2 min-w-8 min-h-8 rounded-md bg-black/35 text-white hover:bg-black/50 transition-colors"
+              aria-label="Ver detalle del reto"
+            >
+              <Info className="w-3.5 h-3.5" />
+            </button>
           </div>
 
           {/* ── Cara trasera ─────────────────────────────────────────────── */}
@@ -414,6 +437,21 @@ export default function ChallengeFlipCard({ challenge, className }: ChallengeFli
           </div>
         </div>
       </button>
+
+      <ChallengeDetailSheet
+        challenge={challenge}
+        open={showDetail}
+        onClose={() => setShowDetail(false)}
+        onPrimaryAction={handlePrimaryDetailAction}
+        primaryLabel={
+          isCompleted
+            ? 'Completado'
+            : hasNoTasks
+            ? 'Completar reto'
+            : 'Abrir acciones del reto'
+        }
+        primaryDisabled={isCompleted || submitting}
+      />
     </div>
   );
 }

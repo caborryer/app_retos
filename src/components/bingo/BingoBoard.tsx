@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import type { Challenge } from '@/types';
 import { ChallengeStatus } from '@/types';
@@ -57,8 +57,6 @@ function buildCells(challenges: Challenge[]): (Challenge | null)[] {
   ];
 }
 
-const BINGO_SEEN_PREFIX = 'bingo-seen-';
-
 export function BingoBoard({
   challenges,
   boardId,
@@ -72,24 +70,29 @@ export function BingoBoard({
   startingPlay = false,
 }: BingoBoardProps) {
   const [showBingo, setShowBingo] = useState(false);
+  const seenInSessionRef = useRef<Record<string, boolean>>({});
 
   // Cerrar modal cuando cambia el tablero
   useEffect(() => {
     setShowBingo(false);
   }, [boardId]);
 
-  // Detectar todos los retos completados — solo mostrar si aún no fue visto
+  // Detectar todos los retos completados.
+  // Se evita localStorage para no arrastrar estados "stale" entre tableros/sesiones.
+  // Mostramos una vez por tablero en la sesión actual y rearmamos si deja de estar completo.
   useEffect(() => {
     if (playLocked || challenges.length === 0 || showBingo || !boardId) return;
     const allDone = challenges.every((c) => c.status === ChallengeStatus.COMPLETED);
-    if (!allDone) return;
+    if (!allDone) {
+      seenInSessionRef.current[boardId] = false;
+      return;
+    }
+    if (seenInSessionRef.current[boardId]) return;
 
-    const key = BINGO_SEEN_PREFIX + boardId;
-    if (localStorage.getItem(key) === '1') return;
-
-    // Marcar como visto ANTES del timeout para que recargas no retriggereen el modal
-    localStorage.setItem(key, '1');
-    const timer = setTimeout(() => setShowBingo(true), 600);
+    const timer = setTimeout(() => {
+      seenInSessionRef.current[boardId] = true;
+      setShowBingo(true);
+    }, 600);
     return () => clearTimeout(timer);
   }, [challenges, showBingo, boardId, playLocked]);
 

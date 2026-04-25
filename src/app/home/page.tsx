@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSession } from 'next-auth/react';
 import Layout from '@/components/layout/Layout';
 import { BingoBoard } from '@/components/bingo/BingoBoard';
+import InfoAccordion from '@/components/bingo/InfoAccordion';
 import { useAppStore } from '@/store/useAppStore';
 import type { Challenge } from '@/types';
 import { ChallengeStatus } from '@/types';
@@ -65,6 +66,9 @@ export default function HomePage() {
     () => boards.filter((b) => (b.folder?.trim() || UNCATEGORIZED) === activeCategory),
     [boards, activeCategory]
   );
+  const relatedBoards = useMemo(() => {
+    return boardsInActiveCategory.filter((b) => b.id !== activeBoardId);
+  }, [boards, boardsInActiveCategory, activeBoardId]);
 
   // Keep category in sync if board changes from other flows
   useEffect(() => {
@@ -269,15 +273,61 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* The board gallery section was intentionally removed to keep Home focused */}
+        {/* Tableros relacionados */}
+        {relatedBoards.length > 0 && (
+          <div className="w-full flex justify-center mt-6 px-6">
+            <div className="w-full" style={{ maxWidth: 360 }}>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-semibold text-secondary-800">Tableros relacionados</h2>
+                <span className="text-[11px] text-secondary-500">
+                  {relatedBoards.length} disponible{relatedBoards.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+              <div
+                className="flex gap-3 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden"
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
+              >
+                {relatedBoards.map((board) => (
+                  <button
+                    key={board.id}
+                    onClick={() => {
+                      const category = board.folder?.trim() || UNCATEGORIZED;
+                      if (category !== activeCategory) {
+                        switchCategory(category);
+                      }
+                      switchBoard(board.id);
+                    }}
+                    className="shrink-0 text-left rounded-xl border border-secondary-200 bg-white hover:border-primary-300 hover:shadow-sm transition-all"
+                    style={{ width: 148 }}
+                  >
+                    <div
+                      className="h-20 rounded-t-xl flex items-center justify-center text-3xl"
+                      style={{
+                        background: board.coverImage
+                          ? `linear-gradient(135deg, ${board.color}33 0%, ${board.color}66 100%)`
+                          : `${board.color}22`,
+                      }}
+                    >
+                      {board.emoji}
+                    </div>
+                    <div className="px-3 py-2">
+                      <p className="text-xs font-semibold text-secondary-900 truncate">{board.title}</p>
+                      <p className="text-[11px] text-secondary-500 truncate">
+                        {board.folder?.trim() || UNCATEGORIZED}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
-        {/* Info / Reglas / TyC / FAQ
         <div className="w-full flex justify-center mt-6 px-6">
           <div className="w-full" style={{ maxWidth: 326 }}>
             <InfoAccordion />
           </div>
         </div>
-        */}
       </div>
     </Layout>
   );

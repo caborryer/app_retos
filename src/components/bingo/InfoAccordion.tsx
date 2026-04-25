@@ -28,6 +28,10 @@ const SECTIONS: Section[] = [
         <ul className="space-y-1 mt-2">
           <li className="flex items-start gap-2">
             <span className="text-primary-500 font-bold mt-0.5">→</span>
+            Para iniciar un reto, haz click en la tarjeta o recuadro correspondiente del tablero.
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-primary-500 font-bold mt-0.5">→</span>
             Completa 8 casillas y gana el <span className="font-semibold">BINGO</span>.
           </li>
           <li className="flex items-start gap-2">
