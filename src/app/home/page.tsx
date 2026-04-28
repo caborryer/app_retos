@@ -398,16 +398,26 @@ export default function HomePage() {
                     className="shrink-0 text-left rounded-xl border border-secondary-200 bg-white hover:border-primary-300 hover:shadow-sm transition-all"
                     style={{ width: 148 }}
                   >
-                    <div
-                      className="h-20 rounded-t-xl flex items-center justify-center text-3xl"
-                      style={{
-                        background: board.coverImage
-                          ? `linear-gradient(135deg, ${board.color}33 0%, ${board.color}66 100%)`
-                          : `${board.color}22`,
-                      }}
-                    >
-                      {board.emoji}
-                    </div>
+                    {board.coverImage ? (
+                      <div className="relative h-20 rounded-t-xl overflow-hidden">
+                        <img
+                          src={board.coverImage}
+                          alt={`Portada de ${board.title}`}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent" />
+                        <span className="absolute left-2 bottom-1 text-lg drop-shadow-sm">{board.emoji}</span>
+                      </div>
+                    ) : (
+                      <div
+                        className="h-20 rounded-t-xl flex items-center justify-center text-3xl"
+                        style={{ background: `${board.color}22` }}
+                      >
+                        {board.emoji}
+                      </div>
+                    )}
                     <div className="px-3 py-2">
                       <p className="text-xs font-semibold text-secondary-900 truncate">{board.title}</p>
                       <p className="text-[11px] text-secondary-500 truncate">
