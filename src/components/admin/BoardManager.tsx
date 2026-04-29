@@ -50,17 +50,7 @@ const EMOJI_CATEGORIES: { label: string; emojis: string[] }[] = [
   },
 ];
 
-const CATEGORIES = [
-  'RUNNING', 'CYCLING', 'GYM', 'SWIMMING', 'YOGA',
-  'TEAM_SPORTS', 'OUTDOOR', 'MIXED', 'PETS',
-];
 const DIFFICULTIES = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'EXPERT'];
-
-const CATEGORY_LABELS: Record<string, string> = {
-  RUNNING: 'Correr', CYCLING: 'Ciclismo', GYM: 'Gimnasio', SWIMMING: 'Natación',
-  YOGA: 'Yoga', TEAM_SPORTS: 'Deportes de equipo', OUTDOOR: 'Aire libre',
-  MIXED: 'Mixto', PETS: 'Mascotas',
-};
 const DIFFICULTY_LABELS: Record<string, string> = {
   BEGINNER: 'Principiante', INTERMEDIATE: 'Intermedio',
   ADVANCED: 'Avanzado', EXPERT: 'Experto',
@@ -80,13 +70,11 @@ interface ChallengeSummary {
   id: string;
   title: string;
   icon: string;
-  category: string;
   difficulty: string;
   points: number;
   tasks: TaskDraft[];
   images: string[];
   description: string;
-  duration: number;
   color: string;
 }
 
@@ -385,10 +373,8 @@ function ChallengeFormModal({ boardId, challenge, onClose, onSaved }: ChallengeF
   const [form, setForm] = useState({
     title: challenge?.title ?? '',
     description: challenge?.description ?? '',
-    category: challenge?.category ?? 'MIXED',
     difficulty: challenge?.difficulty ?? 'BEGINNER',
     points: challenge?.points ?? 10,
-    duration: challenge?.duration ?? 7,
     icon: challenge?.icon ?? '🏆',
     color: challenge?.color ?? '#FC0230',
     images: challenge?.images ?? [] as string[],
@@ -463,36 +449,22 @@ function ChallengeFormModal({ boardId, challenge, onClose, onSaved }: ChallengeF
             className="w-full bg-slate-700 text-white text-sm rounded-lg px-3 py-2 resize-none placeholder-slate-400"
           />
 
-          {/* Category + difficulty */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-slate-400 text-xs mb-1 block">Categoría</label>
-              <select
-                value={form.category}
-                onChange={(e) => set('category', e.target.value)}
-                className="w-full bg-slate-700 text-white text-sm rounded-lg px-3 py-2"
-              >
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>{CATEGORY_LABELS[c] ?? c}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-slate-400 text-xs mb-1 block">Dificultad</label>
-              <select
-                value={form.difficulty}
-                onChange={(e) => set('difficulty', e.target.value)}
-                className="w-full bg-slate-700 text-white text-sm rounded-lg px-3 py-2"
-              >
-                {DIFFICULTIES.map((d) => (
-                  <option key={d} value={d}>{DIFFICULTY_LABELS[d] ?? d}</option>
-                ))}
-              </select>
-            </div>
+          {/* Difficulty */}
+          <div>
+            <label className="text-slate-400 text-xs mb-1 block">Dificultad</label>
+            <select
+              value={form.difficulty}
+              onChange={(e) => set('difficulty', e.target.value)}
+              className="w-full bg-slate-700 text-white text-sm rounded-lg px-3 py-2"
+            >
+              {DIFFICULTIES.map((d) => (
+                <option key={d} value={d}>{DIFFICULTY_LABELS[d] ?? d}</option>
+              ))}
+            </select>
           </div>
 
-          {/* Points + duration + color */}
-          <div className="grid grid-cols-3 gap-3">
+          {/* Points + color */}
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-slate-400 text-xs mb-1 block">Puntos</label>
               <input
@@ -500,16 +472,6 @@ function ChallengeFormModal({ boardId, challenge, onClose, onSaved }: ChallengeF
                 min={0}
                 value={form.points}
                 onChange={(e) => set('points', Number(e.target.value))}
-                className="w-full bg-slate-700 text-white text-sm rounded-lg px-3 py-2"
-              />
-            </div>
-            <div>
-              <label className="text-slate-400 text-xs mb-1 block">Duración (días)</label>
-              <input
-                type="number"
-                min={1}
-                value={form.duration}
-                onChange={(e) => set('duration', Number(e.target.value))}
                 className="w-full bg-slate-700 text-white text-sm rounded-lg px-3 py-2"
               />
             </div>

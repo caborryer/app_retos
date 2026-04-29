@@ -43,11 +43,11 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json();
-  const { boardId, title, description, category, difficulty, points, duration, icon, color, images, tasks } = body;
+  const { boardId, title, description, difficulty, points, icon, color, images, tasks } = body;
 
-  if (!boardId || !title || !category || !difficulty) {
+  if (!boardId || !title || !difficulty) {
     return NextResponse.json(
-      { error: 'boardId, title, category and difficulty are required' },
+      { error: 'boardId, title and difficulty are required' },
       { status: 400 },
     );
   }
@@ -57,10 +57,10 @@ export async function POST(req: Request) {
       boardId,
       title,
       description: description ?? '',
-      category,
+      category: 'MIXED',
       difficulty,
       points: points ?? 0,
-      duration: duration ?? 0,
+      duration: 0,
       icon: icon ?? '🏆',
       color: color ?? '#FC0230',
       images: images ?? [],

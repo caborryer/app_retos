@@ -94,5 +94,25 @@ export async function PATCH(
     });
   }
 
+  // UX fix:
+  // After a rejection notification, clear the submission automatically so
+  // the user can re-submit immediately without waiting for admin deletion.
+  if (status === 'REJECTED') {
+    await prisma.userTaskProgress.delete({
+      where: { id: taskProgress.id },
+    });
+
+    return NextResponse.json({
+      ...taskProgress,
+      completed: false,
+      photoUrl: null,
+      linkUrl: null,
+      completedAt: null,
+      validationStatus: 'PENDING',
+      rejectionReason: null,
+      deletedAfterReject: true,
+    });
+  }
+
   return NextResponse.json(taskProgress);
 }

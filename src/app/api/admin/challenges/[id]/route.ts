@@ -24,7 +24,7 @@ export async function PATCH(
   }
 
   const body = await req.json();
-  const { title, description, category, difficulty, points, duration, icon, color, images, tasks } = body;
+  const { title, description, difficulty, points, icon, color, images, tasks } = body;
 
   // Update challenge fields
   await prisma.challenge.update({
@@ -32,10 +32,8 @@ export async function PATCH(
     data: {
       ...(title !== undefined && { title }),
       ...(description !== undefined && { description }),
-      ...(category !== undefined && { category }),
       ...(difficulty !== undefined && { difficulty }),
       ...(points !== undefined && { points }),
-      ...(duration !== undefined && { duration }),
       ...(icon !== undefined && { icon }),
       ...(color !== undefined && { color }),
       ...(images !== undefined && { images }),

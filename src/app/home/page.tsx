@@ -11,11 +11,14 @@ import { ChallengeStatus } from '@/types';
 import { isChallengeNotStarted } from '@/lib/utils';
 
 const HOME_PINNED_CATEGORY_KEY = 'home-pinned-category-v1';
+const COMPLETED_CATEGORY = 'Tableros completados';
+const HOME_DEBUG = process.env.NODE_ENV !== 'production';
 
 export default function HomePage() {
   const { status } = useSession();
   const { challenges, setChallenges, setIsLoading } = useAppStore();
   const UNCATEGORIZED = 'Sin categoria';
+  const CYCLING_CATEGORY = 'Bici';
 
   type HomeBoard = {
     id: string;
@@ -34,10 +37,35 @@ export default function HomePage() {
   const [pinnedCategory, setPinnedCategory] = useState<string | null>(null);
   const [loadingBoard, setLoadingBoard] = useState(true);
   const [startingBoardPlay, setStartingBoardPlay] = useState(false);
+  const [completedBoardIds, setCompletedBoardIds] = useState<string[]>([]);
   const boardCache = useRef<Record<string, Challenge[]>>({});
   const boardCompletedCache = useRef<Record<string, boolean>>({});
+  const boardCompletionRequestCache = useRef<Record<string, Promise<boolean>>>({});
   const activeBoardIdRef = useRef<string | null>(null);
   activeBoardIdRef.current = activeBoardId;
+
+  const getBoardCategory = useCallback((board: HomeBoard) => {
+    const rawFolder = board.folder?.trim();
+    const rawTitle = board.title?.trim() || '';
+    const source = rawFolder || rawTitle;
+    if (!source) return UNCATEGORIZED;
+    const normalized = source
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+
+    const isCycling =
+      normalized.includes('bici') ||
+      normalized.includes('bike') ||
+      normalized.includes('cycling') ||
+      normalized.includes('cycl') ||
+      normalized.includes('cicl');
+
+    if (isCycling) {
+      return CYCLING_CATEGORY;
+    }
+    return rawFolder || UNCATEGORIZED;
+  }, []);
 
   const playLocked = useMemo(() => {
     if (!activeBoardId || challenges.length === 0) return false;
@@ -62,18 +90,19 @@ export default function HomePage() {
           }
 
           const preferred = savedPinned
-            ? data.find((b) => (b.folder?.trim() || UNCATEGORIZED) === savedPinned)
+            ? data.find((b) => getBoardCategory(b) === savedPinned)
             : null;
 
-          const chosen = preferred ?? data[0];
-          const chosenCategory = chosen.folder?.trim() || UNCATEGORIZED;
+          const firstVisible = data.find((b) => getBoardCategory(b) !== UNCATEGORIZED) ?? data[0];
+          const chosen = preferred ?? firstVisible;
+          const chosenCategory = getBoardCategory(chosen);
           setActiveBoardId(chosen.id);
-          setActiveCategory(chosenCategory);
+          setActiveCategory(chosenCategory === UNCATEGORIZED ? COMPLETED_CATEGORY : chosenCategory);
           if (savedPinned) setPinnedCategory(savedPinned);
         }
       })
       .catch(console.error);
-  }, [status]);
+  }, [status, getBoardCategory]);
 
   // Restore pinned category preference
   useEffect(() => {
@@ -85,11 +114,25 @@ export default function HomePage() {
     }
   }, []);
 
+  const incompleteBoards = useMemo(
+    () => boards.filter((b) => !completedBoardIds.includes(b.id)),
+    [boards, completedBoardIds]
+  );
+
   const categories = useMemo(() => {
-    const base = Array.from(new Set(boards.map((b) => b.folder?.trim() || UNCATEGORIZED)));
-    if (!pinnedCategory || !base.includes(pinnedCategory)) return base;
-    return [pinnedCategory, ...base.filter((c) => c !== pinnedCategory)];
-  }, [boards, pinnedCategory]);
+    const base = Array.from(
+      new Set(
+        incompleteBoards
+          .map((b) => getBoardCategory(b))
+          .filter((category) => category !== UNCATEGORIZED)
+      )
+    );
+    const baseWithoutCompleted = base.filter((c) => c !== COMPLETED_CATEGORY);
+    const ordered = (!pinnedCategory || !baseWithoutCompleted.includes(pinnedCategory))
+      ? baseWithoutCompleted
+      : [pinnedCategory, ...baseWithoutCompleted.filter((c) => c !== pinnedCategory)];
+    return [...ordered, COMPLETED_CATEGORY];
+  }, [incompleteBoards, pinnedCategory, getBoardCategory]);
 
   useEffect(() => {
     if (!pinnedCategory) return;
@@ -100,17 +143,87 @@ export default function HomePage() {
     }
   }, [pinnedCategory]);
 
-  const boardsInActiveCategory = useMemo(
-    () => boards.filter((b) => (b.folder?.trim() || UNCATEGORIZED) === activeCategory),
-    [boards, activeCategory]
+  const completedBoards = useMemo(
+    () => boards.filter((b) => completedBoardIds.includes(b.id)),
+    [boards, completedBoardIds]
   );
+  const boardsInActiveCategory = useMemo(() => {
+    if (activeCategory === COMPLETED_CATEGORY) {
+      return completedBoards;
+    }
+    return incompleteBoards.filter((b) => getBoardCategory(b) === activeCategory);
+  }, [completedBoards, incompleteBoards, activeCategory, getBoardCategory]);
   useEffect(() => {
     if (!activeBoardId) return;
     if (challenges.length === 0) return;
-    boardCompletedCache.current[activeBoardId] = challenges.every(
+    const isCompleted = challenges.every(
       (c) => c.status === ChallengeStatus.COMPLETED
     );
+    boardCompletedCache.current[activeBoardId] = isCompleted;
+    setCompletedBoardIds((prev) =>
+      isCompleted
+        ? (prev.includes(activeBoardId) ? prev : [...prev, activeBoardId])
+        : prev.filter((id) => id !== activeBoardId)
+    );
   }, [activeBoardId, challenges]);
+  const isBoardCompleted = useCallback(async (boardId: string) => {
+    if (boardCompletedCache.current[boardId] !== undefined) {
+      return boardCompletedCache.current[boardId];
+    }
+
+    const cached = boardCache.current[boardId];
+    if (cached && cached.length > 0) {
+      const done = cached.every((c) => c.status === ChallengeStatus.COMPLETED);
+      boardCompletedCache.current[boardId] = done;
+      return done;
+    }
+
+    const inflight = boardCompletionRequestCache.current[boardId];
+    if (inflight) return inflight;
+
+    const request = fetch(`/api/challenges?boardId=${boardId}`, { credentials: 'include' })
+      .then(async (res) => {
+        const data: unknown = await res.json();
+        if (!res.ok || !Array.isArray(data)) return false;
+        const list = data as Challenge[];
+        boardCache.current[boardId] = list;
+        const done = list.length > 0 && list.every((c) => c.status === ChallengeStatus.COMPLETED);
+        boardCompletedCache.current[boardId] = done;
+        return done;
+      })
+      .catch(() => false)
+      .finally(() => {
+        delete boardCompletionRequestCache.current[boardId];
+      });
+
+    boardCompletionRequestCache.current[boardId] = request;
+    return request;
+  }, []);
+
+  useEffect(() => {
+    if (status !== 'authenticated' || boards.length === 0) return;
+    let cancelled = false;
+
+    const syncCompletedBoards = async () => {
+      const checks = await Promise.all(
+        boards.map(async (board) => ({
+          id: board.id,
+          done: await isBoardCompleted(board.id),
+        }))
+      );
+      if (cancelled) return;
+      setCompletedBoardIds(checks.filter((row) => row.done).map((row) => row.id));
+    };
+
+    syncCompletedBoards().catch(() => {
+      // ignore transient errors; local cache still updates from active board flow
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [boards, status, isBoardCompleted]);
+
 
   const relatedBoards = useMemo(() => {
     return boardsInActiveCategory.filter((b) => b.id !== activeBoardId);
@@ -121,11 +234,74 @@ export default function HomePage() {
     if (!activeBoardId) return;
     const board = boards.find((b) => b.id === activeBoardId);
     if (!board) return;
-    const boardCategory = board.folder?.trim() || UNCATEGORIZED;
+    // Keep virtual completed category stable; do not force original folder.
+    if (activeCategory === COMPLETED_CATEGORY) {
+      if (HOME_DEBUG) {
+        console.log('[home] preserving completed category view', {
+          activeBoardId,
+          isCompletedBoard: completedBoardIds.includes(activeBoardId),
+        });
+      }
+      return;
+    }
+    const boardCategory = getBoardCategory(board);
     if (boardCategory !== activeCategory) {
+      if (HOME_DEBUG) {
+        console.log('[home] syncing category from board', {
+          from: activeCategory,
+          to: boardCategory,
+          boardId: activeBoardId,
+        });
+      }
       setActiveCategory(boardCategory);
     }
-  }, [activeBoardId, boards, activeCategory]);
+  }, [activeBoardId, boards, activeCategory, completedBoardIds, getBoardCategory]);
+
+  // Self-heal category/board selection when a category becomes empty
+  // (e.g. boards moved to "Tableros completados" after completion sync).
+  useEffect(() => {
+    if (boards.length === 0 || categories.length === 0) return;
+
+    const categoryExists = categories.includes(activeCategory);
+    const hasBoardsInActiveCategory =
+      activeCategory === COMPLETED_CATEGORY
+        ? completedBoards.length > 0
+        : boardsInActiveCategory.length > 0;
+
+    if (categoryExists && hasBoardsInActiveCategory) return;
+
+    const fallbackCategory = categories.find((category) => {
+      if (category === COMPLETED_CATEGORY) return completedBoards.length > 0;
+      return incompleteBoards.some((b) => getBoardCategory(b) === category);
+    });
+
+    if (!fallbackCategory) return;
+
+    const fallbackBoard =
+      fallbackCategory === COMPLETED_CATEGORY
+        ? completedBoards[0]
+        : incompleteBoards.find((b) => getBoardCategory(b) === fallbackCategory);
+
+    if (HOME_DEBUG) {
+      console.log('[home] fallback category/board applied', {
+        activeCategory,
+        fallbackCategory,
+        fallbackBoardId: fallbackBoard?.id ?? null,
+      });
+    }
+
+    setActiveCategory(fallbackCategory);
+    if (fallbackBoard) {
+      setActiveBoardId(fallbackBoard.id);
+    }
+  }, [
+    boards,
+    categories,
+    activeCategory,
+    boardsInActiveCategory,
+    completedBoards,
+    incompleteBoards,
+  ]);
 
   // Fetch challenges for active board
   useEffect(() => {
@@ -216,7 +392,7 @@ export default function HomePage() {
       setChallenges(list);
       // UX: cuando el usuario inicia un tablero, priorizamos su categoría al inicio de badges.
       if (currentBoard) {
-        const pinned = currentBoard.folder?.trim() || UNCATEGORIZED;
+        const pinned = getBoardCategory(currentBoard);
         setPinnedCategory(pinned);
         try {
           window.localStorage.setItem(HOME_PINNED_CATEGORY_KEY, pinned);
@@ -229,7 +405,7 @@ export default function HomePage() {
     } finally {
       setStartingBoardPlay(false);
     }
-  }, [boards, setChallenges]);
+  }, [boards, setChallenges, getBoardCategory]);
 
   const handleBingoContinue = useCallback(async () => {
     if (!activeBoardId || boards.length === 0 || categories.length === 0) return;
@@ -240,34 +416,9 @@ export default function HomePage() {
         ? [...categories.slice(currentCategoryIdx + 1), ...categories.slice(0, currentCategoryIdx + 1)]
         : categories;
 
-    const isBoardCompleted = async (boardId: string) => {
-      if (boardCompletedCache.current[boardId] !== undefined) {
-        return boardCompletedCache.current[boardId];
-      }
-
-      const cached = boardCache.current[boardId];
-      if (cached && cached.length > 0) {
-        const done = cached.every((c) => c.status === ChallengeStatus.COMPLETED);
-        boardCompletedCache.current[boardId] = done;
-        return done;
-      }
-
-      try {
-        const res = await fetch(`/api/challenges?boardId=${boardId}`, { credentials: 'include' });
-        const data: unknown = await res.json();
-        if (!res.ok || !Array.isArray(data)) return false;
-        const list = data as Challenge[];
-        boardCache.current[boardId] = list;
-        const done = list.length > 0 && list.every((c) => c.status === ChallengeStatus.COMPLETED);
-        boardCompletedCache.current[boardId] = done;
-        return done;
-      } catch {
-        return false;
-      }
-    };
-
     for (const category of orderedCategories) {
-      const categoryBoards = boards.filter((b) => (b.folder?.trim() || UNCATEGORIZED) === category);
+      if (category === COMPLETED_CATEGORY) continue;
+      const categoryBoards = incompleteBoards.filter((b) => getBoardCategory(b) === category);
       for (const board of categoryBoards) {
         const done = await isBoardCompleted(board.id);
         if (!done) {
@@ -279,7 +430,7 @@ export default function HomePage() {
         }
       }
     }
-  }, [activeBoardId, activeCategory, boards, categories]);
+  }, [activeBoardId, activeCategory, boards, categories, incompleteBoards, isBoardCompleted, getBoardCategory]);
 
   const switchBoard = useCallback((boardId: string) => {
     if (boardId === activeBoardId) return;
@@ -288,12 +439,27 @@ export default function HomePage() {
 
   const switchCategory = useCallback((category: string) => {
     if (category === activeCategory) return;
+    if (HOME_DEBUG) {
+      console.log('[home] switchCategory', {
+        from: activeCategory,
+        to: category,
+        completedCount: completedBoards.length,
+      });
+    }
     setActiveCategory(category);
-    const firstBoardInCategory = boards.find(
-      (b) => (b.folder?.trim() || UNCATEGORIZED) === category
-    );
+    const firstBoardInCategory = category === COMPLETED_CATEGORY
+      ? completedBoards[0]
+      : incompleteBoards.find((b) => getBoardCategory(b) === category);
     if (firstBoardInCategory) setActiveBoardId(firstBoardInCategory.id);
-  }, [activeCategory, boards]);
+  }, [activeCategory, incompleteBoards, completedBoards, getBoardCategory]);
+
+  // If user is in "Tableros completados" and boards arrive later, auto-select one.
+  useEffect(() => {
+    if (activeCategory !== COMPLETED_CATEGORY) return;
+    if (completedBoards.length === 0) return;
+    if (activeBoardId && completedBoards.some((b) => b.id === activeBoardId)) return;
+    setActiveBoardId(completedBoards[0].id);
+  }, [activeCategory, completedBoards, activeBoardId]);
 
   if (status === 'loading' || loadingBoard) {
     return (
@@ -340,6 +506,9 @@ export default function HomePage() {
                   style={category === activeCategory ? { backgroundColor: activeBoard?.color ?? '#FC0230' } : undefined}
                 >
                   {category}
+                  {category === COMPLETED_CATEGORY && (
+                    <span className="ml-1 text-[10px] opacity-90">({completedBoards.length})</span>
+                  )}
                 </button>
               ))}
             </div>
@@ -389,7 +558,7 @@ export default function HomePage() {
                   <button
                     key={board.id}
                     onClick={() => {
-                      const category = board.folder?.trim() || UNCATEGORIZED;
+                      const category = getBoardCategory(board);
                       if (category !== activeCategory) {
                         switchCategory(category);
                       }
@@ -421,7 +590,7 @@ export default function HomePage() {
                     <div className="px-3 py-2">
                       <p className="text-xs font-semibold text-secondary-900 truncate">{board.title}</p>
                       <p className="text-[11px] text-secondary-500 truncate">
-                        {board.folder?.trim() || UNCATEGORIZED}
+                        {getBoardCategory(board)}
                       </p>
                     </div>
                   </button>
