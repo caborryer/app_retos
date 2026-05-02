@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { syncBoardLiveRanksAndNotify } from '@/lib/board-live-ranking';
 
 /**
  * PATCH /api/tasks/:id/validate
@@ -76,6 +77,10 @@ export async function PATCH(
         },
       });
     }
+
+    await syncBoardLiveRanksAndNotify(prisma, task.challenge.boardId, userId).catch((err) => {
+      console.error('[validate] syncBoardLiveRanksAndNotify', err);
+    });
   }
 
   // Send in-app notification for APPROVED and REJECTED (not PENDING)

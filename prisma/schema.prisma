@@ -140,6 +140,19 @@ model Board {
   challenges Challenge[]
 }
 
+/// Cached per-user progress rank on a board; used to detect leader changes and send notifications.
+model BoardUserRankSnapshot {
+  id                    String   @id @default(cuid())
+  boardId               String
+  userId                String
+  rank                  Int
+  completedChallenges   Int
+  updatedAt             DateTime @updatedAt
+
+  @@unique([boardId, userId])
+  @@index([boardId])
+}
+
 model Challenge {
   id           String              @id @default(cuid())
   title        String

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { getBoardFullCompletionOrder } from '@/lib/board-live-ranking';
 
 export const dynamic = 'force-dynamic';
 
@@ -118,7 +119,7 @@ export async function GET(req: Request) {
       SELECT date_trunc('day', "completedAt") AS day, COUNT(*)::bigint AS count
       FROM "UserTaskProgress"
       WHERE "completedAt" IS NOT NULL
-        AND "completedAt" >= ${toDate(84)}
+        AND "completedAt" >= ${since}
       GROUP BY day
       ORDER BY day ASC
     `),
@@ -246,8 +247,8 @@ export async function GET(req: Request) {
   });
 
   const heatByDay = new Map(heatRows.map((row) => [new Date(row.day).toISOString().slice(0, 10), Number(row.count)]));
-  const heatmap = Array.from({ length: 84 }, (_, index) => {
-    const date = toDate(83 - index);
+  const heatmap = Array.from({ length: daysBack }, (_, index) => {
+    const date = toDate(daysBack - 1 - index);
     return heatByDay.get(date.toISOString().slice(0, 10)) ?? 0;
   });
 
@@ -286,6 +287,94 @@ export async function GET(req: Request) {
   });
   const conversionRate = startedBoards ? Math.round((completedBoards / startedBoards) * 1000) / 10 : 0;
 
+  const boardsWithMeta = await prisma.board.findMany({
+    select: {
+      id: true,
+      title: true,
+      emoji: true,
+      _count: { select: { challenges: true } },
+    },
+    orderBy: { updatedAt: 'desc' },
+    take: 36,
+  });
+  const eightChallengeBoardIds = boardsWithMeta
+    .filter((b) => b._count.challenges >= 8)
+    .map((b) => b.id);
+  const leaderboardBoardIds = [
+    ...new Set([...boardCounter.keys(), ...eightChallengeBoardIds]),
+  ].slice(0, 14);
+
+  const metaByBoardId = new Map(
+    boardsWithMeta.map((b) => [
+      b.id,
+      {
+        title: b.title,
+        emoji: b.emoji,
+        challengeCount: b._count.challenges,
+      },
+    ])
+  );
+
+  type FinisherDto = {
+    place: number;
+    userId: string;
+    name: string;
+    finishedAt: string;
+  };
+
+  type BoardLbDto = {
+    boardId: string;
+    title: string;
+    emoji: string;
+    finishersAllTimeCount: number;
+    finishersInPeriod: FinisherDto[];
+  };
+
+  const boardCompletionLeaderboards: BoardLbDto[] = [];
+
+  for (const bid of leaderboardBoardIds) {
+    let meta = metaByBoardId.get(bid);
+    if (!meta) {
+      const row = await prisma.board.findUnique({
+        where: { id: bid },
+        select: {
+          title: true,
+          emoji: true,
+          _count: { select: { challenges: true } },
+        },
+      });
+      if (!row || row._count.challenges < 8) continue;
+      meta = { title: row.title, emoji: row.emoji, challengeCount: row._count.challenges };
+      metaByBoardId.set(bid, meta);
+    } else if (meta.challengeCount < 8) continue;
+
+    const orderAll = await getBoardFullCompletionOrder(prisma, bid);
+    const ranked = orderAll
+      .filter((row) => row.finishedAt >= since)
+      .slice(0, 30)
+      .map((row, idx) => ({
+        place: idx + 1,
+        userId: row.userId,
+        name: row.name,
+        finishedAt: row.finishedAt.toISOString(),
+      }));
+
+    boardCompletionLeaderboards.push({
+      boardId: bid,
+      title: meta.title,
+      emoji: meta.emoji,
+      finishersAllTimeCount: orderAll.length,
+      finishersInPeriod: ranked,
+    });
+  }
+
+  boardCompletionLeaderboards.sort((a, b) => {
+    if (b.finishersInPeriod.length !== a.finishersInPeriod.length) {
+      return b.finishersInPeriod.length - a.finishersInPeriod.length;
+    }
+    return a.title.localeCompare(b.title);
+  });
+
   return NextResponse.json({
     period,
     kpis: {
@@ -307,5 +396,6 @@ export async function GET(req: Request) {
       completedBoards,
       rate: conversionRate,
     },
+    boardCompletionLeaderboards,
   });
 }

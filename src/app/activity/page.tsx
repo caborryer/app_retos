@@ -60,6 +60,20 @@ type ActivityStatResponse = {
       delta: number;
     };
   };
+  boardCompletionOrder: null | {
+    boardId: string;
+    boardTitle: string;
+    boardEmoji: string;
+    entries: Array<{
+      place: number;
+      userId: string;
+      name: string;
+      finishedAt: string;
+      isCurrentUser: boolean;
+    }>;
+  };
+  boardsForCompletionOrder: Array<{ boardId: string; title: string; emoji: string }>;
+  completionBoardId: string | null;
 };
 
 export default function ActivityPage() {
@@ -68,13 +82,19 @@ export default function ActivityPage() {
   const [loading, setLoading] = useState(true);
   const [apiData, setApiData] = useState<ActivityStatResponse | null>(null);
   const [rankingMode, setRankingMode] = useState<'board' | 'global'>('board');
+  const [pickedCompletionBoardId, setPickedCompletionBoardId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!ready) return;
     let mounted = true;
 
     setLoading(true);
-    fetch('/api/user/activity', { credentials: 'include' })
+    const qs =
+      pickedCompletionBoardId != null && pickedCompletionBoardId !== ''
+        ? `?completionBoardId=${encodeURIComponent(pickedCompletionBoardId)}`
+        : '';
+
+    fetch(`/api/user/activity${qs}`, { credentials: 'include' })
       .then(async (res) => {
         if (!res.ok) {
           throw new Error('No se pudo cargar la actividad.');
@@ -96,7 +116,7 @@ export default function ActivityPage() {
     return () => {
       mounted = false;
     };
-  }, [ready]);
+  }, [ready, pickedCompletionBoardId]);
 
   const stats = useMemo(
     () => ({
@@ -111,6 +131,10 @@ export default function ActivityPage() {
   const recentActivity = apiData?.recentActivity ?? [];
   const boardRanking = apiData?.boardRanking ?? null;
   const globalRanking = apiData?.globalRanking ?? null;
+  const boardCompletionOrder = apiData?.boardCompletionOrder ?? null;
+  const boardsForCompletionOrder = apiData?.boardsForCompletionOrder ?? [];
+  const resolvedCompletionBoardId =
+    pickedCompletionBoardId ?? apiData?.completionBoardId ?? '';
   const activeRanking =
     rankingMode === 'global'
       ? (globalRanking ?? boardRanking)
@@ -327,6 +351,69 @@ export default function ActivityPage() {
                 Compites con {activeRanking.totalCompetitors} jugador{activeRanking.totalCompetitors !== 1 ? 'es' : ''} en este ranking.
               </p>
             </Card>
+          </div>
+        )}
+
+        {boardsForCompletionOrder.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-lg font-bold text-secondary-900">
+                Orden de finalización del tablero
+              </h2>
+              <label className="text-xs text-secondary-600 shrink-0">
+                <span className="sr-only">Elegir tablero</span>
+                <select
+                  aria-label="Tablero para ver orden de finalización"
+                  className="max-w-[min(100vw-2rem,220px)] w-full rounded-lg border border-secondary-200 bg-white px-3 py-2 text-sm text-secondary-900"
+                  value={resolvedCompletionBoardId}
+                  onChange={(e) => setPickedCompletionBoardId(e.target.value)}
+                  disabled={loading}
+                >
+                  {boardsForCompletionOrder.map((b) => (
+                    <option key={b.boardId} value={b.boardId}>
+                      {b.emoji} {b.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            {boardCompletionOrder && (
+              <Card variant="elevated" className="p-4">
+                <p className="text-xs text-secondary-500 mb-2">Quién terminó todos los retos primero</p>
+                <p className="font-semibold text-secondary-900 truncate mb-3">
+                  {boardCompletionOrder.boardEmoji} {boardCompletionOrder.boardTitle}
+                </p>
+                {boardCompletionOrder.entries.length === 0 ? (
+                  <p className="text-sm text-secondary-600 py-4 text-center">
+                    Nadie ha completado todos los retos de este tablero aún.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {boardCompletionOrder.entries.map((entry) => (
+                      <div
+                        key={entry.userId}
+                        className={`flex items-center justify-between rounded-xl px-3 py-2 ${
+                          entry.isCurrentUser ? 'bg-primary-50 border border-primary-200' : 'bg-secondary-50'
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-secondary-900 truncate">
+                            {entry.place}° {entry.name}
+                            {entry.isCurrentUser ? ' (Tú)' : ''}
+                          </p>
+                          <p className="text-[11px] text-secondary-600">
+                            {formatRelativeTime(new Date(entry.finishedAt))}
+                          </p>
+                        </div>
+                        <span className="text-xs font-bold text-primary-600 shrink-0 ml-2">
+                          {entry.place === 1 ? '🥇' : entry.place === 2 ? '🥈' : entry.place === 3 ? '🥉' : ''}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
+            )}
           </div>
         )}
 

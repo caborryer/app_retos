@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { getUserProfileMetrics } from '@/lib/profile-metrics';
+import { getBoardFullCompletionOrder } from '@/lib/board-live-ranking';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,6 +36,19 @@ type RankingBlock = {
   };
 };
 
+type BoardCompletionOrderBlock = {
+  boardId: string;
+  boardTitle: string;
+  boardEmoji: string;
+  entries: Array<{
+    place: number;
+    userId: string;
+    name: string;
+    finishedAt: string;
+    isCurrentUser: boolean;
+  }>;
+};
+
 function rankEntries(entries: RankingEntry[]) {
   return [...entries].sort((a, b) => {
     if (b.completedChallenges !== a.completedChallenges) {
@@ -60,13 +74,15 @@ function getTrend(currentPosition: number, previousPosition: number) {
   return { direction: 'same' as const, delta: 0 };
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const userId = session.user.id;
+  const { searchParams } = new URL(req.url);
+  const requestedCompletionBoardId = searchParams.get('completionBoardId');
 
   const [metrics, challengeProgress, taskProgress] =
     await Promise.all([
@@ -133,6 +149,24 @@ export async function GET() {
         0,
     }))
     .sort((a, b) => b.lastTime - a.lastTime)[0];
+
+  const userBoardIds = [...new Set(challengeProgress.map((cp) => cp.challenge.boardId))];
+
+  let boardsForCompletionOrder: Array<{ boardId: string; title: string; emoji: string }> =
+    [];
+
+  if (userBoardIds.length > 0) {
+    const boardRows = await prisma.board.findMany({
+      where: { id: { in: userBoardIds } },
+      select: { id: true, title: true, emoji: true },
+      orderBy: { title: 'asc' },
+    });
+    boardsForCompletionOrder = boardRows.map((b) => ({
+      boardId: b.id,
+      title: b.title,
+      emoji: b.emoji,
+    }));
+  }
 
   const activities: ActivityItem[] = [];
   const boardStartEvents = new Map<string, ActivityItem>();
@@ -341,6 +375,48 @@ export async function GET() {
         }
       : null;
 
+  const completionBoardId =
+    requestedCompletionBoardId && userBoardIds.includes(requestedCompletionBoardId)
+      ? requestedCompletionBoardId
+      : latestBoardProgress?.boardId ??
+          boardsForCompletionOrder[0]?.boardId ??
+          null;
+
+  let boardCompletionOrder: BoardCompletionOrderBlock | null = null;
+  if (completionBoardId) {
+    let meta =
+      boardsForCompletionOrder.find((b) => b.boardId === completionBoardId) ??
+      (latestBoardProgress && latestBoardProgress.boardId === completionBoardId
+        ? {
+            boardId: latestBoardProgress.boardId,
+            title: latestBoardProgress.boardTitle,
+            emoji: latestBoardProgress.boardEmoji,
+          }
+        : null);
+    if (!meta) {
+      const row = await prisma.board.findUnique({
+        where: { id: completionBoardId },
+        select: { id: true, title: true, emoji: true },
+      });
+      if (row) meta = { boardId: row.id, title: row.title, emoji: row.emoji };
+    }
+    if (meta) {
+      const finishOrder = await getBoardFullCompletionOrder(prisma, completionBoardId);
+      boardCompletionOrder = {
+        boardId: meta.boardId,
+        boardTitle: meta.title,
+        boardEmoji: meta.emoji,
+        entries: finishOrder.map((row, idx) => ({
+          place: idx + 1,
+          userId: row.userId,
+          name: row.name,
+          finishedAt: row.finishedAt.toISOString(),
+          isCurrentUser: row.userId === userId,
+        })),
+      };
+    }
+  }
+
   return NextResponse.json({
     stats: {
       activeChallenges: metrics.activeChallenges,
@@ -351,6 +427,9 @@ export async function GET() {
     recentActivity: activities.slice(0, 12),
     boardRanking,
     globalRanking,
+    boardsForCompletionOrder,
+    completionBoardId,
+    boardCompletionOrder,
   });
 }
 

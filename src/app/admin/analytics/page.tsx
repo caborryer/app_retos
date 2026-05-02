@@ -37,13 +37,49 @@ interface AnalyticsResponse {
     completedBoards: number;
     rate: number;
   };
+  boardCompletionLeaderboards: Array<{
+    boardId: string;
+    title: string;
+    emoji: string;
+    finishersAllTimeCount: number;
+    finishersInPeriod: Array<{
+      place: number;
+      userId: string;
+      name: string;
+      finishedAt: string;
+    }>;
+  }>;
 }
 
 const HEAT_PALETTE = ['#1E2535', '#7F1D1D', '#991B1B', '#DC2626', '#FC0230', '#FF5327'];
 const MEDALS = ['🥇', '🥈', '🥉'];
 
+/** Columnas del grid del mapa de calor (periodo seleccionado en admin). */
+const HEAT_GRID_COLS: Record<Period, number> = {
+  '7d': 7,
+  '30d': 10,
+  '90d': 15,
+};
+
 function formatCompact(value: number) {
   return value.toLocaleString('es-CO');
+}
+
+function periodPhrase(period: Period) {
+  if (period === '7d') return 'los ultimos 7 dias';
+  if (period === '30d') return 'los ultimos 30 dias';
+  return 'los ultimos 90 dias';
+}
+
+function formatFinishedAt(iso: string) {
+  try {
+    return new Date(iso).toLocaleString('es-CO', {
+      dateStyle: 'short',
+      timeStyle: 'short',
+    });
+  } catch {
+    return iso;
+  }
 }
 
 function heatColor(value: number, max: number) {
@@ -252,7 +288,11 @@ export default function AdminAnalyticsPage() {
     fetch(`/api/admin/analytics?period=${period}`)
       .then(async (response) => {
         if (!response.ok) throw new Error('No se pudieron cargar las metricas');
-        return response.json() as Promise<AnalyticsResponse>;
+        const data = (await response.json()) as AnalyticsResponse;
+        return {
+          ...data,
+          boardCompletionLeaderboards: data.boardCompletionLeaderboards ?? [],
+        };
       })
       .then((data) => {
         if (!active) return;
@@ -492,15 +532,27 @@ export default function AdminAnalyticsPage() {
         </div>
 
         <div className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-4">
-          <p className="text-xs font-semibold text-slate-400 mb-3">Mapa de calor - ultimas 12 semanas</p>
+          <p className="text-xs font-semibold text-slate-400 mb-1">Mapa de calor — tareas completadas por dia</p>
+          <p className="text-[10px] text-slate-500 mb-3">
+            Campo por dia desde &quot;hoy&quot; hacia el pasado, alineado con el selector {analytics.period}.
+          </p>
           <div className="overflow-x-auto pb-1">
-            <div className="grid gap-0.5 min-w-[320px]" style={{ gridTemplateColumns: 'repeat(12, minmax(0, 1fr))' }}>
+            <div
+              className="grid gap-0.5 min-w-[200px]"
+              style={{ gridTemplateColumns: `repeat(${HEAT_GRID_COLS[analytics.period]}, minmax(0, 1fr))` }}
+            >
               {analytics.heatmap.map((value, index) => (
                 <div
                   key={index}
                   className="aspect-square rounded-sm"
                   style={{ background: heatColor(value, heatMax) }}
-                  title={`${value} sesiones`}
+                  title={
+                    value === 0
+                      ? 'Sin tareas completadas ese dia'
+                      : value === 1
+                        ? '1 tarea completada ese dia'
+                        : `${value} tareas completadas ese dia`
+                  }
                 />
               ))}
             </div>
@@ -516,6 +568,70 @@ export default function AdminAnalyticsPage() {
       </div>
 
       <ChartsPanel analytics={analytics} />
+
+      <div className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-4">
+        <p className="text-xs font-semibold text-slate-400 mb-1">Posiciones por tablero completado</p>
+        <p className="text-[11px] text-slate-500 mb-4">
+          Usuarios que completaron todos los retos del bingo, ordenados por cuándo cerraron el último reto. Lista filtrada a finalizaciones en{' '}
+          {periodPhrase(period)}; el contador histórico es de siempre.
+        </p>
+        {analytics.boardCompletionLeaderboards.length === 0 ? (
+          <p className="text-xs text-slate-500">No hay tableros elegibles o no hay datos de completados.</p>
+        ) : (
+          <div className="space-y-2 max-h-[min(70vh,520px)] overflow-y-auto pr-1">
+            {analytics.boardCompletionLeaderboards.map((board) => (
+              <details
+                key={board.boardId}
+                className="group rounded-lg border border-slate-700/50 bg-slate-900/40 open:border-slate-600/60"
+              >
+                <summary className="cursor-pointer list-none flex items-center gap-2 px-3 py-2.5 [&::-webkit-details-marker]:hidden">
+                  <span className="text-base shrink-0" aria-hidden>
+                    {board.emoji}
+                  </span>
+                  <span className="text-xs font-medium text-slate-200 flex-1 min-w-0 truncate">{board.title}</span>
+                  <span className="text-[10px] text-slate-500 shrink-0 tabular-nums">
+                    {board.finishersInPeriod.length} en periodo / {board.finishersAllTimeCount} total
+                  </span>
+                  <span className="text-slate-500 text-[10px] group-open:rotate-180 transition-transform">▼</span>
+                </summary>
+                <div className="px-3 pb-3 pt-0 border-t border-slate-700/40">
+                  {board.finishersInPeriod.length === 0 ? (
+                    <p className="text-[11px] text-slate-500 pt-2">Nadie cerró este tablero completo en {periodPhrase(period)}.</p>
+                  ) : (
+                    <div className="overflow-x-auto pt-2">
+                      <table className="w-full text-left text-[11px]">
+                        <thead>
+                          <tr className="text-slate-500 border-b border-slate-700/50">
+                            <th className="py-1.5 pr-2 font-medium w-10">#</th>
+                            <th className="py-1.5 pr-2 font-medium">Usuario</th>
+                            <th className="py-1.5 font-medium whitespace-nowrap">Completado</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {board.finishersInPeriod.map((f) => (
+                            <tr key={f.userId} className="border-b border-slate-700/30 last:border-0">
+                              <td className="py-1.5 pr-2 text-slate-400 tabular-nums">
+                                {f.place <= 3 ? MEDALS[f.place - 1] : f.place}
+                              </td>
+                              <td className="py-1.5 pr-2">
+                                <div className="text-slate-200 font-medium truncate max-w-[200px]">{f.name}</div>
+                                <div className="text-[10px] text-slate-600 truncate max-w-[240px]" title={f.userId}>
+                                  {f.userId}
+                                </div>
+                              </td>
+                              <td className="py-1.5 text-slate-400 whitespace-nowrap">{formatFinishedAt(f.finishedAt)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </details>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         <div className="xl:col-span-2 bg-slate-800/60 border border-slate-700/50 rounded-xl p-4">
