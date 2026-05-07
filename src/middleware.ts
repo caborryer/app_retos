@@ -12,13 +12,27 @@ function isRequestHttps(req: NextRequest) {
 
 export default async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
-  // Auth.js uses __Secure-authjs.session-token on HTTPS; getToken defaults to
-  // non-secure cookie names when secureCookie is omitted (middleware runs on Edge).
-  const token = await getToken({
+  const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET;
+  // Be resilient to cookie-name mismatches between environments (secure vs non-secure).
+  // This avoids login loops where client session exists but middleware cannot read it.
+  let token = await getToken({
     req,
-    secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
+    secret,
     secureCookie: isRequestHttps(req),
   });
+  if (!token) {
+    token = await getToken({
+      req,
+      secret,
+      secureCookie: !isRequestHttps(req),
+    });
+  }
+  if (!token) {
+    token = await getToken({
+      req,
+      secret,
+    });
+  }
 
   const isPublic = PUBLIC_ROUTES.some((r) => pathname === r);
   const isAdminRoute = ADMIN_ROUTES.some((r) => pathname.startsWith(r)) && pathname !== '/admin/login';

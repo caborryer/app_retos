@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import Layout from '@/components/layout/Layout';
 import { BingoBoard } from '@/components/bingo/BingoBoard';
 import InfoAccordion from '@/components/bingo/InfoAccordion';
@@ -16,6 +17,7 @@ const HOME_DEBUG = process.env.NODE_ENV !== 'production';
 
 export default function HomePage() {
   const { status } = useSession();
+  const router = useRouter();
   const { challenges, setChallenges, setIsLoading } = useAppStore();
   const UNCATEGORIZED = 'Sin categoria';
   const CYCLING_CATEGORY = 'Bici';
@@ -36,6 +38,7 @@ export default function HomePage() {
   const [activeCategory, setActiveCategory] = useState<string>(UNCATEGORIZED);
   const [pinnedCategory, setPinnedCategory] = useState<string | null>(null);
   const [loadingBoard, setLoadingBoard] = useState(true);
+  const [boardsLoaded, setBoardsLoaded] = useState(false);
   const [startingBoardPlay, setStartingBoardPlay] = useState(false);
   const [completedBoardIds, setCompletedBoardIds] = useState<string[]>([]);
   const boardCache = useRef<Record<string, Challenge[]>>({});
@@ -77,6 +80,8 @@ export default function HomePage() {
   // Fetch boards list on mount
   useEffect(() => {
     if (status !== 'authenticated') return;
+    setLoadingBoard(true);
+    setBoardsLoaded(false);
     fetch('/api/boards')
       .then((r) => r.json())
       .then((data: HomeBoard[]) => {
@@ -97,12 +102,31 @@ export default function HomePage() {
           const chosen = preferred ?? firstVisible;
           const chosenCategory = getBoardCategory(chosen);
           setActiveBoardId(chosen.id);
-          setActiveCategory(chosenCategory === UNCATEGORIZED ? COMPLETED_CATEGORY : chosenCategory);
+          setActiveCategory(chosenCategory);
           if (savedPinned) setPinnedCategory(savedPinned);
+          return;
         }
+        // No boards available: avoid indefinite loading state.
+        setActiveBoardId(null);
+        setChallenges([]);
       })
-      .catch(console.error);
-  }, [status, getBoardCategory]);
+      .catch((err) => {
+        console.error(err);
+        setActiveBoardId(null);
+        setChallenges([]);
+      })
+      .finally(() => {
+        setLoadingBoard(false);
+        setBoardsLoaded(true);
+      });
+  }, [status, getBoardCategory, setChallenges]);
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      setLoadingBoard(false);
+      router.replace('/login');
+    }
+  }, [status, router]);
 
   // Restore pinned category preference
   useEffect(() => {
@@ -124,7 +148,6 @@ export default function HomePage() {
       new Set(
         incompleteBoards
           .map((b) => getBoardCategory(b))
-          .filter((category) => category !== UNCATEGORIZED)
       )
     );
     const baseWithoutCompleted = base.filter((c) => c !== COMPLETED_CATEGORY);
@@ -461,7 +484,11 @@ export default function HomePage() {
     setActiveBoardId(completedBoards[0].id);
   }, [activeCategory, completedBoards, activeBoardId]);
 
-  if (status === 'loading' || loadingBoard) {
+  if (
+    status === 'loading' ||
+    status === 'unauthenticated' ||
+    (status === 'authenticated' && (!boardsLoaded || (loadingBoard && !!activeBoardId)))
+  ) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-secondary-50 to-white flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
@@ -469,7 +496,10 @@ export default function HomePage() {
     );
   }
 
+  const hasBoards = boards.length > 0;
   const activeBoard = boards.find((b) => b.id === activeBoardId);
+  const showEmptyState = hasBoards && !activeBoard;
+  const showNoActiveBoards = !hasBoards;
 
   return (
     <Layout title="BingoChallenge">
@@ -488,7 +518,7 @@ export default function HomePage() {
           </div>
 
           {/* Category tabs */}
-          {categories.length > 0 && (
+          {categories.length > 0 && hasBoards && (
             <div
               className="flex gap-2 mt-2 overflow-x-auto [&::-webkit-scrollbar]:hidden"
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
@@ -515,89 +545,125 @@ export default function HomePage() {
           )}
         </div>
 
-        {/* Tablero */}
-        <div className="w-full flex justify-center mt-4">
-          {challenges.length > 0 && (
-            <BingoBoard
-              challenges={challenges}
-              boardId={activeBoardId ?? ''}
-              boardTitle={activeBoard?.title ?? 'Tablero'}
-              boardNumber={boards.findIndex((b) => b.id === activeBoardId) + 1}
-              boardColor={activeBoard?.color}
-              boardCoverImage={activeBoard?.coverImage}
-              onBingoContinue={handleBingoContinue}
-              playLocked={playLocked}
-              onStartPlay={handleStartBoardPlay}
-              startingPlay={startingBoardPlay}
-            />
-          )}
-        </div>
-
-        {/* Progreso del tablero */}
-        <div className="w-full flex justify-center mt-4 px-6">
-          <div className="w-full" style={{ maxWidth: 326 }}>
-            <CompletionBar challenges={challenges} />
-          </div>
-        </div>
-
-        {/* Tableros relacionados */}
-        {relatedBoards.length > 0 && (
-          <div className="w-full flex justify-center mt-6 px-6">
-            <div className="w-full" style={{ maxWidth: 360 }}>
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-semibold text-secondary-800">Tableros relacionados</h2>
-                <span className="text-[11px] text-secondary-500">
-                  {relatedBoards.length} disponible{relatedBoards.length !== 1 ? 's' : ''}
-                </span>
-              </div>
-              <div
-                className="flex gap-3 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden"
-                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
+        {showNoActiveBoards ? (
+          <div className="w-full flex justify-center mt-8 px-6">
+            <div className="w-full rounded-2xl border border-secondary-200 bg-white p-5 text-center" style={{ maxWidth: 360 }}>
+              <p className="text-sm font-semibold text-secondary-900">No hay tableros activos en este momento</p>
+              <p className="text-xs text-secondary-500 mt-1">
+                Estamos preparando nuevos retos. Intenta nuevamente en unos minutos.
+              </p>
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="mt-4 inline-flex items-center justify-center rounded-xl bg-primary-500 px-4 py-2 text-xs font-semibold text-white hover:bg-primary-600 transition-colors"
               >
-                {relatedBoards.map((board) => (
-                  <button
-                    key={board.id}
-                    onClick={() => {
-                      const category = getBoardCategory(board);
-                      if (category !== activeCategory) {
-                        switchCategory(category);
-                      }
-                      switchBoard(board.id);
-                    }}
-                    className="shrink-0 text-left rounded-xl border border-secondary-200 bg-white hover:border-primary-300 hover:shadow-sm transition-all"
-                    style={{ width: 148 }}
-                  >
-                    {board.coverImage ? (
-                      <div className="relative h-20 rounded-t-xl overflow-hidden">
-                        <img
-                          src={board.coverImage}
-                          alt={`Portada de ${board.title}`}
-                          className="w-full h-full object-cover"
-                          loading="lazy"
-                          decoding="async"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent" />
-                        <span className="absolute left-2 bottom-1 text-lg drop-shadow-sm">{board.emoji}</span>
-                      </div>
-                    ) : (
-                      <div
-                        className="h-20 rounded-t-xl flex items-center justify-center text-3xl"
-                        style={{ background: `${board.color}22` }}
-                      >
-                        {board.emoji}
-                      </div>
-                    )}
-                    <div className="px-3 py-2">
-                      <p className="text-xs font-semibold text-secondary-900 truncate">{board.title}</p>
-                      <p className="text-[11px] text-secondary-500 truncate">
-                        {getBoardCategory(board)}
-                      </p>
-                    </div>
-                  </button>
-                ))}
-              </div>
+                Reintentar
+              </button>
             </div>
           </div>
+        ) : showEmptyState ? (
+          <div className="w-full flex justify-center mt-8 px-6">
+            <div className="w-full rounded-2xl border border-secondary-200 bg-white p-5 text-center" style={{ maxWidth: 360 }}>
+              <p className="text-sm font-semibold text-secondary-900">No se pudo seleccionar un tablero</p>
+              <p className="text-xs text-secondary-500 mt-1">
+                Actualiza la página para volver a cargar tus retos.
+              </p>
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="mt-4 inline-flex items-center justify-center rounded-xl bg-primary-500 px-4 py-2 text-xs font-semibold text-white hover:bg-primary-600 transition-colors"
+              >
+                Recargar
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Tablero */}
+            <div className="w-full flex justify-center mt-4">
+              {challenges.length > 0 && (
+                <BingoBoard
+                  challenges={challenges}
+                  boardId={activeBoardId ?? ''}
+                  boardTitle={activeBoard?.title ?? 'Tablero'}
+                  boardNumber={boards.findIndex((b) => b.id === activeBoardId) + 1}
+                  boardColor={activeBoard?.color}
+                  boardCoverImage={activeBoard?.coverImage}
+                  onBingoContinue={handleBingoContinue}
+                  playLocked={playLocked}
+                  onStartPlay={handleStartBoardPlay}
+                  startingPlay={startingBoardPlay}
+                />
+              )}
+            </div>
+
+            {/* Progreso del tablero */}
+            <div className="w-full flex justify-center mt-4 px-6">
+              <div className="w-full" style={{ maxWidth: 326 }}>
+                <CompletionBar challenges={challenges} />
+              </div>
+            </div>
+
+            {/* Tableros relacionados */}
+            {relatedBoards.length > 0 && (
+              <div className="w-full flex justify-center mt-6 px-6">
+                <div className="w-full" style={{ maxWidth: 360 }}>
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-sm font-semibold text-secondary-800">Tableros relacionados</h2>
+                    <span className="text-[11px] text-secondary-500">
+                      {relatedBoards.length} disponible{relatedBoards.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <div
+                    className="flex gap-3 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden"
+                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
+                  >
+                    {relatedBoards.map((board) => (
+                      <button
+                        key={board.id}
+                        onClick={() => {
+                          const category = getBoardCategory(board);
+                          if (category !== activeCategory) {
+                            switchCategory(category);
+                          }
+                          switchBoard(board.id);
+                        }}
+                        className="shrink-0 text-left rounded-xl border border-secondary-200 bg-white hover:border-primary-300 hover:shadow-sm transition-all"
+                        style={{ width: 148 }}
+                      >
+                        {board.coverImage ? (
+                          <div className="relative h-20 rounded-t-xl overflow-hidden">
+                            <img
+                              src={board.coverImage}
+                              alt={`Portada de ${board.title}`}
+                              className="w-full h-full object-cover"
+                              loading="lazy"
+                              decoding="async"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent" />
+                            <span className="absolute left-2 bottom-1 text-lg drop-shadow-sm">{board.emoji}</span>
+                          </div>
+                        ) : (
+                          <div
+                            className="h-20 rounded-t-xl flex items-center justify-center text-3xl"
+                            style={{ background: `${board.color}22` }}
+                          >
+                            {board.emoji}
+                          </div>
+                        )}
+                        <div className="px-3 py-2">
+                          <p className="text-xs font-semibold text-secondary-900 truncate">{board.title}</p>
+                          <p className="text-[11px] text-secondary-500 truncate">
+                            {getBoardCategory(board)}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         <div className="w-full flex justify-center mt-6 px-6">

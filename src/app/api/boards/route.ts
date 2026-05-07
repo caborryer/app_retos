@@ -14,10 +14,15 @@ export async function GET() {
     include: { _count: { select: { challenges: true } } },
   });
 
-  // Public users only see boards that are fully configured (8 challenges)
+  // Public users prefer fully configured boards (8 challenges). If none match,
+  // fall back to active boards so Home never renders empty unexpectedly.
   const visibleBoards = isAdmin
     ? boards
-    : boards.filter((b) => (b._count?.challenges ?? 0) >= 8);
+    : (() => {
+        const fullyConfigured = boards.filter((b) => (b._count?.challenges ?? 0) >= 8);
+        if (fullyConfigured.length > 0) return fullyConfigured;
+        return boards;
+      })();
 
   return NextResponse.json(visibleBoards);
 }

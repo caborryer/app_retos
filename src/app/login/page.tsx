@@ -9,6 +9,7 @@ import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
 export default function LoginPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const [sessionCheckTimedOut, setSessionCheckTimedOut] = useState(false);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -22,13 +23,16 @@ export default function LoginPage() {
     }
   }, [status, session]);
 
-  if (status === 'loading') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#FAFAF9]">
-        <div className="w-8 h-8 border-4 border-[#FC0230] border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (status !== 'loading') {
+      setSessionCheckTimedOut(false);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setSessionCheckTimedOut(true);
+    }, 5000);
+    return () => window.clearTimeout(timer);
+  }, [status]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -92,6 +96,13 @@ export default function LoginPage() {
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-[#1C1C1A] tracking-tight">Iniciar sesión</h1>
             <p className="text-[#6B6B67] text-sm mt-1">Accede a tu tablero de retos</p>
+            {status === 'loading' && (
+              <p className="text-[11px] text-[#9B9B95] mt-2">
+                {sessionCheckTimedOut
+                  ? 'La verificación de sesión está tardando. Puedes iniciar sesión manualmente.'
+                  : 'Verificando sesión...'}
+              </p>
+            )}
           </div>
 
           <div className="space-y-4 mb-6">
