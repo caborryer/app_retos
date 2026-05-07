@@ -58,9 +58,12 @@ export function getBoardActivationBlockReasons(
     if (!img || !String(img).trim()) {
       reasons.push(`${label}: falta la imagen del reto.`);
     }
+    // Legacy admin flows create challenges with duration=0 and there is
+    // currently no UI to edit duration. Do not block board activation on this
+    // field until duration is fully managed from admin.
     const duration = Number(c.duration);
-    if (!Number.isFinite(duration) || duration < 1) {
-      reasons.push(`${label}: la duración debe ser al menos 1 día.`);
+    if (Number.isFinite(duration) && duration < 0) {
+      reasons.push(`${label}: la duración no puede ser negativa.`);
     }
 
     const tasks = c.tasks ?? [];
