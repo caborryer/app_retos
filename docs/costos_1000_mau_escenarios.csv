@@ -1,0 +1,23 @@
+Variable,Conservador,Base,Agresivo
+MAU,1000,1000,1000
+Fotos por usuario/mes,3,5,8
+Tamano promedio foto MB,0.30,0.45,0.70
+Multiplicador descargas por foto,1.8,2.5,4.0
+Precio storage USD por GB/mes,0.021,0.021,0.021
+Precio egress USD por GB,0.09,0.09,0.09
+Costo fijo Vercel,20,20,20
+Costo fijo Supabase,25,35,60
+Costo monitoreo/logs,0,10,30
+Otros fijos dominio/prorrateos,2,2,2
+,,,, 
+Fotos totales por mes,=B2*B3,=C2*C3,=D2*D3
+GB subidos por mes,=(B12*B4)/1024,=(C12*C4)/1024,=(D12*D4)/1024
+GB egress por mes,=B13*B5,=C13*C5,=D13*D5
+Costo storage,=B13*B6,=C13*C6,=D13*D6
+Costo egress,=B14*B7,=C14*C7,=D14*D7
+Total variable,=B15+B16,=C15+C16,=D15+D16
+Total fijo,=B8+B9+B10+B11,=C8+C9+C10+C11,=D8+D9+D10+D11
+Total mensual,=B17+B18,=C17+C18,=D17+D18
+Costo por MAU,=B19/B2,=C19/C2,=D19/D2
+Buffer porcentaje,0.30,0.30,0.30
+Total con buffer,=B19*(1+B21),=C19*(1+C21),=D19*(1+D21)

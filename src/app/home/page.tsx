@@ -502,7 +502,7 @@ export default function HomePage() {
   const showNoActiveBoards = !hasBoards;
 
   return (
-    <Layout title="BingoChallenge">
+    <Layout brandLogoSrc="/images/box-challenge-logo.png" brandLogoAlt="Box Challenge">
       <div className="min-h-full pb-8">
         {/* Título + selector de tablero */}
         <div className="pt-1 pb-0" style={{ paddingLeft: '8.53%', paddingRight: 17 }}>

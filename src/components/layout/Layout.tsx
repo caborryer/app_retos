@@ -10,6 +10,9 @@ import LocationConsentPrompt from '@/components/location/LocationConsentPrompt';
 interface LayoutProps {
   children: ReactNode;
   title?: string;
+  brandLogoSrc?: string;
+  brandLogoAlt?: string;
+  brandTitle?: string;
   showBack?: boolean;
   showNotifications?: boolean;
   showBottomNav?: boolean;
@@ -19,6 +22,9 @@ interface LayoutProps {
 export default function Layout({
   children,
   title,
+  brandLogoSrc,
+  brandLogoAlt,
+  brandTitle,
   showBack = false,
   showNotifications = true,
   showBottomNav = true,
@@ -30,6 +36,9 @@ export default function Layout({
     <div className="min-h-screen bg-gradient-to-b from-secondary-50 to-white">
       <Header
         title={title}
+        brandLogoSrc={brandLogoSrc}
+        brandLogoAlt={brandLogoAlt}
+        brandTitle={brandTitle}
         showBack={showBack}
         showNotifications={showNotifications}
       />

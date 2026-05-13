@@ -1,0 +1,32 @@
+Variable,Valor,Formula/Notas
+MAU,1000,
+Total mensual sin buffer,=Escenarios!C20,Total mensual Base (sin buffer) desde hoja Escenarios
+Buffer de seguridad,0.30,
+Total mensual objetivo con buffer,=B3*(1+B4),
+Costo IA mensual solo pendientes,100,Ajusta segun proveedor y volumen real de pendientes
+Total mensual objetivo con IA,=B5+B6,
+,,
+Total mensual conservador con buffer,=Escenarios!B23,Referencia de rango inferior
+Total mensual agresivo con buffer,=Escenarios!D23,Referencia de rango superior
+Rango total con IA minimo,=B8+B6,Conservador + IA
+Rango total con IA maximo,=B9+B6,Agresivo + IA
+,,,
+Porcentaje conversion a pago,0.03,3 por ciento
+Precio mensual plan USD,4.99,
+Comision pasarela porcentaje,0.05,5 por ciento
+Costo fijo pasarela mensual USD,10,
+Ingreso neto por usuario pago,=B10*(1-B11),
+,,,
+Usuarios pagos necesarios break-even,=ROUNDUP((B7+B12)/B13,0),
+Porcentaje conversion necesario,=B15/B2,
+Usuarios pagos estimados con conversion actual,=ROUND(B2*B9,0),
+Ingreso neto mensual estimado,=(B17*B13)-B12,
+Ganancia o perdida mensual,=B18-B7,
+ARPU neto requerido USD por MAU,=B7/B2,
+ARPPU neto USD por usuario pago,=B13,
+,,,
+RESUMEN TOTALES 1000 USUARIOS (USD/MES),,No son costos unitarios
+Total mensual base sin IA (1000 usuarios),87.80,Escenario base con buffer (USD/mes)
+Total mensual con IA (1000 usuarios),187.80,Escenario base con buffer + IA pendientes (USD/mes)
+Total mensual minimo con IA (1000 usuarios),161.31,Escenario conservador con IA (USD/mes)
+Total mensual maximo con IA (1000 usuarios),248.31,Escenario agresivo con IA (USD/mes)
