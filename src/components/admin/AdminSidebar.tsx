@@ -8,6 +8,8 @@ import {
   Image,
   LayoutGrid,
   BarChart2,
+  Building2,
+  Users,
   LogOut,
   Zap,
   ChevronRight,
@@ -26,6 +28,18 @@ const NAV_ITEMS = [
     href: '/admin/submissions',
     label: 'Envíos',
     icon: Image,
+    exact: false,
+  },
+  {
+    href: '/admin/organizations',
+    label: 'Empresas',
+    icon: Building2,
+    exact: false,
+  },
+  {
+    href: '/admin/users',
+    label: 'Usuarios',
+    icon: Users,
     exact: false,
   },
   {

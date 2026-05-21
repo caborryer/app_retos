@@ -42,10 +42,10 @@ export default function ProgressBar({
     <div className={cn('w-full', className)} {...props}>
       {showLabel && (
         <div className="flex justify-between items-center mb-1">
-          <span className="text-sm font-medium text-secondary-700">
+          <span className="text-sm font-medium text-slate-400">
             Progreso
           </span>
-          <span className="text-sm font-semibold text-secondary-900">
+          <span className="text-sm font-semibold text-white">
             {Math.round(percentage)}%
           </span>
         </div>
@@ -53,7 +53,7 @@ export default function ProgressBar({
       
       <div
         className={cn(
-          'w-full bg-secondary-200 rounded-full overflow-hidden',
+          'w-full bg-slate-700 rounded-full overflow-hidden',
           sizes[size]
         )}
       >

@@ -34,11 +34,11 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       primary:
         'bg-primary-500 text-white hover:bg-primary-600 focus:ring-primary-500 shadow-lg shadow-primary-500/30',
       secondary:
-        'bg-secondary-100 text-secondary-900 hover:bg-secondary-200 focus:ring-secondary-500',
+        'bg-slate-700 text-slate-100 hover:bg-slate-600 focus:ring-slate-500',
       outline:
-        'border-2 border-primary-500 text-primary-500 hover:bg-primary-50 focus:ring-primary-500',
+        'border-2 border-primary-500 text-primary-400 hover:bg-primary-500/10 focus:ring-primary-500',
       ghost:
-        'text-secondary-700 hover:bg-secondary-100 focus:ring-secondary-500',
+        'text-slate-300 hover:bg-slate-800 focus:ring-slate-500',
     };
 
     const sizes = {

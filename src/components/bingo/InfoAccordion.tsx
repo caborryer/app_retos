@@ -16,9 +16,9 @@ const SECTIONS: Section[] = [
     id: 'info',
     title: 'Info',
     content: (
-      <div className="space-y-2 text-sm text-secondary-600 leading-relaxed">
+      <div className="space-y-2 text-sm text-slate-400 leading-relaxed">
         <p>
-          <span className="font-semibold text-secondary-900">Bingo</span> es una plataforma de retos deportivos
+          <span className="font-semibold text-white">Bingo</span> es una plataforma de retos deportivos
           en formato tablero de bingo. Cada casilla del tablero representa un reto diferente que debes completar.
         </p>
         <p>
@@ -50,7 +50,7 @@ const SECTIONS: Section[] = [
     id: 'reglas',
     title: 'Reglas',
     content: (
-      <ol className="space-y-2 text-sm text-secondary-600 leading-relaxed list-none">
+      <ol className="space-y-2 text-sm text-slate-400 leading-relaxed list-none">
         {[
           'Cada participante debe completar los retos de forma honesta y en el tiempo indicado.',
           'La evidencia de cada reto debe ser una foto propia o el link de la actividad en Strava.',
@@ -75,34 +75,34 @@ const SECTIONS: Section[] = [
   //   id: 'tyc',
   //   title: 'Términos y Condiciones',
   //   content: (
-  //     <div className="space-y-3 text-sm text-secondary-600 leading-relaxed">
+  //     <div className="space-y-3 text-sm text-slate-400 leading-relaxed">
   //       <p>
   //         Al participar en Bingo aceptas los siguientes términos:
   //       </p>
   //       <div className="space-y-2">
   //         <div>
-  //           <p className="font-semibold text-secondary-800">1. Uso de la plataforma</p>
+  //           <p className="font-semibold text-slate-200">1. Uso de la plataforma</p>
   //           <p>
   //             El uso de Bingo está destinado exclusivamente a personas mayores de 16 años.
   //             La plataforma es de uso personal e intransferible.
   //           </p>
   //         </div>
   //         <div>
-  //           <p className="font-semibold text-secondary-800">2. Privacidad</p>
+  //           <p className="font-semibold text-slate-200">2. Privacidad</p>
   //           <p>
   //             Las fotos e información compartida en los retos son visibles para el equipo
   //             organizador con fines de validación. No se compartirán con terceros.
   //           </p>
   //         </div>
   //         <div>
-  //           <p className="font-semibold text-secondary-800">3. Modificaciones</p>
+  //           <p className="font-semibold text-slate-200">3. Modificaciones</p>
   //           <p>
   //             Los organizadores se reservan el derecho de modificar reglas, tableros y
   //             puntuaciones con previo aviso a los participantes.
   //           </p>
   //         </div>
   //         <div>
-  //           <p className="font-semibold text-secondary-800">4. Responsabilidad</p>
+  //           <p className="font-semibold text-slate-200">4. Responsabilidad</p>
   //           <p>
   //             Cada participante es responsable de su propia seguridad al realizar los retos.
   //             Bingo no se hace responsable de lesiones o daños derivados de la práctica deportiva.
@@ -119,7 +119,7 @@ const SECTIONS: Section[] = [
     id: 'faq',
     title: 'FAQ',
     content: (
-      <div className="space-y-4 text-sm text-secondary-600 leading-relaxed">
+      <div className="space-y-4 text-sm text-slate-400 leading-relaxed">
         {[
           {
             q: '¿Cuánto tiempo tengo para completar un tablero?',
@@ -142,8 +142,8 @@ const SECTIONS: Section[] = [
             a: 'Actualmente solo hay un tablero activo por vez. Al completar el bingo podrás pasar al siguiente tablero disponible.',
           },
         ].map(({ q, a }, i) => (
-          <div key={i} className="border-b border-secondary-100 pb-3 last:border-0 last:pb-0">
-            <p className="font-semibold text-secondary-800 mb-1">{q}</p>
+          <div key={i} className="border-b border-slate-800 pb-3 last:border-0 last:pb-0">
+            <p className="font-semibold text-slate-200 mb-1">{q}</p>
             <p>{a}</p>
           </div>
         ))}
@@ -160,7 +160,7 @@ export default function InfoAccordion() {
   };
 
   return (
-    <div className="rounded-2xl border border-secondary-200 bg-white overflow-hidden divide-y divide-secondary-100">
+    <div className="rounded-2xl border border-slate-700 bg-slate-800 overflow-hidden divide-y divide-slate-800">
       {SECTIONS.map((section) => {
         const isOpen = openId === section.id;
 
@@ -171,13 +171,13 @@ export default function InfoAccordion() {
               onClick={() => toggle(section.id)}
               className={cn(
                 'w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors',
-                isOpen ? 'bg-primary-50' : 'hover:bg-secondary-50'
+                isOpen ? 'bg-primary-500/10' : 'hover:bg-slate-800/50'
               )}
             >
               <span
                 className={cn(
                   'flex-1 font-semibold text-sm',
-                  isOpen ? 'text-primary-600' : 'text-secondary-900'
+                  isOpen ? 'text-primary-400' : 'text-white'
                 )}
               >
                 {section.title}
@@ -190,7 +190,7 @@ export default function InfoAccordion() {
                 <ChevronDown
                   className={cn(
                     'w-4 h-4 transition-colors',
-                    isOpen ? 'text-primary-500' : 'text-secondary-400'
+                    isOpen ? 'text-primary-400' : 'text-slate-500'
                   )}
                 />
               </motion.div>

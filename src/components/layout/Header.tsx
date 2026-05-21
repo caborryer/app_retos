@@ -9,10 +9,8 @@ import NotificationPanel from '../notifications/NotificationPanel';
 
 interface HeaderProps {
   title?: string;
-  /** When set, shows brand logo instead of title text (e.g. home). */
   brandLogoSrc?: string;
   brandLogoAlt?: string;
-  /** Shown next to the logo when `brandLogoSrc` is set. */
   brandTitle?: string;
   showBack?: boolean;
   showNotifications?: boolean;
@@ -32,21 +30,19 @@ export default function Header({
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-white to-white/95 backdrop-blur-sm">
-        {/* Main Header */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-slate-900/95 backdrop-blur-sm border-b border-slate-800">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
-            {/* Left Side */}
             <div className="flex items-center gap-3">
               {showBack && (
                 <button
                   onClick={() => router.back()}
-                  className="p-2 -ml-2 rounded-full hover:bg-secondary-100 transition-colors"
+                  className="p-2 -ml-2 rounded-full hover:bg-slate-800 transition-colors"
                 >
-                  <ChevronLeft className="w-6 h-6 text-secondary-900" />
+                  <ChevronLeft className="w-6 h-6 text-slate-200" />
                 </button>
               )}
-              
+
               {brandLogoSrc && (
                 <div className="flex items-center gap-1 min-w-0">
                   <Image
@@ -59,36 +55,33 @@ export default function Header({
                     priority
                   />
                   {brandTitle ? (
-                    <span className="text-lg sm:text-xl font-bold text-secondary-900 tracking-tight leading-none truncate">
+                    <span className="text-lg sm:text-xl font-bold text-white tracking-tight leading-none truncate">
                       {brandTitle}
                     </span>
                   ) : null}
                 </div>
               )}
               {!brandLogoSrc && title && (
-                <h1 className="text-2xl font-bold text-secondary-900">
-                  {title}
-                </h1>
+                <h1 className="text-2xl font-bold text-white">{title}</h1>
               )}
             </div>
 
-            {/* Right Side */}
             <div className="flex items-center gap-1">
               <button
                 onClick={() => router.push('/profile/settings')}
-                className="p-2 rounded-full hover:bg-secondary-100 transition-colors"
+                className="p-2 rounded-full hover:bg-slate-800 transition-colors"
                 aria-label="Ir a configuración del perfil"
                 title="Configuración"
               >
-                <Settings className="w-5 h-5 text-secondary-900" />
+                <Settings className="w-5 h-5 text-slate-300" />
               </button>
 
               {showNotifications && (
                 <button
                   onClick={() => setIsPanelOpen(true)}
-                  className="relative p-2 -mr-2 rounded-full hover:bg-secondary-100 transition-colors"
+                  className="relative p-2 -mr-2 rounded-full hover:bg-slate-800 transition-colors"
                 >
-                  <Bell className="w-6 h-6 text-secondary-900" />
+                  <Bell className="w-6 h-6 text-slate-300" />
                   {unreadCount > 0 && (
                     <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary-500 rounded-full flex items-center justify-center">
                       <span className="text-xs font-bold text-white">
@@ -103,11 +96,7 @@ export default function Header({
         </div>
       </header>
 
-      {/* Notification Panel */}
-      <NotificationPanel 
-        isOpen={isPanelOpen}
-        onClose={() => setIsPanelOpen(false)}
-      />
+      <NotificationPanel isOpen={isPanelOpen} onClose={() => setIsPanelOpen(false)} />
     </>
   );
 }

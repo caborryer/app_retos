@@ -22,8 +22,16 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const boardId = searchParams.get('boardId');
+  const organizationId = searchParams.get('organizationId');
   if (!boardId) {
     return NextResponse.json({ error: 'boardId is required' }, { status: 400 });
+  }
+
+  const { assertBoardBelongsToOrganization } = await import('@/lib/admin-org-filter');
+  try {
+    await assertBoardBelongsToOrganization(boardId, organizationId);
+  } catch {
+    return NextResponse.json({ error: 'Board not in selected organization' }, { status: 400 });
   }
 
   const challenges = await prisma.challenge.findMany({

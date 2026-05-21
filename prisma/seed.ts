@@ -854,12 +854,24 @@ async function main() {
     },
   ];
 
+  const generalOrg = await prisma.organization.upsert({
+    where: { slug: 'general' },
+    create: { id: 'org_general_default', name: 'General', slug: 'general' },
+    update: {},
+  });
+
   for (const boardData of boards) {
     const { challenges, ...boardFields } = boardData;
     const board = await prisma.board.upsert({
       where: { id: boardFields.id },
-      update: { title: boardFields.title, emoji: boardFields.emoji, color: boardFields.color, active: boardFields.active },
-      create: boardFields,
+      update: {
+        title: boardFields.title,
+        emoji: boardFields.emoji,
+        color: boardFields.color,
+        active: boardFields.active,
+        organizationId: generalOrg.id,
+      },
+      create: { ...boardFields, organizationId: generalOrg.id },
     });
 
     for (const challengeData of challenges) {

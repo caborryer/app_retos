@@ -32,9 +32,9 @@ export default function NotificationItem({
 
   const getBackgroundColor = () => {
     if (!notification.read) {
-      return 'bg-primary-50 border-primary-200';
+      return 'bg-primary-500/10 border-primary-500/40';
     }
-    return 'bg-white border-secondary-200';
+    return 'bg-slate-800/80 border-slate-700';
   };
 
   return (
@@ -53,10 +53,10 @@ export default function NotificationItem({
           e.stopPropagation();
           onDelete(notification.id);
         }}
-        className="absolute top-2 right-2 p-1 rounded-full hover:bg-secondary-200 transition-colors"
+        className="absolute top-2 right-2 p-1 rounded-full hover:bg-slate-700 transition-colors"
         aria-label="Eliminar notificación"
       >
-        <X className="w-4 h-4 text-secondary-500" />
+        <X className="w-4 h-4 text-slate-500" />
       </button>
 
       <div
@@ -73,7 +73,7 @@ export default function NotificationItem({
           <h4
             className={cn(
               'text-sm font-semibold mb-1',
-              notification.read ? 'text-secondary-700' : 'text-secondary-900'
+              notification.read ? 'text-slate-400' : 'text-white'
             )}
           >
             {notification.title}
@@ -81,13 +81,13 @@ export default function NotificationItem({
           <p
             className={cn(
               'text-sm mb-2',
-              notification.read ? 'text-secondary-600' : 'text-secondary-700'
+              notification.read ? 'text-slate-500' : 'text-slate-300'
             )}
           >
             {notification.message}
           </p>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-secondary-500">
+            <span className="text-xs text-slate-500">
               {formatRelativeTime(notification.timestamp)}
             </span>
             {!notification.read && (

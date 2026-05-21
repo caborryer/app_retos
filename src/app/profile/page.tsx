@@ -274,10 +274,10 @@ export default function ProfilePage() {
       <Layout title="Perfil">
         <div className="space-y-4">
           <Card variant="bordered" className="p-5">
-            <h2 className="text-lg font-semibold text-secondary-900 mb-2">
+            <h2 className="text-lg font-semibold text-white mb-2">
               No pudimos cargar tu perfil
             </h2>
-            <p className="text-sm text-secondary-600">
+            <p className="text-sm text-slate-400">
               {error ?? 'Ocurrió un problema al cargar los datos del perfil.'}
             </p>
             <div className="mt-4">
@@ -305,7 +305,7 @@ export default function ProfilePage() {
                 className="w-20 h-20 rounded-full border-4 border-white/30 object-cover"
               />
             ) : (
-              <div className="w-20 h-20 rounded-full bg-white/30 flex items-center justify-center text-3xl">
+              <div className="w-20 h-20 rounded-full bg-slate-800/30 flex items-center justify-center text-3xl">
                 👤
               </div>
             )}
@@ -318,7 +318,7 @@ export default function ProfilePage() {
                 {data.user.email}
               </p>
               {data.user.role === 'ADMIN' && (
-                <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-xs font-medium bg-white/20 text-white">
+                <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-800/20 text-white">
                   <ShieldCheck className="w-3 h-3" />
                   Admin
                 </span>
@@ -326,7 +326,7 @@ export default function ProfilePage() {
             </div>
             <Button
               variant="ghost"
-              className="bg-white/20 text-white border-white/30 hover:bg-white/30"
+              className="bg-slate-800/20 text-white border-white/30 hover:bg-slate-800/30"
               leftIcon={<Camera className="w-4 h-4" />}
               onClick={() => fileInputRef.current?.click()}
               disabled={updatingAvatar}
@@ -343,7 +343,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Level Progress */}
-          <div className="bg-white/20 rounded-xl p-4">
+          <div className="bg-slate-800/20 rounded-xl p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-white text-sm font-medium">
                 Nivel {data.metrics.level}
@@ -376,36 +376,36 @@ export default function ProfilePage() {
             <div className="text-3xl font-bold text-primary-500 mb-1">
               {data.metrics.points}
             </div>
-            <div className="text-xs text-secondary-600">Puntos</div>
+            <div className="text-xs text-slate-400">Puntos</div>
           </Card>
 
           <Card variant="elevated" className="p-4 text-center">
             <div className="text-3xl font-bold text-green-500 mb-1">
               {data.metrics.completedChallenges}
             </div>
-            <div className="text-xs text-secondary-600">Retos completados</div>
+            <div className="text-xs text-slate-400">Retos completados</div>
           </Card>
 
           <Card variant="elevated" className="p-4 text-center">
             <div className="text-3xl font-bold text-indigo-500 mb-1">
               {data.metrics.completedBoards}
             </div>
-            <div className="text-xs text-secondary-600">Tableros completados</div>
+            <div className="text-xs text-slate-400">Tableros completados</div>
           </Card>
 
           <Card variant="elevated" className="p-4 text-center">
             <div className="text-3xl font-bold text-yellow-500 mb-1">
               {unlockedBadges}
             </div>
-            <div className="text-xs text-secondary-600">Insignias</div>
+            <div className="text-xs text-slate-400">Insignias</div>
           </Card>
         </div>
 
         <Card variant="elevated" className="p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold text-secondary-900">Configuración de la cuenta</p>
-              <p className="text-xs text-secondary-600 mt-1">
+              <p className="text-sm font-semibold text-white">Configuración de la cuenta</p>
+              <p className="text-xs text-slate-400 mt-1">
                 Edita perfil, seguridad, notificaciones y cuenta en una pantalla dedicada.
               </p>
             </div>
@@ -421,31 +421,31 @@ export default function ProfilePage() {
             onClick={() => toggleSection('badges')}
             aria-expanded={openSection === 'badges'}
             aria-controls="profile-section-badges"
-            className="w-full flex items-center justify-between rounded-xl border border-secondary-200 bg-white px-4 py-3 text-left"
+            className="w-full flex items-center justify-between rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-left"
           >
-            <span className="font-semibold text-secondary-900 flex items-center gap-2">
+            <span className="font-semibold text-white flex items-center gap-2">
               <Trophy className="w-4 h-4 text-primary-500" />
               Insignias y progreso
             </span>
-            <ChevronDown className={`w-4 h-4 text-secondary-500 transition-transform ${openSection === 'badges' ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${openSection === 'badges' ? 'rotate-180' : ''}`} />
           </button>
           {openSection === 'badges' && (
             <Card id="profile-section-badges" variant="elevated" className="p-5 mt-2">
               <div className="space-y-3">
                 {data.metrics.badges.map((badge) => (
-                  <div key={badge.id} className="rounded-xl border border-secondary-100 p-3">
+                  <div key={badge.id} className="rounded-xl border border-slate-800 p-3">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-sm font-semibold text-secondary-900">
+                        <p className="text-sm font-semibold text-white">
                           {badge.icon} {badge.name}
                         </p>
-                        <p className="text-xs text-secondary-600 mt-1">{badge.description}</p>
+                        <p className="text-xs text-slate-400 mt-1">{badge.description}</p>
                       </div>
                       <span
                         className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
                           badge.unlocked
                             ? 'bg-green-100 text-green-700'
-                            : 'bg-secondary-100 text-secondary-600'
+                            : 'bg-slate-800 text-slate-400'
                         }`}
                       >
                         {badge.unlocked ? 'Obtenida' : `${badge.progress}%`}
@@ -464,27 +464,27 @@ export default function ProfilePage() {
             onClick={() => toggleSection('profile')}
             aria-expanded={openSection === 'profile'}
             aria-controls="profile-section-data"
-            className="w-full flex items-center justify-between rounded-xl border border-secondary-200 bg-white px-4 py-3 text-left"
+            className="w-full flex items-center justify-between rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-left"
           >
-            <span className="font-semibold text-secondary-900">Datos del perfil</span>
-            <ChevronDown className={`w-4 h-4 text-secondary-500 transition-transform ${openSection === 'profile' ? 'rotate-180' : ''}`} />
+            <span className="font-semibold text-white">Datos del perfil</span>
+            <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${openSection === 'profile' ? 'rotate-180' : ''}`} />
           </button>
           {openSection === 'profile' && (
             <Card id="profile-section-data" variant="elevated" className="p-5 space-y-4 mt-2">
               <label className="block">
-                <span className="text-xs text-secondary-600">Nombre visible</span>
+                <span className="text-xs text-slate-400">Nombre visible</span>
                 <input
                   value={nameInput}
                   onChange={(e) => setNameInput(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-secondary-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
+                  className="mt-1 w-full rounded-xl border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
                 />
               </label>
               <label className="block">
-                <span className="text-xs text-secondary-600">Email</span>
+                <span className="text-xs text-slate-400">Email</span>
                 <input
                   disabled
                   value={data.user.email}
-                  className="mt-1 w-full rounded-xl border border-secondary-200 px-3 py-2 text-sm bg-secondary-50 text-secondary-500"
+                  className="mt-1 w-full rounded-xl border border-slate-700 px-3 py-2 text-sm bg-slate-800/50 text-slate-500"
                 />
               </label>
               <Button onClick={() => void handleSaveName()} disabled={savingName}>
@@ -500,29 +500,29 @@ export default function ProfilePage() {
             onClick={() => toggleSection('security')}
             aria-expanded={openSection === 'security'}
             aria-controls="profile-section-security"
-            className="w-full flex items-center justify-between rounded-xl border border-secondary-200 bg-white px-4 py-3 text-left"
+            className="w-full flex items-center justify-between rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-left"
           >
-            <span className="font-semibold text-secondary-900">Seguridad</span>
-            <ChevronDown className={`w-4 h-4 text-secondary-500 transition-transform ${openSection === 'security' ? 'rotate-180' : ''}`} />
+            <span className="font-semibold text-white">Seguridad</span>
+            <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${openSection === 'security' ? 'rotate-180' : ''}`} />
           </button>
           {openSection === 'security' && (
             <Card id="profile-section-security" variant="elevated" className="p-5 space-y-4 mt-2">
               <label className="block">
-                <span className="text-xs text-secondary-600">Contraseña actual</span>
+                <span className="text-xs text-slate-400">Contraseña actual</span>
                 <input
                   type="password"
                   value={passwordCurrent}
                   onChange={(e) => setPasswordCurrent(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-secondary-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
+                  className="mt-1 w-full rounded-xl border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
                 />
               </label>
               <label className="block">
-                <span className="text-xs text-secondary-600">Nueva contraseña</span>
+                <span className="text-xs text-slate-400">Nueva contraseña</span>
                 <input
                   type="password"
                   value={passwordNext}
                   onChange={(e) => setPasswordNext(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-secondary-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
+                  className="mt-1 w-full rounded-xl border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
                 />
               </label>
               <Button onClick={() => void handleChangePassword()} disabled={changingPassword}>
@@ -538,10 +538,10 @@ export default function ProfilePage() {
             onClick={() => toggleSection('notifications')}
             aria-expanded={openSection === 'notifications'}
             aria-controls="profile-section-notifications"
-            className="w-full flex items-center justify-between rounded-xl border border-secondary-200 bg-white px-4 py-3 text-left"
+            className="w-full flex items-center justify-between rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-left"
           >
-            <span className="font-semibold text-secondary-900">Notificaciones</span>
-            <ChevronDown className={`w-4 h-4 text-secondary-500 transition-transform ${openSection === 'notifications' ? 'rotate-180' : ''}`} />
+            <span className="font-semibold text-white">Notificaciones</span>
+            <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${openSection === 'notifications' ? 'rotate-180' : ''}`} />
           </button>
           {openSection === 'notifications' && (
             <Card id="profile-section-notifications" variant="elevated" className="p-5 space-y-3 mt-2">
@@ -560,7 +560,7 @@ export default function ProfilePage() {
                 },
               ].map((item) => (
                 <label key={item.key} className="flex items-center justify-between py-1">
-                  <span className="text-sm text-secondary-700">{item.label}</span>
+                  <span className="text-sm text-slate-300">{item.label}</span>
                   <input
                     type="checkbox"
                     className="h-4 w-4 accent-primary-500"
@@ -584,23 +584,23 @@ export default function ProfilePage() {
             onClick={() => toggleSection('completed')}
             aria-expanded={openSection === 'completed'}
             aria-controls="profile-section-completed"
-            className="w-full flex items-center justify-between rounded-xl border border-secondary-200 bg-white px-4 py-3 text-left"
+            className="w-full flex items-center justify-between rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-left"
           >
-            <span className="font-semibold text-secondary-900">Retos completados</span>
-            <ChevronDown className={`w-4 h-4 text-secondary-500 transition-transform ${openSection === 'completed' ? 'rotate-180' : ''}`} />
+            <span className="font-semibold text-white">Retos completados</span>
+            <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${openSection === 'completed' ? 'rotate-180' : ''}`} />
           </button>
           {openSection === 'completed' && (
             <Card id="profile-section-completed" variant="elevated" className="p-5 space-y-3 mt-2">
               {data.recentCompletedChallenges.length === 0 ? (
-                <p className="text-sm text-secondary-600">Aun no has completado retos.</p>
+                <p className="text-sm text-slate-400">Aun no has completado retos.</p>
               ) : (
                 <div className="space-y-2">
                   {data.recentCompletedChallenges.map((item) => (
-                    <div key={item.id} className="rounded-lg border border-secondary-100 px-3 py-2">
-                      <p className="text-sm font-medium text-secondary-800">
+                    <div key={item.id} className="rounded-lg border border-slate-800 px-3 py-2">
+                      <p className="text-sm font-medium text-slate-200">
                         {item.icon} {item.title}
                       </p>
-                      <p className="text-xs text-secondary-500 mt-1">
+                      <p className="text-xs text-slate-500 mt-1">
                         {item.completedAt
                           ? formatRelativeTime(new Date(item.completedAt))
                           : 'Completado recientemente'}
@@ -619,20 +619,20 @@ export default function ProfilePage() {
             onClick={() => toggleSection('active')}
             aria-expanded={openSection === 'active'}
             aria-controls="profile-section-active"
-            className="w-full flex items-center justify-between rounded-xl border border-secondary-200 bg-white px-4 py-3 text-left"
+            className="w-full flex items-center justify-between rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-left"
           >
-            <span className="font-semibold text-secondary-900">Retos activos</span>
-            <ChevronDown className={`w-4 h-4 text-secondary-500 transition-transform ${openSection === 'active' ? 'rotate-180' : ''}`} />
+            <span className="font-semibold text-white">Retos activos</span>
+            <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${openSection === 'active' ? 'rotate-180' : ''}`} />
           </button>
           {openSection === 'active' && (
             <Card id="profile-section-active" variant="elevated" className="p-5 space-y-3 mt-2">
               {data.activeChallenges.length === 0 ? (
-                <p className="text-sm text-secondary-600">No tienes retos activos en este momento.</p>
+                <p className="text-sm text-slate-400">No tienes retos activos en este momento.</p>
               ) : (
                 <div className="space-y-2">
                   {data.activeChallenges.map((item) => (
-                    <div key={item.id} className="rounded-lg border border-secondary-100 px-3 py-2">
-                      <p className="text-sm font-medium text-secondary-800">
+                    <div key={item.id} className="rounded-lg border border-slate-800 px-3 py-2">
+                      <p className="text-sm font-medium text-slate-200">
                         {item.icon} {item.title}
                       </p>
                     </div>
@@ -649,20 +649,20 @@ export default function ProfilePage() {
             onClick={() => toggleSection('account')}
             aria-expanded={openSection === 'account'}
             aria-controls="profile-section-account"
-            className="w-full flex items-center justify-between rounded-xl border border-secondary-200 bg-white px-4 py-3 text-left"
+            className="w-full flex items-center justify-between rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-left"
           >
-            <span className="font-semibold text-secondary-900">Cuenta</span>
-            <ChevronDown className={`w-4 h-4 text-secondary-500 transition-transform ${openSection === 'account' ? 'rotate-180' : ''}`} />
+            <span className="font-semibold text-white">Cuenta</span>
+            <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${openSection === 'account' ? 'rotate-180' : ''}`} />
           </button>
           {openSection === 'account' && (
             <Card id="profile-section-account" variant="elevated" className="p-5 space-y-4 mt-2">
-              <p className="text-xs text-secondary-500">
+              <p className="text-xs text-slate-500">
                 Para eliminar tu cuenta escribe <strong>ELIMINAR</strong>. Esta accion no se puede deshacer.
               </p>
               <input
                 value={confirmDeleteText}
                 onChange={(e) => setConfirmDeleteText(e.target.value)}
-                className="w-full rounded-xl border border-secondary-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-error/20"
+                className="w-full rounded-xl border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-error/20"
                 placeholder="Escribe ELIMINAR"
               />
               <button
@@ -702,7 +702,7 @@ export default function ProfilePage() {
         {data.user.role === 'ADMIN' && (
           <button
             onClick={() => router.push('/admin')}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-primary-200 bg-primary-50 text-primary-700 font-medium text-sm hover:bg-primary-100 transition-colors"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-primary-500/30 bg-primary-500/10 text-primary-700 font-medium text-sm hover:bg-primary-100 transition-colors"
           >
             <ShieldCheck className="w-5 h-5" />
             Ir al Panel Admin

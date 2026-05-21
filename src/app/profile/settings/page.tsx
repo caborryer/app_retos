@@ -225,7 +225,7 @@ export default function ProfileSettingsPage() {
     return (
       <Layout title="Configuración" showBack>
         <Card variant="bordered" className="p-5">
-          <p className="text-sm text-secondary-700 mb-3">
+          <p className="text-sm text-slate-300 mb-3">
             No pudimos cargar tu configuración.
           </p>
           <Button onClick={() => void loadProfile()}>Reintentar</Button>
@@ -238,12 +238,12 @@ export default function ProfileSettingsPage() {
     <Layout title="Configuración" showBack>
       <div className="space-y-4">
         <Card variant="elevated" className="p-5 space-y-4">
-          <h3 className="font-semibold text-secondary-900">Perfil</h3>
+          <h3 className="font-semibold text-white">Perfil</h3>
           <div className="flex items-center gap-3">
             {data.user.avatar ? (
-              <img src={data.user.avatar} alt={data.user.name} className="w-16 h-16 rounded-full object-cover border border-secondary-200" />
+              <img src={data.user.avatar} alt={data.user.name} className="w-16 h-16 rounded-full object-cover border border-slate-700" />
             ) : (
-              <div className="w-16 h-16 rounded-full bg-secondary-100 flex items-center justify-center text-2xl">👤</div>
+              <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center text-2xl">👤</div>
             )}
             <div className="flex gap-2">
               <Button
@@ -267,46 +267,46 @@ export default function ProfileSettingsPage() {
             />
           </div>
           <label className="block">
-            <span className="text-xs text-secondary-600">Nombre visible</span>
+            <span className="text-xs text-slate-400">Nombre visible</span>
             <input
               value={nameInput}
               onChange={(e) => setNameInput(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-secondary-200 px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-xl border border-slate-700 px-3 py-2 text-sm"
             />
           </label>
           <label className="block">
-            <span className="text-xs text-secondary-600">Email</span>
+            <span className="text-xs text-slate-400">Email</span>
             <input
               disabled
               value={data.user.email}
-              className="mt-1 w-full rounded-xl border border-secondary-200 px-3 py-2 text-sm bg-secondary-50 text-secondary-500"
+              className="mt-1 w-full rounded-xl border border-slate-700 px-3 py-2 text-sm bg-slate-800/50 text-slate-500"
             />
           </label>
           <Button onClick={() => void handleSaveName()} disabled={savingName}>Guardar cambios</Button>
         </Card>
 
         <Card variant="elevated" className="p-5 space-y-4">
-          <h3 className="font-semibold text-secondary-900">Seguridad</h3>
+          <h3 className="font-semibold text-white">Seguridad</h3>
           <label className="block">
-            <span className="text-xs text-secondary-600">Contraseña actual</span>
-            <input type="password" value={passwordCurrent} onChange={(e) => setPasswordCurrent(e.target.value)} className="mt-1 w-full rounded-xl border border-secondary-200 px-3 py-2 text-sm" />
+            <span className="text-xs text-slate-400">Contraseña actual</span>
+            <input type="password" value={passwordCurrent} onChange={(e) => setPasswordCurrent(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 px-3 py-2 text-sm" />
           </label>
           <label className="block">
-            <span className="text-xs text-secondary-600">Nueva contraseña</span>
-            <input type="password" value={passwordNext} onChange={(e) => setPasswordNext(e.target.value)} className="mt-1 w-full rounded-xl border border-secondary-200 px-3 py-2 text-sm" />
+            <span className="text-xs text-slate-400">Nueva contraseña</span>
+            <input type="password" value={passwordNext} onChange={(e) => setPasswordNext(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 px-3 py-2 text-sm" />
           </label>
           <Button onClick={() => void handleChangePassword()} disabled={changingPassword}>Cambiar contraseña</Button>
         </Card>
 
         <Card variant="elevated" className="p-5 space-y-3">
-          <h3 className="font-semibold text-secondary-900">Notificaciones</h3>
+          <h3 className="font-semibold text-white">Notificaciones</h3>
           {[
             { key: 'notificationsEnabled', label: 'Notificaciones en la app' },
             { key: 'activityReminders', label: 'Recordatorios de actividad' },
             { key: 'marketingEmails', label: 'Emails informativos' },
           ].map((item) => (
             <label key={item.key} className="flex items-center justify-between py-1">
-              <span className="text-sm text-secondary-700">{item.label}</span>
+              <span className="text-sm text-slate-300">{item.label}</span>
               <input
                 type="checkbox"
                 className="h-4 w-4 accent-primary-500"
@@ -323,14 +323,14 @@ export default function ProfileSettingsPage() {
         </Card>
 
         <Card variant="elevated" className="p-5 space-y-4">
-          <h3 className="font-semibold text-secondary-900">Cuenta</h3>
-          <p className="text-xs text-secondary-500">
+          <h3 className="font-semibold text-white">Cuenta</h3>
+          <p className="text-xs text-slate-500">
             Para eliminar tu cuenta escribe <strong>ELIMINAR</strong>. Esta accion no se puede deshacer.
           </p>
           <input
             value={confirmDeleteText}
             onChange={(e) => setConfirmDeleteText(e.target.value)}
-            className="w-full rounded-xl border border-secondary-200 px-3 py-2 text-sm"
+            className="w-full rounded-xl border border-slate-700 px-3 py-2 text-sm"
             placeholder="Escribe ELIMINAR"
           />
           <button
@@ -363,7 +363,7 @@ export default function ProfileSettingsPage() {
         {data.user.role === 'ADMIN' && (
           <button
             onClick={() => router.push('/admin')}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-primary-200 bg-primary-50 text-primary-700 font-medium text-sm hover:bg-primary-100 transition-colors"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-primary-500/30 bg-primary-500/10 text-primary-700 font-medium text-sm hover:bg-primary-100 transition-colors"
           >
             <ShieldCheck className="w-5 h-5" />
             Ir al Panel Admin

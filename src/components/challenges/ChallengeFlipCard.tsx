@@ -277,7 +277,7 @@ export default function ChallengeFlipCard({ challenge, className }: ChallengeFli
 
           {/* ── Cara trasera ─────────────────────────────────────────────── */}
           <div
-            className="absolute inset-0 overflow-hidden bg-white backface-hidden flex flex-col items-center justify-center p-2 gap-2"
+            className="absolute inset-0 overflow-hidden bg-slate-800 backface-hidden flex flex-col items-center justify-center p-2 gap-2"
             style={{
               backfaceVisibility: 'hidden',
               transform: 'rotateY(180deg)',
@@ -286,7 +286,7 @@ export default function ChallengeFlipCard({ challenge, className }: ChallengeFli
           >
             {!showLinkInput ? (
               <>
-                <p className="text-secondary-900 font-semibold text-xs text-center line-clamp-2">
+                <p className="text-white font-semibold text-xs text-center line-clamp-2">
                   {challenge.title}
                 </p>
 

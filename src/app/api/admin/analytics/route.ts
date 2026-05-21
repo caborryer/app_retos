@@ -3,6 +3,12 @@ import { Prisma } from '@prisma/client';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { getBoardFullCompletionOrder } from '@/lib/board-live-ranking';
+import {
+  boardFilterForOrganization,
+  challengeFilterForOrganization,
+  getOrganizationIdFromRequest,
+  userFilterForOrganizationMembers,
+} from '@/lib/admin-org-filter';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,13 +65,19 @@ export async function GET(req: Request) {
   const periodParam = searchParams.get('period');
   const period: Period = periodParam === '30d' || periodParam === '90d' ? periodParam : '7d';
 
+  const organizationId = getOrganizationIdFromRequest(req);
+  const challengeFilter = challengeFilterForOrganization(organizationId);
+  const boardFilter = boardFilterForOrganization(organizationId);
+  const userFilter = userFilterForOrganizationMembers(organizationId);
+  const progressScope = challengeFilter ? { challenge: challengeFilter } : {};
+
   const daysBack = DAYS_BY_PERIOD[period];
   const since = toDate(daysBack);
   const prevSince = toDate(daysBack * 2);
 
   const [activeUsers, completedChallenges, previousActiveUsers, topUsers, boardStarts, categoryCounts, dailyRows, hourlyRows, heatRows, locationRows] = await Promise.all([
     prisma.userChallengeProgress.findMany({
-      where: { startedAt: { gte: since } },
+      where: { startedAt: { gte: since }, ...progressScope },
       select: { userId: true },
       distinct: ['userId'],
     }),
@@ -73,29 +85,30 @@ export async function GET(req: Request) {
       where: {
         status: 'COMPLETED',
         completedAt: { gte: since },
+        ...progressScope,
       },
     }),
     prisma.userChallengeProgress.findMany({
-      where: { startedAt: { gte: prevSince, lt: since } },
+      where: { startedAt: { gte: prevSince, lt: since }, ...progressScope },
       select: { userId: true },
       distinct: ['userId'],
     }),
     prisma.user.findMany({
-      where: { role: 'USER' },
+      where: { role: 'USER', ...userFilter },
       orderBy: { points: 'desc' },
       take: 7,
       select: { id: true, name: true, points: true },
     }),
     prisma.userChallengeProgress.groupBy({
       by: ['challengeId'],
-      where: { startedAt: { gte: since } },
+      where: { startedAt: { gte: since }, ...progressScope },
       _count: { _all: true },
       orderBy: { _count: { challengeId: 'desc' } },
       take: 20,
     }),
     prisma.userChallengeProgress.groupBy({
       by: ['challengeId'],
-      where: { startedAt: { gte: since } },
+      where: { startedAt: { gte: since }, ...progressScope },
       _count: { _all: true },
       orderBy: { _count: { challengeId: 'desc' } },
     }),
@@ -283,11 +296,12 @@ export async function GET(req: Request) {
 
   const startedBoards = totalBoardStarts;
   const completedBoards = await prisma.userChallengeProgress.count({
-    where: { status: 'COMPLETED', completedAt: { gte: since } },
+    where: { status: 'COMPLETED', completedAt: { gte: since }, ...progressScope },
   });
   const conversionRate = startedBoards ? Math.round((completedBoards / startedBoards) * 1000) / 10 : 0;
 
   const boardsWithMeta = await prisma.board.findMany({
+    where: boardFilter,
     select: {
       id: true,
       title: true,

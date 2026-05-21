@@ -25,10 +25,10 @@ const Card = forwardRef<HTMLDivElement, CardProps>(
     const baseStyles = 'rounded-2xl overflow-hidden transition-all duration-300';
 
     const variants = {
-      default: 'bg-white',
-      elevated: 'bg-white shadow-card',
-      bordered: 'bg-white border-2 border-secondary-200',
-      gradient: 'bg-gradient-to-br from-primary-500 to-accent-500 text-white',
+      default: 'bg-slate-800/60 border border-slate-700/50',
+      elevated: 'bg-slate-800 border border-slate-700 shadow-lg shadow-black/20',
+      bordered: 'bg-slate-800/80 border-2 border-slate-700',
+      gradient: 'bg-gradient-to-br from-primary-500 to-accent-500 text-white border-0',
     };
 
     const hoverStyles = hoverable

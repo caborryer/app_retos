@@ -145,12 +145,12 @@ export default function ActivityPage() {
       : activeRanking?.trend.direction === 'down'
       ? { text: `Bajaste ${activeRanking.trend.delta} puesto${activeRanking.trend.delta !== 1 ? 's' : ''} vs hace 7 días`, className: 'text-red-600', icon: ArrowDownRight }
       : activeRanking?.trend.direction === 'same'
-      ? { text: 'Sin cambios vs hace 7 días', className: 'text-secondary-600', icon: Minus }
+      ? { text: 'Sin cambios vs hace 7 días', className: 'text-slate-400', icon: Minus }
       : { text: 'Nueva entrada en ranking', className: 'text-indigo-600', icon: TrendingUp };
 
   if (!ready) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-secondary-50">
+      <div className="min-h-screen flex items-center justify-center bg-slate-800/50">
         <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -167,10 +167,10 @@ export default function ActivityPage() {
                 <TrendingUp className="w-6 h-6 text-primary-500" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-secondary-900">
+                <div className="text-2xl font-bold text-white">
                   {stats.activeChallenges}
                 </div>
-                <div className="text-xs text-secondary-600">Retos Activos</div>
+                <div className="text-xs text-slate-400">Retos Activos</div>
               </div>
             </div>
           </Card>
@@ -181,10 +181,10 @@ export default function ActivityPage() {
                 <Trophy className="w-6 h-6 text-green-500" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-secondary-900">
+                <div className="text-2xl font-bold text-white">
                   {stats.completedChallenges}
                 </div>
-                <div className="text-xs text-secondary-600">Completados</div>
+                <div className="text-xs text-slate-400">Completados</div>
               </div>
             </div>
           </Card>
@@ -195,10 +195,10 @@ export default function ActivityPage() {
                 <Trophy className="w-6 h-6 text-indigo-500" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-secondary-900">
+                <div className="text-2xl font-bold text-white">
                   {stats.completedBoards}
                 </div>
-                <div className="text-xs text-secondary-600">Tableros completados</div>
+                <div className="text-xs text-slate-400">Tableros completados</div>
               </div>
             </div>
           </Card>
@@ -228,7 +228,7 @@ export default function ActivityPage() {
         {/* Recent Badges */}
         {/* {user && user.badges.length > 0 && (
           <div className="space-y-4">
-            <h2 className="text-lg font-bold text-secondary-900 flex items-center gap-2">
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
               <Award className="w-5 h-5 text-primary-500" />
               Insignias Recientes
             </h2>
@@ -244,10 +244,10 @@ export default function ActivityPage() {
                   <Card variant="elevated" hoverable className="p-4">
                     <div className="text-center">
                       <div className="text-4xl mb-2">{badge.icon}</div>
-                      <h3 className="font-semibold text-secondary-900 text-sm mb-1">
+                      <h3 className="font-semibold text-white text-sm mb-1">
                         {badge.name}
                       </h3>
-                      <p className="text-xs text-secondary-600 line-clamp-2 mb-2">
+                      <p className="text-xs text-slate-400 line-clamp-2 mb-2">
                         {badge.description}
                       </p>
                       <Badge
@@ -276,17 +276,17 @@ export default function ActivityPage() {
         {activeRanking && (
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-2">
-              <h2 className="text-lg font-bold text-secondary-900">
+              <h2 className="text-lg font-bold text-white">
                 Tu posición en el ranking
               </h2>
-              <div className="inline-flex rounded-lg border border-secondary-200 bg-white p-0.5">
+              <div className="inline-flex rounded-lg border border-slate-700 bg-slate-800 p-0.5">
                 <button
                   type="button"
                   onClick={() => setRankingMode('board')}
                   className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
                     rankingMode === 'board'
-                      ? 'bg-primary-500 text-white'
-                      : 'text-secondary-600 hover:bg-secondary-100'
+                      ? 'bg-primary-500/100 text-white'
+                      : 'text-slate-400 hover:bg-slate-800'
                   }`}
                 >
                   Tablero
@@ -296,8 +296,8 @@ export default function ActivityPage() {
                   onClick={() => setRankingMode('global')}
                   className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
                     rankingMode === 'global'
-                      ? 'bg-primary-500 text-white'
-                      : 'text-secondary-600 hover:bg-secondary-100'
+                      ? 'bg-primary-500/100 text-white'
+                      : 'text-slate-400 hover:bg-slate-800'
                   }`}
                 >
                   Global
@@ -307,13 +307,13 @@ export default function ActivityPage() {
             <Card variant="elevated" className="p-4">
               <div className="flex items-center justify-between gap-3 mb-3">
                 <div className="min-w-0">
-                  <p className="text-xs text-secondary-500">Ranking actual</p>
-                  <p className="font-semibold text-secondary-900 truncate">
+                  <p className="text-xs text-slate-500">Ranking actual</p>
+                  <p className="font-semibold text-white truncate">
                     {activeRanking.boardEmoji} {activeRanking.boardTitle}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs text-secondary-500">Tu posición</p>
+                  <p className="text-xs text-slate-500">Tu posición</p>
                   <p className="text-xl font-bold text-primary-600">
                     #{activeRanking.yourPosition}
                   </p>
@@ -329,25 +329,25 @@ export default function ActivityPage() {
                   <div
                     key={entry.userId}
                     className={`flex items-center justify-between rounded-xl px-3 py-2 ${
-                      entry.isCurrentUser ? 'bg-primary-50 border border-primary-200' : 'bg-secondary-50'
+                      entry.isCurrentUser ? 'bg-primary-500/10 border border-primary-500/30' : 'bg-slate-800/50'
                     }`}
                   >
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-secondary-900 truncate">
+                      <p className="text-sm font-medium text-white truncate">
                         {idx + 1}. {entry.name}
                         {entry.isCurrentUser ? ' (Tú)' : ''}
                       </p>
-                      <p className="text-[11px] text-secondary-600">
+                      <p className="text-[11px] text-slate-400">
                         {entry.completedChallenges} retos completados
                       </p>
                     </div>
-                    <p className="text-sm font-semibold text-secondary-800">
+                    <p className="text-sm font-semibold text-slate-200">
                       {entry.earnedPoints} pts
                     </p>
                   </div>
                 ))}
               </div>
-              <p className="text-[11px] text-secondary-500 mt-3">
+              <p className="text-[11px] text-slate-500 mt-3">
                 Compites con {activeRanking.totalCompetitors} jugador{activeRanking.totalCompetitors !== 1 ? 'es' : ''} en este ranking.
               </p>
             </Card>
@@ -357,14 +357,14 @@ export default function ActivityPage() {
         {boardsForCompletionOrder.length > 0 && (
           <div className="space-y-3">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="text-lg font-bold text-secondary-900">
+              <h2 className="text-lg font-bold text-white">
                 Orden de finalización del tablero
               </h2>
-              <label className="text-xs text-secondary-600 shrink-0">
+              <label className="text-xs text-slate-400 shrink-0">
                 <span className="sr-only">Elegir tablero</span>
                 <select
                   aria-label="Tablero para ver orden de finalización"
-                  className="max-w-[min(100vw-2rem,220px)] w-full rounded-lg border border-secondary-200 bg-white px-3 py-2 text-sm text-secondary-900"
+                  className="max-w-[min(100vw-2rem,220px)] w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white"
                   value={resolvedCompletionBoardId}
                   onChange={(e) => setPickedCompletionBoardId(e.target.value)}
                   disabled={loading}
@@ -379,12 +379,12 @@ export default function ActivityPage() {
             </div>
             {boardCompletionOrder && (
               <Card variant="elevated" className="p-4">
-                <p className="text-xs text-secondary-500 mb-2">Quién terminó todos los retos primero</p>
-                <p className="font-semibold text-secondary-900 truncate mb-3">
+                <p className="text-xs text-slate-500 mb-2">Quién terminó todos los retos primero</p>
+                <p className="font-semibold text-white truncate mb-3">
                   {boardCompletionOrder.boardEmoji} {boardCompletionOrder.boardTitle}
                 </p>
                 {boardCompletionOrder.entries.length === 0 ? (
-                  <p className="text-sm text-secondary-600 py-4 text-center">
+                  <p className="text-sm text-slate-400 py-4 text-center">
                     Nadie ha completado todos los retos de este tablero aún.
                   </p>
                 ) : (
@@ -393,15 +393,15 @@ export default function ActivityPage() {
                       <div
                         key={entry.userId}
                         className={`flex items-center justify-between rounded-xl px-3 py-2 ${
-                          entry.isCurrentUser ? 'bg-primary-50 border border-primary-200' : 'bg-secondary-50'
+                          entry.isCurrentUser ? 'bg-primary-500/10 border border-primary-500/30' : 'bg-slate-800/50'
                         }`}
                       >
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-secondary-900 truncate">
+                          <p className="text-sm font-medium text-white truncate">
                             {entry.place}° {entry.name}
                             {entry.isCurrentUser ? ' (Tú)' : ''}
                           </p>
-                          <p className="text-[11px] text-secondary-600">
+                          <p className="text-[11px] text-slate-400">
                             {formatRelativeTime(new Date(entry.finishedAt))}
                           </p>
                         </div>
@@ -418,7 +418,7 @@ export default function ActivityPage() {
         )}
 
         <div className="space-y-4">
-          <h2 className="text-lg font-bold text-secondary-900">
+          <h2 className="text-lg font-bold text-white">
             Actividad Reciente
           </h2>
 
@@ -436,10 +436,10 @@ export default function ActivityPage() {
                       <span className="text-xl">{activity.icon}</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-secondary-900">
+                      <h3 className="font-semibold text-white">
                         {activity.title}
                       </h3>
-                      <p className="text-sm text-secondary-600 mt-1">
+                      <p className="text-sm text-slate-400 mt-1">
                         {formatRelativeTime(new Date(activity.time))}
                       </p>
                     </div>
@@ -451,7 +451,7 @@ export default function ActivityPage() {
         </div>
 
         {loading && (
-          <Card variant="bordered" className="p-4 text-center text-sm text-secondary-600">
+          <Card variant="bordered" className="p-4 text-center text-sm text-slate-400">
             Cargando actividad...
           </Card>
         )}
@@ -460,10 +460,10 @@ export default function ActivityPage() {
         {!loading && recentActivity.length === 0 && stats.activeChallenges === 0 && stats.completedChallenges === 0 && (
           <Card variant="bordered" className="p-12 text-center">
             <div className="text-6xl mb-4">📊</div>
-            <h3 className="text-lg font-bold text-secondary-900 mb-2">
+            <h3 className="text-lg font-bold text-white mb-2">
               Sin actividad reciente
             </h3>
-            <p className="text-sm text-secondary-600">
+            <p className="text-sm text-slate-400">
               Comienza un reto para ver tu progreso aquí
             </p>
           </Card>

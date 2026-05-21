@@ -138,7 +138,7 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
 
   if (!authReady || isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-secondary-50">
+      <div className="min-h-screen flex items-center justify-center bg-slate-950">
         <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -149,7 +149,7 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
       <Layout showBack title="">
         <div className="text-center py-12">
           <div className="text-6xl mb-4">🔍</div>
-          <h2 className="text-2xl font-bold text-secondary-900 mb-2">
+          <h2 className="text-2xl font-bold text-white mb-2">
             Reto no encontrado
           </h2>
           <p className="text-secondary-600 mb-6">
@@ -346,7 +346,7 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
         {/* Progress (if in progress) */}
         {isInProgress && (
           <Card variant="elevated" className="p-6">
-            <h2 className="text-lg font-bold text-secondary-900 mb-4">
+            <h2 className="text-lg font-bold text-white mb-4">
               Tu Progreso
             </h2>
             <ProgressBar
@@ -366,7 +366,7 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
 
         {/* Tasks */}
         <div className="space-y-4">
-          <h2 className="text-lg font-bold text-secondary-900">
+          <h2 className="text-lg font-bold text-white">
             Tareas del Reto
           </h2>
 
@@ -400,7 +400,7 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
                     <div className="flex-1 min-w-0">
                       <h3
                         className={`font-semibold ${
-                          task.completed ? 'text-secondary-500 line-through' : 'text-secondary-900'
+                          task.completed ? 'text-slate-500 line-through' : 'text-white'
                         }`}
                       >
                         {task.title}
@@ -545,7 +545,7 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
           {isCompleted && (
             <Card variant="elevated" className="p-6 text-center">
               <div className="text-6xl mb-3">🎉</div>
-              <h3 className="text-xl font-bold text-secondary-900 mb-2">
+              <h3 className="text-xl font-bold text-white mb-2">
                 ¡Reto Completado!
               </h3>
               <p className="text-secondary-600 mb-4">

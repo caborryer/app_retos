@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { assertUserCanAccessBoard, BoardAccessError } from '@/lib/organization-access';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,6 +17,19 @@ export async function POST(
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    await assertUserCanAccessBoard(
+      session.user.id,
+      session.user.role === 'ADMIN' ? 'ADMIN' : 'USER',
+      params.id
+    );
+  } catch (e) {
+    if (e instanceof BoardAccessError) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+    throw e;
   }
 
   const board = await prisma.board.findUnique({

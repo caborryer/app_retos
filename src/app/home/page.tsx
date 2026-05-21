@@ -490,7 +490,7 @@ export default function HomePage() {
     (status === 'authenticated' && (!boardsLoaded || (loadingBoard && !!activeBoardId)))
   ) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-secondary-50 to-white flex items-center justify-center">
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
       </div>
     );
@@ -507,7 +507,7 @@ export default function HomePage() {
         {/* Título + selector de tablero */}
         <div className="pt-1 pb-0" style={{ paddingLeft: '8.53%', paddingRight: 17 }}>
           <div className="flex items-center justify-between">
-            <h1 className="text-[#1E1E22] font-semibold text-xl tracking-tight">
+            <h1 className="text-white font-semibold text-xl tracking-tight">
               Retos
             </h1>
             {activeBoard && (
@@ -531,7 +531,7 @@ export default function HomePage() {
                   className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                     category === activeCategory
                       ? 'text-white'
-                      : 'bg-secondary-100 text-secondary-600 hover:bg-secondary-200'
+                      : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
                   }`}
                   style={category === activeCategory ? { backgroundColor: activeBoard?.color ?? '#FC0230' } : undefined}
                 >
@@ -547,15 +547,16 @@ export default function HomePage() {
 
         {showNoActiveBoards ? (
           <div className="w-full flex justify-center mt-8 px-6">
-            <div className="w-full rounded-2xl border border-secondary-200 bg-white p-5 text-center" style={{ maxWidth: 360 }}>
-              <p className="text-sm font-semibold text-secondary-900">No hay tableros activos en este momento</p>
-              <p className="text-xs text-secondary-500 mt-1">
-                Estamos preparando nuevos retos. Intenta nuevamente en unos minutos.
+            <div className="w-full rounded-2xl border border-slate-700 bg-slate-800 p-5 text-center" style={{ maxWidth: 360 }}>
+              <p className="text-sm font-semibold text-white">No hay tableros disponibles</p>
+              <p className="text-xs text-slate-500 mt-1">
+                Puede que aún no tengas acceso a retos de tu empresa, o que no haya tableros activos.
+                Si acabas de registrarte, confirma que usaste el enlace de invitación de tu organización.
               </p>
               <button
                 type="button"
                 onClick={() => window.location.reload()}
-                className="mt-4 inline-flex items-center justify-center rounded-xl bg-primary-500 px-4 py-2 text-xs font-semibold text-white hover:bg-primary-600 transition-colors"
+                className="mt-4 inline-flex items-center justify-center rounded-xl bg-primary-500/100 px-4 py-2 text-xs font-semibold text-white hover:bg-primary-600 transition-colors"
               >
                 Reintentar
               </button>
@@ -563,15 +564,15 @@ export default function HomePage() {
           </div>
         ) : showEmptyState ? (
           <div className="w-full flex justify-center mt-8 px-6">
-            <div className="w-full rounded-2xl border border-secondary-200 bg-white p-5 text-center" style={{ maxWidth: 360 }}>
-              <p className="text-sm font-semibold text-secondary-900">No se pudo seleccionar un tablero</p>
-              <p className="text-xs text-secondary-500 mt-1">
+            <div className="w-full rounded-2xl border border-slate-700 bg-slate-800 p-5 text-center" style={{ maxWidth: 360 }}>
+              <p className="text-sm font-semibold text-white">No se pudo seleccionar un tablero</p>
+              <p className="text-xs text-slate-500 mt-1">
                 Actualiza la página para volver a cargar tus retos.
               </p>
               <button
                 type="button"
                 onClick={() => window.location.reload()}
-                className="mt-4 inline-flex items-center justify-center rounded-xl bg-primary-500 px-4 py-2 text-xs font-semibold text-white hover:bg-primary-600 transition-colors"
+                className="mt-4 inline-flex items-center justify-center rounded-xl bg-primary-500/100 px-4 py-2 text-xs font-semibold text-white hover:bg-primary-600 transition-colors"
               >
                 Recargar
               </button>
@@ -609,8 +610,8 @@ export default function HomePage() {
               <div className="w-full flex justify-center mt-6 px-6">
                 <div className="w-full" style={{ maxWidth: 360 }}>
                   <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-sm font-semibold text-secondary-800">Tableros relacionados</h2>
-                    <span className="text-[11px] text-secondary-500">
+                    <h2 className="text-sm font-semibold text-slate-200">Tableros relacionados</h2>
+                    <span className="text-[11px] text-slate-500">
                       {relatedBoards.length} disponible{relatedBoards.length !== 1 ? 's' : ''}
                     </span>
                   </div>
@@ -628,7 +629,7 @@ export default function HomePage() {
                           }
                           switchBoard(board.id);
                         }}
-                        className="shrink-0 text-left rounded-xl border border-secondary-200 bg-white hover:border-primary-300 hover:shadow-sm transition-all"
+                        className="shrink-0 text-left rounded-xl border border-slate-700 bg-slate-800 hover:border-primary-500/40 hover:shadow-sm transition-all"
                         style={{ width: 148 }}
                       >
                         {board.coverImage ? (
@@ -652,8 +653,8 @@ export default function HomePage() {
                           </div>
                         )}
                         <div className="px-3 py-2">
-                          <p className="text-xs font-semibold text-secondary-900 truncate">{board.title}</p>
-                          <p className="text-[11px] text-secondary-500 truncate">
+                          <p className="text-xs font-semibold text-white truncate">{board.title}</p>
+                          <p className="text-[11px] text-slate-500 truncate">
                             {getBoardCategory(board)}
                           </p>
                         </div>
@@ -684,12 +685,12 @@ function CompletionBar({ challenges }: { challenges: Challenge[] }) {
   return (
     <div>
       <div className="flex justify-between items-center mb-1">
-        <span className="text-xs text-secondary-500">
+        <span className="text-xs text-slate-500">
           {completed} / {total} retos completados
         </span>
         <span className="text-xs font-semibold text-primary-500">{pct}%</span>
       </div>
-      <div className="h-2 bg-secondary-100 rounded-full overflow-hidden">
+      <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
         <div
           className="h-full rounded-full transition-all duration-500"
           style={{

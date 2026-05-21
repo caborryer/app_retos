@@ -16,12 +16,17 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const status = searchParams.get('status');
   const challengeId = searchParams.get('challengeId');
+  const organizationId = searchParams.get('organizationId');
+
+  const orgChallengeFilter = organizationId
+    ? { task: { challenge: { board: { organizationId } } } }
+    : {};
 
   const submissions = await prisma.userTaskProgress.findMany({
     where: {
+      ...orgChallengeFilter,
       ...(status && status !== 'all' ? { validationStatus: status as 'PENDING' | 'APPROVED' | 'REJECTED' } : {}),
       ...(challengeId ? { task: { challengeId } } : {}),
-      // Only include submissions that have some evidence
       OR: [{ photoUrl: { not: null } }, { linkUrl: { not: null } }],
     },
     include: {

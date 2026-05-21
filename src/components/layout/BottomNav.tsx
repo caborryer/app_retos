@@ -30,7 +30,7 @@ export default function BottomNav() {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-secondary-200 safe-area-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-slate-900 border-t border-slate-800 safe-area-bottom">
       <div className="flex items-center justify-around px-4 py-3">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -46,7 +46,7 @@ export default function BottomNav() {
               <motion.div
                 className={cn(
                   'transition-colors duration-200',
-                  isActive ? 'text-primary-500' : 'text-secondary-500'
+                  isActive ? 'text-primary-400' : 'text-slate-500'
                 )}
                 whileTap={{ scale: 0.9 }}
               >
@@ -56,7 +56,7 @@ export default function BottomNav() {
               <span
                 className={cn(
                   'text-xs font-medium transition-colors duration-200',
-                  isActive ? 'text-primary-500' : 'text-secondary-500'
+                  isActive ? 'text-primary-400' : 'text-slate-500'
                 )}
               >
                 {item.label}
@@ -76,4 +76,3 @@ export default function BottomNav() {
     </nav>
   );
 }
-

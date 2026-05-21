@@ -33,7 +33,7 @@ export default function Layout({
   useNotificationSync();
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-secondary-50 to-white">
+    <div className="min-h-screen bg-slate-950">
       <Header
         title={title}
         brandLogoSrc={brandLogoSrc}

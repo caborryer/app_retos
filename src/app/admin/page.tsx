@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { Image, LayoutGrid, CheckCircle, Clock, XCircle, Trophy, TrendingUp, Users } from 'lucide-react';
+import OrganizationFilter, { organizationQueryParam } from '@/components/admin/OrganizationFilter';
 
 interface Stats {
   totalUsers: number;
@@ -19,14 +20,21 @@ export default function AdminDashboardPage() {
   const { data: session } = useSession();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [organizationId, setOrganizationId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/api/admin/stats')
+    const stored = localStorage.getItem('adminOrganizationId');
+    if (stored && stored !== 'all') setOrganizationId(stored);
+  }, []);
+
+  useEffect(() => {
+    setLoading(true);
+    fetch(`/api/admin/stats${organizationQueryParam(organizationId)}`)
       .then((r) => r.json())
       .then(setStats)
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, []);
+  }, [organizationId]);
 
   const statCards = stats
     ? [
@@ -43,11 +51,20 @@ export default function AdminDashboardPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-        <p className="text-slate-400 text-sm mt-1">
-          Bienvenido, {session?.user?.name ?? 'Admin'}
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Dashboard</h1>
+          <p className="text-slate-400 text-sm mt-1">
+            Bienvenido, {session?.user?.name ?? 'Admin'}
+          </p>
+        </div>
+        <OrganizationFilter
+          value={organizationId}
+          onChange={(id) => {
+            setOrganizationId(id);
+            localStorage.setItem('adminOrganizationId', id ?? 'all');
+          }}
+        />
       </div>
 
       {/* Stats */}

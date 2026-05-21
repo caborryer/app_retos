@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { getUserProfileMetrics } from '@/lib/profile-metrics';
 import { getBoardFullCompletionOrder } from '@/lib/board-live-ranking';
+import { accessibleBoardWhereForUser } from '@/lib/organization-access';
 
 export const dynamic = 'force-dynamic';
 
@@ -81,6 +82,8 @@ export async function GET(req: Request) {
   }
 
   const userId = session.user.id;
+  const role = session.user.role === 'ADMIN' ? 'ADMIN' : 'USER';
+  const boardAccess = await accessibleBoardWhereForUser(userId, role);
   const { searchParams } = new URL(req.url);
   const requestedCompletionBoardId = searchParams.get('completionBoardId');
 
@@ -88,7 +91,7 @@ export async function GET(req: Request) {
     await Promise.all([
       getUserProfileMetrics(prisma, userId),
       prisma.userChallengeProgress.findMany({
-        where: { userId },
+        where: { userId, challenge: { board: boardAccess } },
         select: {
           id: true,
           status: true,
@@ -157,7 +160,7 @@ export async function GET(req: Request) {
 
   if (userBoardIds.length > 0) {
     const boardRows = await prisma.board.findMany({
-      where: { id: { in: userBoardIds } },
+      where: { id: { in: userBoardIds }, ...boardAccess },
       select: { id: true, title: true, emoji: true },
       orderBy: { title: 'asc' },
     });
@@ -301,7 +304,7 @@ export async function GET(req: Request) {
   globalTrendCutoff.setDate(globalTrendCutoff.getDate() - 7);
 
   const globalRows = await prisma.userChallengeProgress.findMany({
-    where: { status: 'COMPLETED' },
+    where: { status: 'COMPLETED', challenge: { board: boardAccess } },
     select: {
       userId: true,
       challenge: { select: { points: true } },
@@ -312,6 +315,7 @@ export async function GET(req: Request) {
     where: {
       status: 'COMPLETED',
       completedAt: { lte: globalTrendCutoff },
+      challenge: { board: boardAccess },
     },
     select: {
       userId: true,

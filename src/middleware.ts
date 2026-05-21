@@ -46,8 +46,9 @@ export default async function middleware(req: NextRequest) {
   if (isApiAuth) return NextResponse.next();
   if (isHealthEndpoint) return NextResponse.next();
 
-  // Allow the public registration API endpoint
+  // Allow public registration and invite validation APIs
   if (pathname === '/api/register') return NextResponse.next();
+  if (pathname.startsWith('/api/invites/')) return NextResponse.next();
 
   // Always allow public routes
   if (isPublic) return NextResponse.next();

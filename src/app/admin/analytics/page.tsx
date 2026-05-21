@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import OrganizationFilter, { organizationQueryParam } from '@/components/admin/OrganizationFilter';
 
 type Period = '7d' | '30d' | '90d';
 
@@ -270,11 +271,17 @@ function ChartsPanel({ analytics }: { analytics: AnalyticsResponse }) {
 
 export default function AdminAnalyticsPage() {
   const [period, setPeriod] = useState<Period>('7d');
+  const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [analytics, setAnalytics] = useState<AnalyticsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [liveMessage, setLiveMessage] = useState('Cargando analytics del periodo 7d.');
   const [showFallbackNotice, setShowFallbackNotice] = useState(false);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('adminOrganizationId');
+    if (stored && stored !== 'all') setOrganizationId(stored);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -285,7 +292,10 @@ export default function AdminAnalyticsPage() {
       setShowFallbackNotice(false);
     }
 
-    fetch(`/api/admin/analytics?period=${period}`)
+    const orgSuffix = organizationId
+      ? `&organizationId=${encodeURIComponent(organizationId)}`
+      : '';
+    fetch(`/api/admin/analytics?period=${period}${orgSuffix}`)
       .then(async (response) => {
         if (!response.ok) throw new Error('No se pudieron cargar las metricas');
         const data = (await response.json()) as AnalyticsResponse;
@@ -312,7 +322,7 @@ export default function AdminAnalyticsPage() {
     return () => {
       active = false;
     };
-  }, [period]);
+  }, [period, organizationId]);
 
   const maxHourly = useMemo(() => Math.max(...(analytics?.hourlyActivity.map((item) => item.count) ?? [0])), [analytics]);
   const maxRegionUsers = useMemo(() => Math.max(...(analytics?.locationRegions.map((item) => item.users) ?? [0])), [analytics]);
@@ -358,14 +368,22 @@ export default function AdminAnalyticsPage() {
       <div className="flex items-start sm:items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-white">Analytics del bingo</h1>
-          <p className="text-slate-400 text-sm mt-1">Metricas globales de engagement, progresion y distribucion geografica.</p>
+          <p className="text-slate-400 text-sm mt-1">Metricas de engagement, progresion y distribucion geografica.</p>
           {showFallbackNotice && (
             <p className="mt-2 inline-flex items-center rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-300">
               Se amplio automaticamente a 90d para mostrar datos geograficos.
             </p>
           )}
         </div>
-        <div className="flex gap-1.5 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto sm:items-center">
+          <OrganizationFilter
+            value={organizationId}
+            onChange={(id) => {
+              setOrganizationId(id);
+              localStorage.setItem('adminOrganizationId', id ?? 'all');
+            }}
+          />
+          <div className="flex gap-1.5">
           {(['7d', '30d', '90d'] as Period[]).map((p) => (
             <button
               key={p}
@@ -379,6 +397,7 @@ export default function AdminAnalyticsPage() {
               {p}
             </button>
           ))}
+          </div>
         </div>
       </div>
 

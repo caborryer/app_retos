@@ -60,16 +60,16 @@ export default function NotificationPanel({ isOpen, onClose }: NotificationPanel
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed top-0 right-0 bottom-0 w-full max-w-md bg-white shadow-2xl z-50 flex flex-col"
+            className="fixed top-0 right-0 bottom-0 w-full max-w-md bg-slate-900 border-l border-slate-800 shadow-2xl z-50 flex flex-col"
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-secondary-200">
+            <div className="flex items-center justify-between p-4 border-b border-slate-800">
               <div>
-                <h2 className="text-xl font-bold text-secondary-900">
+                <h2 className="text-xl font-bold text-white">
                   Notificaciones
                 </h2>
                 {unreadCount > 0 && (
-                  <p className="text-sm text-secondary-600">
+                  <p className="text-sm text-slate-400">
                     {unreadCount} sin leer
                   </p>
                 )}
@@ -77,16 +77,16 @@ export default function NotificationPanel({ isOpen, onClose }: NotificationPanel
 
               <button
                 onClick={onClose}
-                className="p-2 rounded-full hover:bg-secondary-100 transition-colors"
+                className="p-2 rounded-full hover:bg-slate-800 transition-colors"
                 aria-label="Cerrar panel"
               >
-                <X className="w-6 h-6 text-secondary-600" />
+                <X className="w-6 h-6 text-slate-400" />
               </button>
             </div>
 
             {/* Actions */}
             {notifications.length > 0 && (
-              <div className="flex items-center gap-2 p-4 border-b border-secondary-200">
+              <div className="flex items-center gap-2 p-4 border-b border-slate-800">
                 {unreadCount > 0 && (
                   <Button
                     variant="secondary"
@@ -113,10 +113,10 @@ export default function NotificationPanel({ isOpen, onClose }: NotificationPanel
               {notifications.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center py-12">
                   <div className="text-6xl mb-4">🔔</div>
-                  <h3 className="text-lg font-bold text-secondary-900 mb-2">
+                  <h3 className="text-lg font-bold text-white mb-2">
                     No hay notificaciones
                   </h3>
-                  <p className="text-sm text-secondary-600">
+                  <p className="text-sm text-slate-400">
                     Cuando tengas notificaciones, aparecerán aquí
                   </p>
                 </div>

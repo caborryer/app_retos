@@ -89,6 +89,9 @@ interface Board {
   folder: string | null;
   startDate: string | null;
   endDate: string | null;
+  organizationId?: string;
+  isGeneral?: boolean;
+  organization?: { id: string; name: string; slug: string };
   _count?: { challenges: number };
 }
 
@@ -722,6 +725,7 @@ function BoardCard({
       folder: board.folder ?? '',
       startDate: board.startDate ? board.startDate.split('T')[0] : '',
       endDate: board.endDate ? board.endDate.split('T')[0] : '',
+      isGeneral: board.isGeneral ?? false,
     });
     setAddingNewFolder(false);
     setEditing(true);
@@ -887,6 +891,16 @@ function BoardCard({
                 />
               </div>
             </div>
+
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={draft.isGeneral ?? false}
+                onChange={(e) => setDraft((d) => ({ ...d, isGeneral: e.target.checked }))}
+                className="rounded"
+              />
+              <span className="text-slate-300 text-sm">Tablero general (todos los usuarios)</span>
+            </label>
 
             {/* Active — only when all 8 challenges are fully configured */}
             <div className="space-y-2 rounded-xl border border-slate-600 bg-slate-800/80 p-3">
@@ -1056,10 +1070,11 @@ function BoardCard({
 
 // ─── New board modal ──────────────────────────────────────────────────────────
 
-function NewBoardModal({ onClose, onCreate, existingFolders }: {
+function NewBoardModal({ onClose, onCreate, existingFolders, organizationId }: {
   onClose: () => void;
   onCreate: (b: Board) => void;
   existingFolders: string[];
+  organizationId: string;
 }) {
   const [form, setForm] = useState({
     title: '',
@@ -1069,6 +1084,7 @@ function NewBoardModal({ onClose, onCreate, existingFolders }: {
     folder: '',
     startDate: '',
     endDate: '',
+    isGeneral: false,
   });
   const [saving, setSaving] = useState(false);
   const [addingNewFolder, setAddingNewFolder] = useState(false);
@@ -1094,6 +1110,8 @@ function NewBoardModal({ onClose, onCreate, existingFolders }: {
           folder: form.folder || null,
           startDate: form.startDate || null,
           endDate: form.endDate || null,
+          organizationId,
+          isGeneral: form.isGeneral,
         }),
       });
       if (!res.ok) throw new Error();
@@ -1203,10 +1221,22 @@ function NewBoardModal({ onClose, onCreate, existingFolders }: {
           </div>
         </div>
 
+        <label className="flex items-start gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={form.isGeneral}
+            onChange={(e) => set('isGeneral', e.target.checked)}
+            className="rounded mt-0.5"
+          />
+          <span className="text-slate-400 text-xs leading-relaxed">
+            <strong className="text-slate-300">Tablero general</strong> — visible para todos los usuarios
+            registrados, además de los de esta empresa.
+          </span>
+        </label>
+
         <p className="text-slate-500 text-xs leading-relaxed">
           El tablero se crea <strong className="text-slate-400">inactivo</strong>. Cuando tenga los 8 retos
-          con título, descripción, imagen, tareas y evidencia (foto o link) configuradas, podrás activarlo
-          al editar el tablero.
+          configurados, podrás activarlo al editar el tablero.
         </p>
 
         <div className="flex gap-3 pt-1">
@@ -1238,11 +1268,34 @@ export default function BoardManager() {
   const [boards, setBoards] = useState<Board[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
+  const [organizations, setOrganizations] = useState<{ id: string; name: string }[]>([]);
+  const [organizationId, setOrganizationId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('adminOrganizationId');
+    if (stored && stored !== 'all') setOrganizationId(stored);
+    fetch('/api/admin/organizations', { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data: { id: string; name: string }[]) => {
+        setOrganizations(data);
+        if (!stored || stored === 'all') {
+          const general = data.find((o) => o.name === 'General') ?? data[0];
+          if (general) setOrganizationId(general.id);
+        }
+      });
+  }, []);
+
+  useEffect(() => {
+    if (organizationId) {
+      localStorage.setItem('adminOrganizationId', organizationId);
+    }
+  }, [organizationId]);
 
   const fetchBoards = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/boards', { credentials: 'include' });
+      const q = organizationId ? `?organizationId=${encodeURIComponent(organizationId)}` : '';
+      const res = await fetch(`/api/boards${q}`, { credentials: 'include' });
       const data = await res.json();
       setBoards(data);
     } catch (err) {
@@ -1250,7 +1303,7 @@ export default function BoardManager() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [organizationId]);
 
   useEffect(() => { fetchBoards(); }, [fetchBoards]);
 
@@ -1303,11 +1356,22 @@ export default function BoardManager() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white">Tableros</h1>
-          <p className="text-slate-400 text-sm mt-1">Gestiona los tableros y sus retos</p>
+          <p className="text-slate-400 text-sm mt-1">Gestiona los tableros y sus retos por empresa</p>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={organizationId ?? ''}
+            onChange={(e) => setOrganizationId(e.target.value || null)}
+            className="bg-slate-800 border border-slate-700 text-white text-sm rounded-xl px-3 py-2"
+          >
+            <option value="">Todas</option>
+            {organizations.map((o) => (
+              <option key={o.id} value={o.id}>{o.name}</option>
+            ))}
+          </select>
         <div className="flex gap-2">
           <button
             onClick={fetchBoards}
@@ -1317,12 +1381,19 @@ export default function BoardManager() {
             <RefreshCw className="w-4 h-4" />
           </button>
           <button
-            onClick={() => setShowNew(true)}
+            onClick={() => {
+              if (!organizationId) {
+                alert('Selecciona una empresa para crear un tablero.');
+                return;
+              }
+              setShowNew(true);
+            }}
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-500 text-white text-sm font-semibold hover:bg-primary-600 transition-colors"
           >
             <Plus className="w-4 h-4" />
             Nuevo tablero
           </button>
+        </div>
         </div>
       </div>
 
@@ -1365,11 +1436,12 @@ export default function BoardManager() {
         </div>
       )}
 
-      {showNew && (
+      {showNew && organizationId && (
         <NewBoardModal
           onClose={() => setShowNew(false)}
           onCreate={(board) => setBoards((prev) => [...prev, board])}
           existingFolders={existingFolders}
+          organizationId={organizationId}
         />
       )}
     </div>

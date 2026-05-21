@@ -75,7 +75,7 @@ export default function HomePage() {
 
   if (!ready) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-secondary-50">
+      <div className="min-h-screen flex items-center justify-center bg-slate-950">
         <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -183,7 +183,7 @@ export default function HomePage() {
                 onClick={() => setConfirmBoard(null)}
               />
               <motion.div
-                className="relative w-full max-w-xs bg-white rounded-2xl p-6 shadow-2xl"
+                className="relative w-full max-w-xs bg-slate-900 rounded-2xl p-6 shadow-2xl"
                 initial={{ scale: 0.85, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.85, opacity: 0 }}
@@ -191,10 +191,10 @@ export default function HomePage() {
               >
                 <div className="text-center mb-4">
                   <span style={{ fontSize: 36 }}>{confirmBoard.emoji}</span>
-                  <h3 className="text-secondary-900 font-bold text-base mt-2">
+                  <h3 className="text-white font-bold text-base mt-2">
                     ¿Cambiar a {confirmBoard.title}?
                   </h3>
-                  <p className="text-secondary-500 text-xs mt-1">
+                  <p className="text-slate-500 text-xs mt-1">
                     Tienes {completedCount} reto{completedCount !== 1 ? 's' : ''} completado{completedCount !== 1 ? 's' : ''}.
                     Si cambias ahora perderás el progreso actual.
                   </p>
@@ -239,7 +239,7 @@ function CompletionBar({
   return (
     <div>
       <div className="flex justify-between items-center mb-1">
-        <span className="text-xs text-secondary-500">
+        <span className="text-xs text-slate-500">
           {completed} / {total} retos completados
         </span>
         <span className="text-xs font-semibold" style={{ color }}>

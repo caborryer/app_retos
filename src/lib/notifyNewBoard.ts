@@ -1,36 +1,31 @@
 import { prisma } from '@/lib/prisma';
 
 /**
- * Creates in-app notifications for all relevant users when a board becomes active.
- *
- * If the board has a folder: notifies users who have progress in challenges
- * belonging to any board with the same folder (i.e., same category).
- *
- * If no folder: notifies all non-admin users.
+ * Notifies users when a board becomes active.
+ * General boards: all USER accounts.
+ * Organization boards: members of that organization only.
  */
 export async function notifyNewBoard(boardId: string, boardTitle: string, folder: string | null) {
+  const board = await prisma.board.findUnique({
+    where: { id: boardId },
+    select: { isGeneral: true, organizationId: true },
+  });
+  if (!board) return;
+
   let userIds: string[];
 
-  if (folder) {
-    // Find users who have interacted with any challenge in the same folder
-    const rows = await prisma.userChallengeProgress.findMany({
-      where: {
-        challenge: {
-          board: { folder },
-          boardId: { not: boardId }, // exclude the new board itself to avoid self-match
-        },
-      },
-      select: { userId: true },
-      distinct: ['userId'],
-    });
-    userIds = rows.map((r) => r.userId);
-  } else {
-    // No folder — notify all regular users
+  if (board.isGeneral) {
     const users = await prisma.user.findMany({
       where: { role: 'USER' },
       select: { id: true },
     });
     userIds = users.map((u) => u.id);
+  } else {
+    const members = await prisma.organizationMember.findMany({
+      where: { organizationId: board.organizationId },
+      select: { userId: true },
+    });
+    userIds = members.map((m) => m.userId);
   }
 
   if (userIds.length === 0) return;

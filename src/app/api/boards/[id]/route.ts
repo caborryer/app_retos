@@ -16,7 +16,19 @@ export async function PATCH(
     }
 
     const body = await req.json();
-    const { title, emoji, color, description, coverImage, active, folder, startDate, endDate } = body;
+    const {
+      title,
+      emoji,
+      color,
+      description,
+      coverImage,
+      active,
+      folder,
+      startDate,
+      endDate,
+      organizationId,
+      isGeneral,
+    } = body;
 
     // Enforce full board setup + complete challenge data before activation
     if (active === true) {
@@ -55,6 +67,8 @@ export async function PATCH(
         ...(folder !== undefined && { folder: folder ?? null }),
         ...(startDate !== undefined && { startDate: startDate ? new Date(startDate) : null }),
         ...(endDate !== undefined && { endDate: endDate ? new Date(endDate) : null }),
+        ...(organizationId !== undefined && { organizationId }),
+        ...(isGeneral !== undefined && { isGeneral: Boolean(isGeneral) }),
       },
     });
 

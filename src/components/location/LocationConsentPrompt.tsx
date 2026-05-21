@@ -162,22 +162,22 @@ export default function LocationConsentPrompt() {
           aria-describedby="loc-consent-desc"
         >
           <motion.div
-            className="w-full max-w-md bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden"
+            className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden"
             initial={{ y: 40, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 40, opacity: 0 }}
             transition={{ type: 'spring', damping: 28, stiffness: 320 }}
           >
-            <div className="p-5 border-b border-secondary-100 flex items-start gap-3">
-              <div className="w-11 h-11 rounded-xl bg-primary-500/10 flex items-center justify-center shrink-0">
-                <MapPin className="w-6 h-6 text-primary-600" />
+            <div className="p-5 border-b border-slate-800 flex items-start gap-3">
+              <div className="w-11 h-11 rounded-xl bg-primary-500/15 flex items-center justify-center shrink-0">
+                <MapPin className="w-6 h-6 text-primary-400" />
               </div>
               <div className="flex-1 min-w-0">
-                <h2 id="loc-consent-title" className="text-lg font-bold text-secondary-900 pr-8">
+                <h2 id="loc-consent-title" className="text-lg font-bold text-white pr-8">
                   Ubicación aproximada
                 </h2>
-                <p id="loc-consent-desc" className="text-sm text-secondary-600 mt-2 leading-relaxed">
-                  Si aceptas, guardamos tu ubicación <strong className="text-secondary-800">una vez</strong>{' '}
+                <p id="loc-consent-desc" className="text-sm text-slate-400 mt-2 leading-relaxed">
+                  Si aceptas, guardamos tu ubicación <strong className="text-slate-200">una vez</strong>{' '}
                   de forma aproximada mientras usas el juego, para entender mejor desde qué zonas se conecta la
                   comunidad. Más adelante el equipo podrá ver estadísticas agregadas en el panel de
                   administración. No compartimos tu ubicación con otros jugadores.
@@ -186,7 +186,7 @@ export default function LocationConsentPrompt() {
               <button
                 type="button"
                 onClick={handleDecline}
-                className="p-1.5 rounded-full hover:bg-secondary-100 text-secondary-500 -mt-1 -mr-1"
+                className="p-1.5 rounded-full hover:bg-slate-800 text-slate-500 -mt-1 -mr-1"
                 aria-label="Cerrar y rechazar"
               >
                 <X className="w-5 h-5" />
@@ -194,7 +194,7 @@ export default function LocationConsentPrompt() {
             </div>
 
             {error && (
-              <p className="mx-5 mt-3 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+              <p className="mx-5 mt-3 text-sm text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2">
                 {error}
               </p>
             )}
@@ -204,7 +204,7 @@ export default function LocationConsentPrompt() {
                 type="button"
                 onClick={handleDecline}
                 disabled={loading}
-                className="order-2 sm:order-1 px-4 py-2.5 rounded-xl border border-secondary-200 text-secondary-800 text-sm font-medium hover:bg-secondary-50 disabled:opacity-50"
+                className="order-2 sm:order-1 px-4 py-2.5 rounded-xl border border-slate-700 text-slate-200 text-sm font-medium hover:bg-slate-800/50 disabled:opacity-50"
               >
                 No, gracias
               </button>
@@ -225,13 +225,13 @@ export default function LocationConsentPrompt() {
               </button>
             </div>
 
-            <p className="px-5 pb-4 text-[11px] text-secondary-500 leading-snug">
+            <p className="px-5 pb-4 text-[11px] text-slate-500 leading-snug">
               Tras pulsar aceptar, tu navegador te pedirá permiso de ubicación. Puedes revocarlo cuando quieras
               en los ajustes del sitio.
             </p>
             {error?.toLowerCase().includes('denegado') && (
               <div className="px-5 pb-4">
-                <div className="rounded-xl border border-secondary-200 bg-secondary-50 p-3 text-[11px] text-secondary-700 leading-snug">
+                <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-3 text-[11px] text-slate-300 leading-snug">
                   Si ya lo bloqueaste antes, el navegador no vuelve a preguntar automáticamente.
                   Actualiza el permiso del sitio y recarga para intentar de nuevo.
                 </div>

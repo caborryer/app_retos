@@ -3,7 +3,14 @@ import Credentials from 'next-auth/providers/credentials';
 import Google from 'next-auth/providers/google';
 import bcrypt from 'bcryptjs';
 import { randomBytes } from 'node:crypto';
+import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
+import {
+  consumeInviteAndCreateMember,
+  InviteValidationError,
+  validateInviteToken,
+} from '@/lib/organization-access';
+import { INVITE_COOKIE_NAME } from '@/lib/invite-cookie';
 
 const googleConfigured =
   Boolean(process.env.AUTH_GOOGLE_ID?.trim()) && Boolean(process.env.AUTH_GOOGLE_SECRET?.trim());
@@ -90,8 +97,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return true;
       }
       const email = user.email;
+      const existing = await prisma.user.findUnique({ where: { email } });
+
+      if (!existing) {
+        const cookieStore = await cookies();
+        const inviteToken = cookieStore.get(INVITE_COOKIE_NAME)?.value;
+        if (!inviteToken) {
+          console.error('[signIn] Google signup without invite token');
+          return false;
+        }
+        try {
+          await validateInviteToken(inviteToken);
+        } catch (e) {
+          console.error('[signIn] invalid invite:', e);
+          return false;
+        }
+      }
+
       const placeholderPassword = await bcrypt.hash(randomBytes(32).toString('hex'), 12);
-      await prisma.user.upsert({
+      const dbUser = await prisma.user.upsert({
         where: { email },
         create: {
           email,
@@ -105,6 +129,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           avatar: user.image ?? undefined,
         },
       });
+
+      if (!existing) {
+        const cookieStore = await cookies();
+        const inviteToken = cookieStore.get(INVITE_COOKIE_NAME)?.value;
+        if (inviteToken) {
+          try {
+            await consumeInviteAndCreateMember(dbUser.id, inviteToken);
+          } catch (e) {
+            if (e instanceof InviteValidationError) {
+              console.error('[signIn] consume invite failed:', e.message);
+              return false;
+            }
+            throw e;
+          }
+        }
+      }
+
       return true;
     },
     async jwt({ token, user, account }) {

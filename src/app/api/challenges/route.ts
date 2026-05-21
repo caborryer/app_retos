@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import {
+  assertUserCanAccessBoard,
+  BoardAccessError,
+  challengeWhereForUser,
+} from '@/lib/organization-access';
 
 /**
  * GET /api/challenges?boardId=xxx
@@ -14,8 +19,22 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const boardId = searchParams.get('boardId');
+  const role = session.user.role === 'ADMIN' ? 'ADMIN' : 'USER';
 
-  const where = boardId ? { boardId } : {};
+  if (boardId) {
+    try {
+      await assertUserCanAccessBoard(session.user.id, role, boardId);
+    } catch (e) {
+      if (e instanceof BoardAccessError) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+      throw e;
+    }
+  }
+
+  const where = boardId
+    ? { boardId }
+    : await challengeWhereForUser(session.user.id, role);
 
   const challenges = await prisma.challenge.findMany({
     where,

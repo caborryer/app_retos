@@ -4,11 +4,11 @@
 
 @layer base {
   * {
-    @apply border-secondary-200;
+    @apply border-slate-800;
   }
   
   body {
-    @apply bg-white text-secondary-900;
+    @apply bg-slate-950 text-slate-100;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
@@ -56,7 +56,7 @@
 
   /* Glass effect */
   .glass {
-    @apply bg-white/80 backdrop-blur-lg;
+    @apply bg-slate-900/80 backdrop-blur-lg;
   }
 
   /* Line clamp utilities */
@@ -124,12 +124,12 @@ html {
 
 /* Selection color */
 ::selection {
-  @apply bg-primary-200 text-primary-900;
+  @apply bg-primary-500/30 text-white;
 }
 
 /* Focus visible */
 :focus-visible {
-  @apply outline-none ring-2 ring-primary-500 ring-offset-2;
+  @apply outline-none ring-2 ring-primary-500 ring-offset-2 ring-offset-slate-950;
 }
 
 /* Remove tap highlight on mobile */

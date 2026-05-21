@@ -33,7 +33,7 @@ export default function GoogleSignInButton({
       onClick={handleClick}
       disabled={loading || !enabled}
       title={!enabled ? 'Inicio con Google no disponible en este entorno' : undefined}
-      className={`w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-[#E5E3DC] bg-white text-[#1C1C1A] font-semibold text-sm shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${enabled ? 'hover:bg-[#F7F6F2]' : ''} ${className}`}
+      className={`w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-slate-700 bg-slate-800 text-slate-100 font-semibold text-sm shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${enabled ? 'hover:bg-slate-700' : ''} ${className}`}
     >
       {loading ? (
         <span className="w-5 h-5 border-2 border-[#B8B6AF] border-t-[#1C1C1A] rounded-full animate-spin" />

@@ -2,16 +2,32 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { notifyNewBoard } from '@/lib/notifyNewBoard';
+import { boardWhereForUser } from '@/lib/organization-access';
 
-// GET /api/boards — admins see all boards; regular users see only active ones
-export async function GET() {
+// GET /api/boards — admins see all boards; users see active boards for their orgs + general
+export async function GET(req: Request) {
   const session = await auth();
   const isAdmin = session?.user?.role === 'ADMIN';
+  const { searchParams } = new URL(req.url);
+  const organizationId = searchParams.get('organizationId');
+
+  let where: import('@prisma/client').Prisma.BoardWhereInput | undefined;
+
+  if (isAdmin) {
+    where = organizationId ? { organizationId } : undefined;
+  } else if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  } else {
+    where = await boardWhereForUser(session.user.id, session.user.role);
+  }
 
   const boards = await prisma.board.findMany({
-    where: isAdmin ? undefined : { active: true },
+    where,
     orderBy: { createdAt: 'asc' },
-    include: { _count: { select: { challenges: true } } },
+    include: {
+      _count: { select: { challenges: true } },
+      organization: { select: { id: true, name: true, slug: true } },
+    },
   });
 
   // Public users prefer fully configured boards (8 challenges). If none match,
@@ -35,10 +51,31 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json();
-  const { title, emoji, color, description, coverImage, active, folder, startDate, endDate } = body;
+  const {
+    title,
+    emoji,
+    color,
+    description,
+    coverImage,
+    active,
+    folder,
+    startDate,
+    endDate,
+    organizationId,
+    isGeneral,
+  } = body;
 
   if (!title || !emoji || !color) {
     return NextResponse.json({ error: 'title, emoji and color are required' }, { status: 400 });
+  }
+
+  if (!organizationId) {
+    return NextResponse.json({ error: 'organizationId is required' }, { status: 400 });
+  }
+
+  const org = await prisma.organization.findUnique({ where: { id: organizationId } });
+  if (!org) {
+    return NextResponse.json({ error: 'Organization not found' }, { status: 400 });
   }
 
   if (active === true) {
@@ -59,6 +96,8 @@ export async function POST(req: Request) {
       folder: folder ?? null,
       startDate: startDate ? new Date(startDate) : null,
       endDate: endDate ? new Date(endDate) : null,
+      organizationId,
+      isGeneral: Boolean(isGeneral),
     },
   });
 

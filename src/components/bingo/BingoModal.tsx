@@ -62,7 +62,7 @@ export default function BingoModal({ open, boardNumber, totalPoints, onContinue 
 
           {/* Card */}
           <motion.div
-            className="relative w-full max-w-sm bg-white rounded-2xl overflow-hidden shadow-2xl"
+            className="relative w-full max-w-sm bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-2xl"
             initial={{ scale: 0.7, opacity: 0, y: 40 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.8, opacity: 0, y: 20 }}
@@ -114,12 +114,12 @@ export default function BingoModal({ open, boardNumber, totalPoints, onContinue 
 
             {/* Cuerpo */}
             <div className="px-6 py-6 text-center">
-              <p className="text-secondary-700 text-sm mb-2">
+              <p className="text-slate-400 text-sm mb-2">
                 ¡Completaste todos los retos del tablero!
               </p>
               <div className="flex items-center justify-center gap-2 mb-5">
-                <Trophy className="w-5 h-5 text-primary-500" />
-                <span className="text-2xl font-bold text-secondary-900">
+                <Trophy className="w-5 h-5 text-primary-400" />
+                <span className="text-2xl font-bold text-white">
                   +{totalPoints} pts
                 </span>
               </div>
@@ -133,7 +133,7 @@ export default function BingoModal({ open, boardNumber, totalPoints, onContinue 
                 Continuar con el siguiente tablero
               </Button>
 
-              <p className="text-xs text-secondary-400 mt-3">
+              <p className="text-xs text-slate-500 mt-3">
                 Nuevos retos te esperan en el tablero {boardNumber + 1}
               </p>
             </div>

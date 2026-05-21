@@ -48,9 +48,6 @@ export default function LoginPage() {
         callbackUrl: '/home',
       });
 
-      // Temporary debug — remove after login is stable
-      console.debug('[login] signIn result:', JSON.stringify(result));
-
       if (!result) {
         setError('Sin respuesta del servidor. Intenta nuevamente.');
         return;
@@ -74,12 +71,12 @@ export default function LoginPage() {
     }
   }
 
+  const inputClass =
+    'w-full border border-slate-700 rounded-xl pl-10 pr-4 py-3 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-primary-500 transition-all bg-slate-800';
+
   return (
-    <div
-      style={{ minHeight: '100vh', fontFamily: "'DM Sans','Helvetica Neue',sans-serif" }}
-      className="bg-[#FAFAF9] flex flex-col"
-    >
-      <nav className="flex items-center justify-between px-6 h-[60px] border-b border-[#EEECEA] bg-[#FAFAF9] sticky top-0 z-10">
+    <div className="min-h-screen bg-slate-950 flex flex-col font-sans">
+      <nav className="flex items-center justify-between px-6 h-[60px] border-b border-slate-800 bg-slate-900 sticky top-0 z-10">
         <button
           type="button"
           onClick={() => router.push('/')}
@@ -95,7 +92,7 @@ export default function LoginPage() {
             sizes="(max-width: 640px) 72px, 88px"
             priority
           />
-          <span className="text-[15px] sm:text-base font-bold text-[#1C1C1A] tracking-tight truncate">
+          <span className="text-[15px] sm:text-base font-bold text-white tracking-tight truncate">
             BOX Challenge
           </span>
         </button>
@@ -104,10 +101,10 @@ export default function LoginPage() {
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-sm">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-[#1C1C1A] tracking-tight">Iniciar sesión</h1>
-            <p className="text-[#6B6B67] text-sm mt-1">Accede a tu tablero de retos</p>
+            <h1 className="text-2xl font-bold text-white tracking-tight">Iniciar sesión</h1>
+            <p className="text-slate-400 text-sm mt-1">Accede a tu tablero de retos</p>
             {status === 'loading' && (
-              <p className="text-[11px] text-[#9B9B95] mt-2">
+              <p className="text-[11px] text-slate-500 mt-2">
                 {sessionCheckTimedOut
                   ? 'La verificación de sesión está tardando. Puedes iniciar sesión manualmente.'
                   : 'Verificando sesión...'}
@@ -118,19 +115,19 @@ export default function LoginPage() {
           <div className="space-y-4 mb-6">
             <GoogleSignInButton label="Continuar con Google" callbackUrl="/" />
             <div className="relative flex items-center gap-3">
-              <div className="h-px flex-1 bg-[#E5E3DC]" />
-              <span className="text-xs text-[#9B9B95] shrink-0">o con email</span>
-              <div className="h-px flex-1 bg-[#E5E3DC]" />
+              <div className="h-px flex-1 bg-slate-700" />
+              <span className="text-xs text-slate-500 shrink-0">o con email</span>
+              <div className="h-px flex-1 bg-slate-700" />
             </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-[#444441] mb-1.5">
+              <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-1.5">
                 Email
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#B8B6AF]" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input
                   id="email"
                   type="email"
@@ -139,17 +136,17 @@ export default function LoginPage() {
                   placeholder="tu@email.com"
                   required
                   autoComplete="email"
-                  className="w-full border border-[#E5E3DC] rounded-xl pl-10 pr-4 py-3 text-[#1C1C1A] placeholder-[#B8B6AF] text-sm focus:outline-none focus:ring-2 focus:ring-[#FC0230]/40 focus:border-[#FC0230] transition-all bg-white"
+                  className={inputClass}
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-[#444441] mb-1.5">
+              <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-1.5">
                 Contraseña
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#B8B6AF]" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
@@ -158,12 +155,12 @@ export default function LoginPage() {
                   placeholder="••••••••"
                   required
                   autoComplete="current-password"
-                  className="w-full border border-[#E5E3DC] rounded-xl pl-10 pr-11 py-3 text-[#1C1C1A] placeholder-[#B8B6AF] text-sm focus:outline-none focus:ring-2 focus:ring-[#FC0230]/40 focus:border-[#FC0230] transition-all bg-white"
+                  className={`${inputClass} pr-11`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#B8B6AF] hover:text-[#444441] transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
                   aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -172,7 +169,7 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-600 text-sm">
+              <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-red-400 text-sm">
                 {error}
               </div>
             )}
@@ -180,8 +177,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 rounded-xl text-white font-semibold text-sm transition-all disabled:opacity-60 flex items-center justify-center gap-2"
-              style={{ background: '#FC0230' }}
+              className="w-full py-3 rounded-xl bg-primary-500 text-white font-semibold text-sm transition-all hover:bg-primary-600 disabled:opacity-60 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
@@ -193,9 +189,9 @@ export default function LoginPage() {
               )}
             </button>
 
-            <p className="text-center text-sm text-[#9B9B95] pt-1">
+            <p className="text-center text-sm text-slate-500 pt-1">
               ¿No tienes cuenta?{' '}
-              <a href="/register" className="text-[#FC0230] font-medium hover:opacity-80 transition-opacity">
+              <a href="/register" className="text-primary-400 font-medium hover:text-primary-300 transition-colors">
                 Regístrate aquí
               </a>
             </p>

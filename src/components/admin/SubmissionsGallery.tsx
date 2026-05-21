@@ -260,7 +260,11 @@ function SubmissionCard({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function SubmissionsGallery() {
+export default function SubmissionsGallery({
+  organizationId = null,
+}: {
+  organizationId?: string | null;
+}) {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'PENDING' | 'APPROVED' | 'REJECTED'>('all');
@@ -271,6 +275,7 @@ export default function SubmissionsGallery() {
     setLoading(true);
     try {
       const params = new URLSearchParams({ status: filter });
+      if (organizationId) params.set('organizationId', organizationId);
       const res = await fetch(`/api/admin/submissions?${params}`);
       const data = await res.json();
       setSubmissions(data);
@@ -279,7 +284,7 @@ export default function SubmissionsGallery() {
     } finally {
       setLoading(false);
     }
-  }, [filter]);
+  }, [filter, organizationId]);
 
   useEffect(() => { fetchSubmissions(); }, [fetchSubmissions]);
 
