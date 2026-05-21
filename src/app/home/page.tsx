@@ -11,32 +11,45 @@ import type { Challenge } from '@/types';
 import { ChallengeStatus } from '@/types';
 import { isChallengeNotStarted } from '@/lib/utils';
 
-const HOME_PINNED_CATEGORY_KEY = 'home-pinned-category-v1';
-const COMPLETED_CATEGORY = 'Tableros completados';
-const HOME_DEBUG = process.env.NODE_ENV !== 'production';
+type BoardPlayStatus = 'completed' | 'not_started' | 'in_progress' | 'unknown';
+
+type HomeBoard = {
+  id: string;
+  title: string;
+  emoji: string;
+  color: string;
+  coverImage: string | null;
+  active: boolean;
+  folder: string | null;
+  description?: string | null;
+};
+
+const STATUS_SORT_ORDER: Record<BoardPlayStatus, number> = {
+  not_started: 0,
+  unknown: 1,
+  in_progress: 2,
+  completed: 3,
+};
+
+function sortBoardsByPlayStatus(
+  list: HomeBoard[],
+  getStatus: (boardId: string) => BoardPlayStatus,
+  orderIndex: Map<string, number>
+): HomeBoard[] {
+  return [...list].sort((a, b) => {
+    const diff = STATUS_SORT_ORDER[getStatus(a.id)] - STATUS_SORT_ORDER[getStatus(b.id)];
+    if (diff !== 0) return diff;
+    return (orderIndex.get(a.id) ?? 0) - (orderIndex.get(b.id) ?? 0);
+  });
+}
 
 export default function HomePage() {
   const { status } = useSession();
   const router = useRouter();
   const { challenges, setChallenges, setIsLoading } = useAppStore();
-  const UNCATEGORIZED = 'Sin categoria';
-  const CYCLING_CATEGORY = 'Bici';
-
-  type HomeBoard = {
-    id: string;
-    title: string;
-    emoji: string;
-    color: string;
-    coverImage: string | null;
-    active: boolean;
-    folder: string | null;
-    description?: string | null;
-  };
 
   const [boards, setBoards] = useState<HomeBoard[]>([]);
   const [activeBoardId, setActiveBoardId] = useState<string | null>(null);
-  const [activeCategory, setActiveCategory] = useState<string>(UNCATEGORIZED);
-  const [pinnedCategory, setPinnedCategory] = useState<string | null>(null);
   const [loadingBoard, setLoadingBoard] = useState(true);
   const [boardsLoaded, setBoardsLoaded] = useState(false);
   const [startingBoardPlay, setStartingBoardPlay] = useState(false);
@@ -45,30 +58,32 @@ export default function HomePage() {
   const boardCompletedCache = useRef<Record<string, boolean>>({});
   const boardCompletionRequestCache = useRef<Record<string, Promise<boolean>>>({});
   const activeBoardIdRef = useRef<string | null>(null);
+  const initialBoardSelectionApplied = useRef(false);
   activeBoardIdRef.current = activeBoardId;
 
-  const getBoardCategory = useCallback((board: HomeBoard) => {
-    const rawFolder = board.folder?.trim();
-    const rawTitle = board.title?.trim() || '';
-    const source = rawFolder || rawTitle;
-    if (!source) return UNCATEGORIZED;
-    const normalized = source
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '');
+  const boardOrderIndex = useMemo(
+    () => new Map(boards.map((b, i) => [b.id, i])),
+    [boards]
+  );
 
-    const isCycling =
-      normalized.includes('bici') ||
-      normalized.includes('bike') ||
-      normalized.includes('cycling') ||
-      normalized.includes('cycl') ||
-      normalized.includes('cicl');
+  const getBoardPlayStatus = useCallback(
+    (boardId: string): BoardPlayStatus => {
+      if (completedBoardIds.includes(boardId)) return 'completed';
+      if (boardCompletedCache.current[boardId] === true) return 'completed';
 
-    if (isCycling) {
-      return CYCLING_CATEGORY;
-    }
-    return rawFolder || UNCATEGORIZED;
-  }, []);
+      const cached = boardCache.current[boardId];
+      if (!cached || cached.length === 0) return 'unknown';
+
+      const allCompleted = cached.every((c) => c.status === ChallengeStatus.COMPLETED);
+      if (allCompleted) return 'completed';
+
+      const allNotStarted = cached.every((c) => isChallengeNotStarted(c.status));
+      if (allNotStarted) return 'not_started';
+
+      return 'in_progress';
+    },
+    [completedBoardIds]
+  );
 
   const playLocked = useMemo(() => {
     if (!activeBoardId || challenges.length === 0) return false;
@@ -87,26 +102,9 @@ export default function HomePage() {
       .then((data: HomeBoard[]) => {
         setBoards(data);
         if (data.length > 0) {
-          let savedPinned: string | null = null;
-          try {
-            savedPinned = window.localStorage.getItem(HOME_PINNED_CATEGORY_KEY);
-          } catch {
-            savedPinned = null;
-          }
-
-          const preferred = savedPinned
-            ? data.find((b) => getBoardCategory(b) === savedPinned)
-            : null;
-
-          const firstVisible = data.find((b) => getBoardCategory(b) !== UNCATEGORIZED) ?? data[0];
-          const chosen = preferred ?? firstVisible;
-          const chosenCategory = getBoardCategory(chosen);
-          setActiveBoardId(chosen.id);
-          setActiveCategory(chosenCategory);
-          if (savedPinned) setPinnedCategory(savedPinned);
+          setActiveBoardId(data[0].id);
           return;
         }
-        // No boards available: avoid indefinite loading state.
         setActiveBoardId(null);
         setChallenges([]);
       })
@@ -119,7 +117,7 @@ export default function HomePage() {
         setLoadingBoard(false);
         setBoardsLoaded(true);
       });
-  }, [status, getBoardCategory, setChallenges]);
+  }, [status, setChallenges]);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -128,54 +126,26 @@ export default function HomePage() {
     }
   }, [status, router]);
 
-  // Restore pinned category preference
-  useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem(HOME_PINNED_CATEGORY_KEY);
-      if (saved) setPinnedCategory(saved);
-    } catch {
-      // ignore localStorage read issues
-    }
-  }, []);
-
   const incompleteBoards = useMemo(
     () => boards.filter((b) => !completedBoardIds.includes(b.id)),
     [boards, completedBoardIds]
   );
 
-  const categories = useMemo(() => {
-    const base = Array.from(
-      new Set(
-        incompleteBoards
-          .map((b) => getBoardCategory(b))
-      )
-    );
-    const baseWithoutCompleted = base.filter((c) => c !== COMPLETED_CATEGORY);
-    const ordered = (!pinnedCategory || !baseWithoutCompleted.includes(pinnedCategory))
-      ? baseWithoutCompleted
-      : [pinnedCategory, ...baseWithoutCompleted.filter((c) => c !== pinnedCategory)];
-    return [...ordered, COMPLETED_CATEGORY];
-  }, [incompleteBoards, pinnedCategory, getBoardCategory]);
-
-  useEffect(() => {
-    if (!pinnedCategory) return;
-    try {
-      window.localStorage.setItem(HOME_PINNED_CATEGORY_KEY, pinnedCategory);
-    } catch {
-      // ignore localStorage write issues
-    }
-  }, [pinnedCategory]);
-
-  const completedBoards = useMemo(
+  const completedBoardsList = useMemo(
     () => boards.filter((b) => completedBoardIds.includes(b.id)),
     [boards, completedBoardIds]
   );
-  const boardsInActiveCategory = useMemo(() => {
-    if (activeCategory === COMPLETED_CATEGORY) {
-      return completedBoards;
-    }
-    return incompleteBoards.filter((b) => getBoardCategory(b) === activeCategory);
-  }, [completedBoards, incompleteBoards, activeCategory, getBoardCategory]);
+
+  const orderedIncompleteBoards = useMemo(
+    () => sortBoardsByPlayStatus(incompleteBoards, getBoardPlayStatus, boardOrderIndex),
+    [incompleteBoards, getBoardPlayStatus, boardOrderIndex]
+  );
+
+  const upcomingBoards = useMemo(
+    () => orderedIncompleteBoards.filter((b) => b.id !== activeBoardId),
+    [orderedIncompleteBoards, activeBoardId]
+  );
+
   useEffect(() => {
     if (!activeBoardId) return;
     if (challenges.length === 0) return;
@@ -183,12 +153,19 @@ export default function HomePage() {
       (c) => c.status === ChallengeStatus.COMPLETED
     );
     boardCompletedCache.current[activeBoardId] = isCompleted;
-    setCompletedBoardIds((prev) =>
-      isCompleted
-        ? (prev.includes(activeBoardId) ? prev : [...prev, activeBoardId])
-        : prev.filter((id) => id !== activeBoardId)
-    );
-  }, [activeBoardId, challenges]);
+    setCompletedBoardIds((prev) => {
+      if (isCompleted) {
+        if (prev.includes(activeBoardId)) return prev;
+        const next = orderedIncompleteBoards.find((b) => b.id !== activeBoardId);
+        if (next) {
+          queueMicrotask(() => setActiveBoardId(next.id));
+        }
+        return [...prev, activeBoardId];
+      }
+      return prev.filter((id) => id !== activeBoardId);
+    });
+  }, [activeBoardId, challenges, orderedIncompleteBoards]);
+
   const isBoardCompleted = useCallback(async (boardId: string) => {
     if (boardCompletedCache.current[boardId] !== undefined) {
       return boardCompletedCache.current[boardId];
@@ -247,83 +224,20 @@ export default function HomePage() {
     };
   }, [boards, status, isBoardCompleted]);
 
-
-  const relatedBoards = useMemo(() => {
-    return boardsInActiveCategory.filter((b) => b.id !== activeBoardId);
-  }, [boards, boardsInActiveCategory, activeBoardId]);
-
-  // Keep category in sync if board changes from other flows
+  // On first load, if the default board is already completed, switch to first incomplete
   useEffect(() => {
-    if (!activeBoardId) return;
-    const board = boards.find((b) => b.id === activeBoardId);
-    if (!board) return;
-    // Keep virtual completed category stable; do not force original folder.
-    if (activeCategory === COMPLETED_CATEGORY) {
-      if (HOME_DEBUG) {
-        console.log('[home] preserving completed category view', {
-          activeBoardId,
-          isCompletedBoard: completedBoardIds.includes(activeBoardId),
-        });
-      }
-      return;
-    }
-    const boardCategory = getBoardCategory(board);
-    if (boardCategory !== activeCategory) {
-      if (HOME_DEBUG) {
-        console.log('[home] syncing category from board', {
-          from: activeCategory,
-          to: boardCategory,
-          boardId: activeBoardId,
-        });
-      }
-      setActiveCategory(boardCategory);
-    }
-  }, [activeBoardId, boards, activeCategory, completedBoardIds, getBoardCategory]);
-
-  // Self-heal category/board selection when a category becomes empty
-  // (e.g. boards moved to "Tableros completados" after completion sync).
-  useEffect(() => {
-    if (boards.length === 0 || categories.length === 0) return;
-
-    const categoryExists = categories.includes(activeCategory);
-    const hasBoardsInActiveCategory =
-      activeCategory === COMPLETED_CATEGORY
-        ? completedBoards.length > 0
-        : boardsInActiveCategory.length > 0;
-
-    if (categoryExists && hasBoardsInActiveCategory) return;
-
-    const fallbackCategory = categories.find((category) => {
-      if (category === COMPLETED_CATEGORY) return completedBoards.length > 0;
-      return incompleteBoards.some((b) => getBoardCategory(b) === category);
-    });
-
-    if (!fallbackCategory) return;
-
-    const fallbackBoard =
-      fallbackCategory === COMPLETED_CATEGORY
-        ? completedBoards[0]
-        : incompleteBoards.find((b) => getBoardCategory(b) === fallbackCategory);
-
-    if (HOME_DEBUG) {
-      console.log('[home] fallback category/board applied', {
-        activeCategory,
-        fallbackCategory,
-        fallbackBoardId: fallbackBoard?.id ?? null,
-      });
-    }
-
-    setActiveCategory(fallbackCategory);
-    if (fallbackBoard) {
-      setActiveBoardId(fallbackBoard.id);
-    }
+    if (!boardsLoaded || boards.length === 0 || initialBoardSelectionApplied.current) return;
+    if (completedBoardIds.length === 0) return;
+    initialBoardSelectionApplied.current = true;
+    if (!activeBoardId || !completedBoardIds.includes(activeBoardId)) return;
+    const next = orderedIncompleteBoards[0];
+    if (next) setActiveBoardId(next.id);
   }, [
-    boards,
-    categories,
-    activeCategory,
-    boardsInActiveCategory,
-    completedBoards,
-    incompleteBoards,
+    boardsLoaded,
+    boards.length,
+    activeBoardId,
+    completedBoardIds,
+    orderedIncompleteBoards,
   ]);
 
   // Fetch challenges for active board
@@ -335,7 +249,6 @@ export default function HomePage() {
 
     setIsLoading(true);
 
-    // Instant switch with cached board data (no full-screen loading flash)
     const cached = boardCache.current[activeBoardId];
     if (cached) {
       setChallenges(cached);
@@ -393,7 +306,6 @@ export default function HomePage() {
   const handleStartBoardPlay = useCallback(async () => {
     const boardId = activeBoardIdRef.current;
     if (!boardId) return;
-    const currentBoard = boards.find((b) => b.id === boardId);
     setStartingBoardPlay(true);
     try {
       const res = await fetch(`/api/boards/${boardId}/start`, { method: 'POST' });
@@ -413,76 +325,31 @@ export default function HomePage() {
       const list = data as Challenge[];
       boardCache.current[boardId] = list;
       setChallenges(list);
-      // UX: cuando el usuario inicia un tablero, priorizamos su categoría al inicio de badges.
-      if (currentBoard) {
-        const pinned = getBoardCategory(currentBoard);
-        setPinnedCategory(pinned);
-        try {
-          window.localStorage.setItem(HOME_PINNED_CATEGORY_KEY, pinned);
-        } catch {
-          // ignore localStorage write issues
-        }
-      }
     } catch {
       alert('Error de red al iniciar el tablero.');
     } finally {
       setStartingBoardPlay(false);
     }
-  }, [boards, setChallenges, getBoardCategory]);
+  }, [setChallenges]);
 
-  const handleBingoContinue = useCallback(async () => {
-    if (!activeBoardId || boards.length === 0 || categories.length === 0) return;
+  const handleBingoContinue = useCallback(() => {
+    if (!activeBoardId || orderedIncompleteBoards.length === 0) return;
 
-    const currentCategoryIdx = categories.findIndex((c) => c === activeCategory);
-    const orderedCategories =
-      currentCategoryIdx >= 0
-        ? [...categories.slice(currentCategoryIdx + 1), ...categories.slice(0, currentCategoryIdx + 1)]
-        : categories;
+    const currentIdx = orderedIncompleteBoards.findIndex((b) => b.id === activeBoardId);
+    const afterCurrent = orderedIncompleteBoards.slice(currentIdx + 1);
+    const beforeCurrent =
+      currentIdx >= 0 ? orderedIncompleteBoards.slice(0, currentIdx) : orderedIncompleteBoards;
 
-    for (const category of orderedCategories) {
-      if (category === COMPLETED_CATEGORY) continue;
-      const categoryBoards = incompleteBoards.filter((b) => getBoardCategory(b) === category);
-      for (const board of categoryBoards) {
-        const done = await isBoardCompleted(board.id);
-        if (!done) {
-          if (category !== activeCategory) {
-            setActiveCategory(category);
-          }
-          setActiveBoardId(board.id);
-          return;
-        }
-      }
+    const next = afterCurrent[0] ?? beforeCurrent[0];
+    if (next && next.id !== activeBoardId) {
+      setActiveBoardId(next.id);
     }
-  }, [activeBoardId, activeCategory, boards, categories, incompleteBoards, isBoardCompleted, getBoardCategory]);
+  }, [activeBoardId, orderedIncompleteBoards]);
 
   const switchBoard = useCallback((boardId: string) => {
     if (boardId === activeBoardId) return;
     setActiveBoardId(boardId);
   }, [activeBoardId]);
-
-  const switchCategory = useCallback((category: string) => {
-    if (category === activeCategory) return;
-    if (HOME_DEBUG) {
-      console.log('[home] switchCategory', {
-        from: activeCategory,
-        to: category,
-        completedCount: completedBoards.length,
-      });
-    }
-    setActiveCategory(category);
-    const firstBoardInCategory = category === COMPLETED_CATEGORY
-      ? completedBoards[0]
-      : incompleteBoards.find((b) => getBoardCategory(b) === category);
-    if (firstBoardInCategory) setActiveBoardId(firstBoardInCategory.id);
-  }, [activeCategory, incompleteBoards, completedBoards, getBoardCategory]);
-
-  // If user is in "Tableros completados" and boards arrive later, auto-select one.
-  useEffect(() => {
-    if (activeCategory !== COMPLETED_CATEGORY) return;
-    if (completedBoards.length === 0) return;
-    if (activeBoardId && completedBoards.some((b) => b.id === activeBoardId)) return;
-    setActiveBoardId(completedBoards[0].id);
-  }, [activeCategory, completedBoards, activeBoardId]);
 
   if (
     status === 'loading' ||
@@ -500,11 +367,12 @@ export default function HomePage() {
   const activeBoard = boards.find((b) => b.id === activeBoardId);
   const showEmptyState = hasBoards && !activeBoard;
   const showNoActiveBoards = !hasBoards;
+  const activeBoardCompleted =
+    !!activeBoardId && completedBoardIds.includes(activeBoardId);
 
   return (
     <Layout brandLogoSrc="/images/box-challenge-logo.png" brandLogoAlt="Box Challenge">
       <div className="min-h-full pb-8">
-        {/* Título + selector de tablero */}
         <div className="pt-1 pb-0" style={{ paddingLeft: '8.53%', paddingRight: 17 }}>
           <div className="flex items-center justify-between">
             <h1 className="text-white font-semibold text-xl tracking-tight">
@@ -516,33 +384,6 @@ export default function HomePage() {
               </span>
             )}
           </div>
-
-          {/* Category tabs */}
-          {categories.length > 0 && hasBoards && (
-            <div
-              className="flex gap-2 mt-2 overflow-x-auto [&::-webkit-scrollbar]:hidden"
-              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
-            >
-              {categories.map((category) => (
-                <button
-                  key={category}
-                  onClick={() => switchCategory(category)}
-                  aria-pressed={category === activeCategory}
-                  className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                    category === activeCategory
-                      ? 'text-white'
-                      : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
-                  }`}
-                  style={category === activeCategory ? { backgroundColor: activeBoard?.color ?? '#FC0230' } : undefined}
-                >
-                  {category}
-                  {category === COMPLETED_CATEGORY && (
-                    <span className="ml-1 text-[10px] opacity-90">({completedBoards.length})</span>
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
 
         {showNoActiveBoards ? (
@@ -556,7 +397,7 @@ export default function HomePage() {
               <button
                 type="button"
                 onClick={() => window.location.reload()}
-                className="mt-4 inline-flex items-center justify-center rounded-xl bg-primary-500/100 px-4 py-2 text-xs font-semibold text-white hover:bg-primary-600 transition-colors"
+                className="mt-4 inline-flex items-center justify-center rounded-xl bg-primary-500 px-4 py-2 text-xs font-semibold text-white hover:bg-primary-600 transition-colors"
               >
                 Reintentar
               </button>
@@ -572,7 +413,7 @@ export default function HomePage() {
               <button
                 type="button"
                 onClick={() => window.location.reload()}
-                className="mt-4 inline-flex items-center justify-center rounded-xl bg-primary-500/100 px-4 py-2 text-xs font-semibold text-white hover:bg-primary-600 transition-colors"
+                className="mt-4 inline-flex items-center justify-center rounded-xl bg-primary-500 px-4 py-2 text-xs font-semibold text-white hover:bg-primary-600 transition-colors"
               >
                 Recargar
               </button>
@@ -580,7 +421,6 @@ export default function HomePage() {
           </div>
         ) : (
           <>
-            {/* Tablero */}
             <div className="w-full flex justify-center mt-4">
               {challenges.length > 0 && (
                 <BingoBoard
@@ -598,69 +438,47 @@ export default function HomePage() {
               )}
             </div>
 
-            {/* Progreso del tablero */}
             <div className="w-full flex justify-center mt-4 px-6">
               <div className="w-full" style={{ maxWidth: 326 }}>
                 <CompletionBar challenges={challenges} />
               </div>
             </div>
 
-            {/* Tableros relacionados */}
-            {relatedBoards.length > 0 && (
+            {upcomingBoards.length > 0 && (
               <div className="w-full flex justify-center mt-6 px-6">
-                <div className="w-full" style={{ maxWidth: 360 }}>
-                  <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-sm font-semibold text-slate-200">Tableros relacionados</h2>
-                    <span className="text-[11px] text-slate-500">
-                      {relatedBoards.length} disponible{relatedBoards.length !== 1 ? 's' : ''}
-                    </span>
+                <div className="w-full space-y-3" style={{ maxWidth: 326 }}>
+                  <div>
+                    <h2 className="text-sm font-semibold text-slate-200">Próximos tableros</h2>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Empieza por los que aún no has iniciado
+                      {upcomingBoards.length > 1
+                        ? ` · ${upcomingBoards.length} disponibles`
+                        : ''}
+                    </p>
                   </div>
-                  <div
-                    className="flex gap-3 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden"
-                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
-                  >
-                    {relatedBoards.map((board) => (
-                      <button
-                        key={board.id}
-                        onClick={() => {
-                          const category = getBoardCategory(board);
-                          if (category !== activeCategory) {
-                            switchCategory(category);
-                          }
-                          switchBoard(board.id);
-                        }}
-                        className="shrink-0 text-left rounded-xl border border-slate-700 bg-slate-800 hover:border-primary-500/40 hover:shadow-sm transition-all"
-                        style={{ width: 148 }}
-                      >
-                        {board.coverImage ? (
-                          <div className="relative h-20 rounded-t-xl overflow-hidden">
-                            <img
-                              src={board.coverImage}
-                              alt={`Portada de ${board.title}`}
-                              className="w-full h-full object-cover"
-                              loading="lazy"
-                              decoding="async"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent" />
-                            <span className="absolute left-2 bottom-1 text-lg drop-shadow-sm">{board.emoji}</span>
-                          </div>
-                        ) : (
-                          <div
-                            className="h-20 rounded-t-xl flex items-center justify-center text-3xl"
-                            style={{ background: `${board.color}22` }}
-                          >
-                            {board.emoji}
-                          </div>
-                        )}
-                        <div className="px-3 py-2">
-                          <p className="text-xs font-semibold text-white truncate">{board.title}</p>
-                          <p className="text-[11px] text-slate-500 truncate">
-                            {getBoardCategory(board)}
-                          </p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
+                  <BoardThumbnailGrid
+                    boards={upcomingBoards}
+                    activeBoardId={activeBoardId}
+                    getBoardPlayStatus={getBoardPlayStatus}
+                    onSelect={switchBoard}
+                  />
+                </div>
+              </div>
+            )}
+
+            {completedBoardsList.length > 0 && (
+              <div className="w-full flex justify-center mt-6 px-6">
+                <div className="w-full space-y-3" style={{ maxWidth: 326 }}>
+                  <h2 className="text-sm font-semibold text-slate-200">
+                    Tableros completados ({completedBoardsList.length})
+                  </h2>
+                  <BoardThumbnailGrid
+                    boards={completedBoardsList}
+                    activeBoardId={activeBoardCompleted ? activeBoardId : null}
+                    getBoardPlayStatus={() => 'completed'}
+                    onSelect={switchBoard}
+                    showStatusChip={false}
+                  />
                 </div>
               </div>
             )}
@@ -674,6 +492,84 @@ export default function HomePage() {
         </div>
       </div>
     </Layout>
+  );
+}
+
+function BoardThumbnailGrid({
+  boards,
+  activeBoardId,
+  getBoardPlayStatus,
+  onSelect,
+  showStatusChip = true,
+}: {
+  boards: HomeBoard[];
+  activeBoardId: string | null;
+  getBoardPlayStatus: (boardId: string) => BoardPlayStatus;
+  onSelect: (boardId: string) => void;
+  showStatusChip?: boolean;
+}) {
+  return (
+    <div className="w-full grid grid-cols-3 gap-3">
+      {boards.map((board) => {
+        const selected = board.id === activeBoardId;
+        const playStatus = getBoardPlayStatus(board.id);
+        const statusLabel =
+          playStatus === 'not_started'
+            ? 'Nuevo'
+            : playStatus === 'in_progress' || playStatus === 'unknown'
+              ? 'En curso'
+              : null;
+
+        return (
+          <button
+            key={board.id}
+            type="button"
+            onClick={() => onSelect(board.id)}
+            aria-pressed={selected}
+            className={`rounded-xl overflow-hidden border transition-all text-left ${
+              selected
+                ? 'border-primary-500 ring-2 ring-primary-500/20'
+                : 'border-slate-700 hover:border-primary-500/40'
+            }`}
+          >
+            <div className="relative aspect-square bg-slate-800">
+              {board.coverImage ? (
+                <img
+                  src={board.coverImage}
+                  alt={board.title}
+                  className="absolute inset-0 w-full h-full object-cover object-center"
+                  loading="lazy"
+                  decoding="async"
+                />
+              ) : (
+                <div
+                  className="absolute inset-0 flex items-center justify-center text-2xl"
+                  style={{ background: `${board.color}22` }}
+                >
+                  {board.emoji || '■'}
+                </div>
+              )}
+              {showStatusChip && statusLabel && (
+                <span
+                  className={`absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded text-[9px] font-semibold ${
+                    playStatus === 'not_started'
+                      ? 'bg-primary-500 text-white'
+                      : 'bg-slate-900/80 text-slate-300'
+                  }`}
+                >
+                  {statusLabel}
+                </span>
+              )}
+            </div>
+            <div className="px-2 py-1.5 bg-slate-800 border-t border-slate-700">
+              <p className="text-[10px] font-semibold text-white truncate leading-tight">
+                {board.emoji} {board.title}
+              </p>
+            </div>
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
