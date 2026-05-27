@@ -267,7 +267,7 @@ export default function SubmissionsGallery({
 }) {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'PENDING' | 'APPROVED' | 'REJECTED'>('all');
+  const [filter, setFilter] = useState<'PENDING' | 'APPROVED' | 'REJECTED'>('PENDING');
   const [search, setSearch] = useState('');
   const [groupByFolder, setGroupByFolder] = useState(true);
 
@@ -337,14 +337,12 @@ export default function SubmissionsGallery({
   });
 
   const counts = {
-    all: submissions.length,
     PENDING: submissions.filter((s) => s.validationStatus === 'PENDING').length,
     APPROVED: submissions.filter((s) => s.validationStatus === 'APPROVED').length,
     REJECTED: submissions.filter((s) => s.validationStatus === 'REJECTED').length,
   };
 
   const FILTERS: { key: typeof filter; label: string }[] = [
-    { key: 'all', label: `Todos (${counts.all})` },
     { key: 'PENDING', label: `Pendientes (${counts.PENDING})` },
     { key: 'APPROVED', label: `Aprobados (${counts.APPROVED})` },
     { key: 'REJECTED', label: `Rechazados (${counts.REJECTED})` },

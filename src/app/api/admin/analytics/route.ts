@@ -55,7 +55,21 @@ function mapRegion(lat: number, lon: number) {
   return 'Otras';
 }
 
+/** Run promise factories in small batches to avoid exhausting the DB pool. */
+async function batchedAll<T extends readonly (() => Promise<unknown>)[]>(
+  factories: T,
+  size = 3
+): Promise<{ -readonly [K in keyof T]: Awaited<ReturnType<T[K]>> }> {
+  const results: unknown[] = [];
+  for (let i = 0; i < factories.length; i += size) {
+    const chunk = factories.slice(i, i + size).map((fn) => fn());
+    results.push(...(await Promise.all(chunk)));
+  }
+  return results as { -readonly [K in keyof T]: Awaited<ReturnType<T[K]>> };
+}
+
 export async function GET(req: Request) {
+  try {
   const session = await auth();
   if (!session?.user?.id || session.user.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -75,44 +89,52 @@ export async function GET(req: Request) {
   const since = toDate(daysBack);
   const prevSince = toDate(daysBack * 2);
 
-  const [activeUsers, completedChallenges, previousActiveUsers, topUsers, boardStarts, categoryCounts, dailyRows, hourlyRows, heatRows, locationRows] = await Promise.all([
-    prisma.userChallengeProgress.findMany({
-      where: { startedAt: { gte: since }, ...progressScope },
-      select: { userId: true },
-      distinct: ['userId'],
-    }),
-    prisma.userChallengeProgress.count({
-      where: {
-        status: 'COMPLETED',
-        completedAt: { gte: since },
-        ...progressScope,
-      },
-    }),
-    prisma.userChallengeProgress.findMany({
-      where: { startedAt: { gte: prevSince, lt: since }, ...progressScope },
-      select: { userId: true },
-      distinct: ['userId'],
-    }),
-    prisma.user.findMany({
-      where: { role: 'USER', ...userFilter },
-      orderBy: { points: 'desc' },
-      take: 7,
-      select: { id: true, name: true, points: true },
-    }),
-    prisma.userChallengeProgress.groupBy({
-      by: ['challengeId'],
-      where: { startedAt: { gte: since }, ...progressScope },
-      _count: { _all: true },
-      orderBy: { _count: { challengeId: 'desc' } },
-      take: 20,
-    }),
-    prisma.userChallengeProgress.groupBy({
-      by: ['challengeId'],
-      where: { startedAt: { gte: since }, ...progressScope },
-      _count: { _all: true },
-      orderBy: { _count: { challengeId: 'desc' } },
-    }),
-    prisma.$queryRaw<Array<{ day: Date; count: bigint }>>(Prisma.sql`
+  const [activeUsers, completedChallenges, previousActiveUsers, topUsers, boardStarts, categoryCounts, dailyRows, hourlyRows, heatRows, locationRows] =
+    await batchedAll([
+      () =>
+        prisma.userChallengeProgress.findMany({
+          where: { startedAt: { gte: since }, ...progressScope },
+          select: { userId: true },
+          distinct: ['userId'],
+        }),
+      () =>
+        prisma.userChallengeProgress.count({
+          where: {
+            status: 'COMPLETED',
+            completedAt: { gte: since },
+            ...progressScope,
+          },
+        }),
+      () =>
+        prisma.userChallengeProgress.findMany({
+          where: { startedAt: { gte: prevSince, lt: since }, ...progressScope },
+          select: { userId: true },
+          distinct: ['userId'],
+        }),
+      () =>
+        prisma.user.findMany({
+          where: { role: 'USER', ...userFilter },
+          orderBy: { points: 'desc' },
+          take: 7,
+          select: { id: true, name: true, points: true },
+        }),
+      () =>
+        prisma.userChallengeProgress.groupBy({
+          by: ['challengeId'],
+          where: { startedAt: { gte: since }, ...progressScope },
+          _count: { _all: true },
+          orderBy: { _count: { challengeId: 'desc' } },
+          take: 20,
+        }),
+      () =>
+        prisma.userChallengeProgress.groupBy({
+          by: ['challengeId'],
+          where: { startedAt: { gte: since }, ...progressScope },
+          _count: { _all: true },
+          orderBy: { _count: { challengeId: 'desc' } },
+        }),
+      () =>
+        prisma.$queryRaw<Array<{ day: Date; count: bigint }>>(Prisma.sql`
       SELECT date_trunc('day', "completedAt") AS day, COUNT(*)::bigint AS count
       FROM "UserTaskProgress"
       WHERE "completedAt" IS NOT NULL
@@ -120,7 +142,8 @@ export async function GET(req: Request) {
       GROUP BY day
       ORDER BY day ASC
     `),
-    prisma.$queryRaw<Array<{ hour: number; count: bigint }>>(Prisma.sql`
+      () =>
+        prisma.$queryRaw<Array<{ hour: number; count: bigint }>>(Prisma.sql`
       SELECT EXTRACT(HOUR FROM "completedAt")::int AS hour, COUNT(*)::bigint AS count
       FROM "UserTaskProgress"
       WHERE "completedAt" IS NOT NULL
@@ -128,7 +151,8 @@ export async function GET(req: Request) {
       GROUP BY hour
       ORDER BY hour ASC
     `),
-    prisma.$queryRaw<Array<{ day: Date; count: bigint }>>(Prisma.sql`
+      () =>
+        prisma.$queryRaw<Array<{ day: Date; count: bigint }>>(Prisma.sql`
       SELECT date_trunc('day', "completedAt") AS day, COUNT(*)::bigint AS count
       FROM "UserTaskProgress"
       WHERE "completedAt" IS NOT NULL
@@ -136,11 +160,12 @@ export async function GET(req: Request) {
       GROUP BY day
       ORDER BY day ASC
     `),
-    prisma.locationPing.findMany({
-      where: { createdAt: { gte: since } },
-      select: { latitude: true, longitude: true, userId: true },
-    }),
-  ]);
+      () =>
+        prisma.locationPing.findMany({
+          where: { createdAt: { gte: since } },
+          select: { latitude: true, longitude: true, userId: true },
+        }),
+    ] as const, 3);
 
   const activeUserIds = new Set(activeUsers.map((u) => u.userId));
   const previousUserIds = new Set(previousActiveUsers.map((u) => u.userId));
@@ -166,33 +191,87 @@ export async function GET(req: Request) {
 
   const challengeMap = new Map(challengeRows.map((c) => [c.id, c]));
 
+  const boardCompletionsByBoard = await prisma.$queryRaw<Array<{ boardId: string; count: bigint }>>(
+    organizationId
+      ? Prisma.sql`
+        WITH board_completions AS (
+          SELECT c."boardId", ucp."userId", MAX(ucp."completedAt") AS "finishedAt"
+          FROM "UserChallengeProgress" ucp
+          INNER JOIN "Challenge" c ON c.id = ucp."challengeId"
+          INNER JOIN "Board" b ON b.id = c."boardId"
+          INNER JOIN "User" u ON u.id = ucp."userId"
+          WHERE ucp.status = 'COMPLETED'
+            AND u."role" = 'USER'
+            AND ucp."completedAt" IS NOT NULL
+            AND b."organizationId" = ${organizationId}
+            AND b.active = true
+          GROUP BY c."boardId", ucp."userId"
+          HAVING COUNT(DISTINCT ucp."challengeId") = (
+            SELECT COUNT(*)::int FROM "Challenge" c2 WHERE c2."boardId" = c."boardId"
+          )
+        )
+        SELECT "boardId", COUNT(*)::bigint AS count
+        FROM board_completions
+        WHERE "finishedAt" >= ${since}
+        GROUP BY "boardId"
+        ORDER BY count DESC
+        LIMIT 20
+      `
+      : Prisma.sql`
+        WITH board_completions AS (
+          SELECT c."boardId", ucp."userId", MAX(ucp."completedAt") AS "finishedAt"
+          FROM "UserChallengeProgress" ucp
+          INNER JOIN "Challenge" c ON c.id = ucp."challengeId"
+          INNER JOIN "Board" b ON b.id = c."boardId"
+          INNER JOIN "User" u ON u.id = ucp."userId"
+          WHERE ucp.status = 'COMPLETED'
+            AND u."role" = 'USER'
+            AND ucp."completedAt" IS NOT NULL
+            AND b.active = true
+          GROUP BY c."boardId", ucp."userId"
+          HAVING COUNT(DISTINCT ucp."challengeId") = (
+            SELECT COUNT(*)::int FROM "Challenge" c2 WHERE c2."boardId" = c."boardId"
+          )
+        )
+        SELECT "boardId", COUNT(*)::bigint AS count
+        FROM board_completions
+        WHERE "finishedAt" >= ${since}
+        GROUP BY "boardId"
+        ORDER BY count DESC
+        LIMIT 20
+      `
+  );
+
+  const completionBoardIds = boardCompletionsByBoard.map((row) => row.boardId);
+  const completionBoardRows = completionBoardIds.length
+    ? await prisma.board.findMany({
+        where: { id: { in: completionBoardIds }, active: true },
+        select: { id: true, title: true, emoji: true, color: true },
+      })
+    : [];
+  const completionBoardMap = new Map(completionBoardRows.map((b) => [b.id, b]));
+
   const boardCounter = new Map<string, { id: string; title: string; emoji: string; color: string; participantCount: number }>();
-  let totalBoardStarts = 0;
-  boardStarts.forEach((row) => {
-    const challenge = challengeMap.get(row.challengeId);
-    const board = challenge?.board;
+  let totalBoardCompletions = 0;
+  boardCompletionsByBoard.forEach((row) => {
+    const board = completionBoardMap.get(row.boardId);
     if (!board) return;
 
-    totalBoardStarts += row._count._all;
-    const existing = boardCounter.get(board.id);
-    if (existing) {
-      existing.participantCount += row._count._all;
-      return;
-    }
-
+    const count = Number(row.count);
+    totalBoardCompletions += count;
     boardCounter.set(board.id, {
       id: board.id,
       title: board.title,
       emoji: board.emoji,
       color: board.color,
-      participantCount: row._count._all,
+      participantCount: count,
     });
   });
 
   const topBoards = [...boardCounter.values()]
     .sort((a, b) => b.participantCount - a.participantCount)
     .slice(0, 6)
-    .map((board) => ({ ...board, pct: toPct(board.participantCount, totalBoardStarts) }));
+    .map((board) => ({ ...board, pct: toPct(board.participantCount, totalBoardCompletions) }));
 
   const userFavCategoryRows = await prisma.$queryRaw<Array<{ userId: string; category: string }>>(Prisma.sql`
     WITH category_counts AS (
@@ -294,14 +373,39 @@ export async function GET(req: Request) {
     .sort((a, b) => b.count - a.count)
     .slice(0, 12);
 
-  const startedBoards = totalBoardStarts;
-  const completedBoards = await prisma.userChallengeProgress.count({
-    where: { status: 'COMPLETED', completedAt: { gte: since }, ...progressScope },
-  });
+  const startedBoards = Number(
+    (
+      await prisma.$queryRaw<Array<{ count: bigint }>>(
+        organizationId
+          ? Prisma.sql`
+              SELECT COUNT(*)::bigint AS count FROM (
+                SELECT DISTINCT c."boardId", ucp."userId"
+                FROM "UserChallengeProgress" ucp
+                INNER JOIN "Challenge" c ON c.id = ucp."challengeId"
+                INNER JOIN "Board" b ON b.id = c."boardId"
+                WHERE ucp."startedAt" >= ${since}
+                  AND b.active = true
+                  AND b."organizationId" = ${organizationId}
+              ) t
+            `
+          : Prisma.sql`
+              SELECT COUNT(*)::bigint AS count FROM (
+                SELECT DISTINCT c."boardId", ucp."userId"
+                FROM "UserChallengeProgress" ucp
+                INNER JOIN "Challenge" c ON c.id = ucp."challengeId"
+                INNER JOIN "Board" b ON b.id = c."boardId"
+                WHERE ucp."startedAt" >= ${since}
+                  AND b.active = true
+              ) t
+            `
+      )
+    )[0]?.count ?? 0
+  );
+  const completedBoards = totalBoardCompletions;
   const conversionRate = startedBoards ? Math.round((completedBoards / startedBoards) * 1000) / 10 : 0;
 
   const boardsWithMeta = await prisma.board.findMany({
-    where: boardFilter,
+    where: { active: true, ...(boardFilter ?? {}) },
     select: {
       id: true,
       title: true,
@@ -316,7 +420,7 @@ export async function GET(req: Request) {
     .map((b) => b.id);
   const leaderboardBoardIds = [
     ...new Set([...boardCounter.keys(), ...eightChallengeBoardIds]),
-  ].slice(0, 14);
+  ].slice(0, 6);
 
   const metaByBoardId = new Map(
     boardsWithMeta.map((b) => [
@@ -354,10 +458,11 @@ export async function GET(req: Request) {
         select: {
           title: true,
           emoji: true,
+          active: true,
           _count: { select: { challenges: true } },
         },
       });
-      if (!row || row._count.challenges < 8) continue;
+      if (!row || !row.active || row._count.challenges < 8) continue;
       meta = { title: row.title, emoji: row.emoji, challengeCount: row._count.challenges };
       metaByBoardId.set(bid, meta);
     } else if (meta.challengeCount < 8) continue;
@@ -412,4 +517,12 @@ export async function GET(req: Request) {
     },
     boardCompletionLeaderboards,
   });
+  } catch (error) {
+    console.error('[GET /api/admin/analytics]', error);
+    const message =
+      error instanceof Error && error.message.includes('max clients')
+        ? 'Demasiadas conexiones a la base de datos. Espera unos segundos e intenta de nuevo.'
+        : 'No se pudieron cargar las métricas. Intenta de nuevo.';
+    return NextResponse.json({ error: message }, { status: 503 });
+  }
 }

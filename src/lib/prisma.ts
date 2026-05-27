@@ -1,7 +1,25 @@
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
 
-type G = typeof globalThis & { prisma?: PrismaClient };
+type G = typeof globalThis & {
+  prisma?: PrismaClient;
+  pgPool?: Pool;
+};
+
+function makePool(): Pool {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error('DATABASE_URL is not set');
+  }
+  return new Pool({
+    connectionString,
+    // Stay well under Supabase session pooler limits (often 15).
+    max: Number(process.env.DATABASE_POOL_MAX ?? 4),
+    idleTimeoutMillis: 20_000,
+    connectionTimeoutMillis: 15_000,
+  });
+}
 
 function makePrismaClient(): PrismaClient {
   const connectionString = process.env.DATABASE_URL;
@@ -19,7 +37,11 @@ function makePrismaClient(): PrismaClient {
     });
   }
 
-  const adapter = new PrismaPg({ connectionString });
+  const g = globalThis as G;
+  const pool = g.pgPool ?? makePool();
+  g.pgPool = pool;
+
+  const adapter = new PrismaPg(pool);
   return new PrismaClient({ adapter });
 }
 

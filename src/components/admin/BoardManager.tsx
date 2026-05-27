@@ -1,10 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Upload, Save, X, RefreshCw, ChevronDown, ChevronUp,
-  Trash2, Edit2, GripVertical, Camera, Link as LinkIcon, ImageIcon, RotateCcw,
+  Trash2, Edit2, GripVertical, Camera, Link as LinkIcon, ImageIcon, RotateCcw, Filter,
 } from 'lucide-react';
 import Image from 'next/image';
 import {
@@ -393,7 +393,12 @@ function ChallengeFormModal({ boardId, challenge, onClose, onSaved }: ChallengeF
     if (!form.title.trim()) { alert('El título es obligatorio.'); return; }
     setSaving(true);
     try {
-      const payload = { ...form, tasks, boardId };
+      const payload = {
+        ...form,
+        color: isEditing ? challenge!.color : form.color,
+        tasks,
+        boardId,
+      };
       const url = isEditing ? `/api/admin/challenges/${challenge!.id}` : '/api/admin/challenges';
       const method = isEditing ? 'PATCH' : 'POST';
       const res = await fetch(url, {
@@ -466,8 +471,8 @@ function ChallengeFormModal({ boardId, challenge, onClose, onSaved }: ChallengeF
             </select>
           </div>
 
-          {/* Points + color */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Points (+ color only when creating) */}
+          {isEditing ? (
             <div>
               <label className="text-slate-400 text-xs mb-1 block">Puntos</label>
               <input
@@ -478,16 +483,29 @@ function ChallengeFormModal({ boardId, challenge, onClose, onSaved }: ChallengeF
                 className="w-full bg-slate-700 text-white text-sm rounded-lg px-3 py-2"
               />
             </div>
-            <div>
-              <label className="text-slate-400 text-xs mb-1 block">Color</label>
-              <input
-                type="color"
-                value={form.color}
-                onChange={(e) => set('color', e.target.value)}
-                className="w-full h-9 rounded-lg cursor-pointer border-0 bg-transparent"
-              />
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-slate-400 text-xs mb-1 block">Puntos</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={form.points}
+                  onChange={(e) => set('points', Number(e.target.value))}
+                  className="w-full bg-slate-700 text-white text-sm rounded-lg px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="text-slate-400 text-xs mb-1 block">Color</label>
+                <input
+                  type="color"
+                  value={form.color}
+                  onChange={(e) => set('color', e.target.value)}
+                  className="w-full h-9 rounded-lg cursor-pointer border-0 bg-transparent"
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Cover image */}
           <div>
@@ -1268,6 +1286,7 @@ export default function BoardManager() {
   const [boards, setBoards] = useState<Board[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<'active' | 'inactive' | 'all'>('active');
   const [organizations, setOrganizations] = useState<{ id: string; name: string }[]>([]);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
 
@@ -1345,12 +1364,30 @@ export default function BoardManager() {
     }
   }
 
-  // Group boards by folder
-  const folders = Array.from(new Set(boards.map((b) => b.folder ?? ''))).sort();
-  const existingFolders = folders.filter(Boolean);
+  // Group boards by folder (active first when showing all)
+  const filteredBoards = useMemo(() => {
+    if (activeFilter === 'active') return boards.filter((b) => b.active);
+    if (activeFilter === 'inactive') return boards.filter((b) => !b.active);
+    return [...boards].sort((a, b) => {
+      if (a.active !== b.active) return a.active ? -1 : 1;
+      return a.title.localeCompare(b.title, 'es');
+    });
+  }, [boards, activeFilter]);
+
+  const activeCount = boards.filter((b) => b.active).length;
+  const inactiveCount = boards.filter((b) => !b.active).length;
+
+  const STATUS_FILTERS: { key: typeof activeFilter; label: string }[] = [
+    { key: 'active', label: `Activos (${activeCount})` },
+    { key: 'inactive', label: `Inactivos (${inactiveCount})` },
+    { key: 'all', label: `Todos (${boards.length})` },
+  ];
+
+  const folders = Array.from(new Set(filteredBoards.map((b) => b.folder ?? ''))).sort();
+  const existingFolders = Array.from(new Set(boards.map((b) => b.folder ?? ''))).filter(Boolean).sort();
   const grouped = folders.map((folder) => ({
     folder,
-    boards: boards.filter((b) => (b.folder ?? '') === folder),
+    boards: filteredBoards.filter((b) => (b.folder ?? '') === folder),
   }));
 
   return (
@@ -1397,15 +1434,42 @@ export default function BoardManager() {
         </div>
       </div>
 
+      {/* Status filter */}
+      <div className="flex items-center gap-2">
+        <Filter className="w-4 h-4 text-slate-400 shrink-0" />
+        <div className="flex gap-1 overflow-x-auto">
+          {STATUS_FILTERS.map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setActiveFilter(key)}
+              className={`shrink-0 px-3 py-2 rounded-xl text-xs font-medium transition-colors ${
+                activeFilter === key
+                  ? 'bg-primary-500 text-white'
+                  : 'bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Content */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <div className="w-8 h-8 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
         </div>
-      ) : boards.length === 0 ? (
+      ) : filteredBoards.length === 0 ? (
         <div className="text-center py-20 text-slate-500">
           <p className="text-4xl mb-3">📋</p>
-          <p>No hay tableros aún. Crea el primero.</p>
+          <p>
+            {activeFilter === 'active'
+              ? 'No hay tableros activos.'
+              : activeFilter === 'inactive'
+              ? 'No hay tableros inactivos.'
+              : 'No hay tableros aún. Crea el primero.'}
+          </p>
         </div>
       ) : (
         <div className="space-y-8">

@@ -7,6 +7,7 @@ import Layout from '@/components/layout/Layout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { useSession, signOut } from 'next-auth/react';
+import { readApiJsonOrThrow } from '@/lib/read-api-json';
 
 type ProfileResponse = {
   user: {
@@ -46,12 +47,15 @@ export default function ProfileSettingsPage() {
     setError(null);
     try {
       const res = await fetch('/api/user/profile', { credentials: 'include' });
-      const body = await res.json();
+      const body = await readApiJsonOrThrow<ProfileResponse & { error?: string }>(
+        res,
+        'No se pudo cargar la configuración.'
+      );
       if (!res.ok) {
         throw new Error(typeof body.error === 'string' ? body.error : 'No se pudo cargar la configuración.');
       }
-      setData(body as ProfileResponse);
-      setNameInput((body as ProfileResponse).user.name);
+      setData(body);
+      setNameInput(body.user.name);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo cargar la configuración.');
     } finally {
@@ -66,12 +70,15 @@ export default function ProfileSettingsPage() {
       credentials: 'include',
       body: JSON.stringify(payload),
     });
-    const body = await res.json();
+    const body = await readApiJsonOrThrow<ProfileResponse & { error?: string }>(
+      res,
+      'No se pudo guardar.'
+    );
     if (!res.ok) {
       throw new Error(typeof body.error === 'string' ? body.error : 'No se pudo guardar.');
     }
-    setData(body as ProfileResponse);
-    return body as ProfileResponse;
+    setData(body);
+    return body;
   }
 
   useEffect(() => {
@@ -131,7 +138,10 @@ export default function ProfileSettingsPage() {
         credentials: 'include',
         body: formData,
       });
-      const uploadBody = await uploadRes.json();
+      const uploadBody = await readApiJsonOrThrow<{ url?: string; error?: string }>(
+        uploadRes,
+        'No se pudo subir la imagen.'
+      );
       if (!uploadRes.ok || typeof uploadBody.url !== 'string') {
         throw new Error(
           typeof uploadBody.error === 'string' ? uploadBody.error : 'No se pudo subir la imagen.'
@@ -174,7 +184,10 @@ export default function ProfileSettingsPage() {
           newPassword: passwordNext,
         }),
       });
-      const body = await res.json();
+      const body = await readApiJsonOrThrow<{ error?: string }>(
+        res,
+        'No se pudo cambiar la contraseña.'
+      );
       if (!res.ok) {
         throw new Error(typeof body.error === 'string' ? body.error : 'No se pudo cambiar la contraseña.');
       }
@@ -198,7 +211,10 @@ export default function ProfileSettingsPage() {
         credentials: 'include',
         body: JSON.stringify({ confirmText: confirmDeleteText }),
       });
-      const body = await res.json();
+      const body = await readApiJsonOrThrow<{ error?: string }>(
+        res,
+        'No se pudo eliminar la cuenta.'
+      );
       if (!res.ok) {
         throw new Error(typeof body.error === 'string' ? body.error : 'No se pudo eliminar la cuenta.');
       }
@@ -224,10 +240,13 @@ export default function ProfileSettingsPage() {
   if (!session?.user || !data) {
     return (
       <Layout title="Configuración" showBack>
-        <Card variant="bordered" className="p-5">
-          <p className="text-sm text-slate-300 mb-3">
+        <Card variant="bordered" className="p-5 space-y-3">
+          <p className="text-sm text-slate-300">
             No pudimos cargar tu configuración.
           </p>
+          {error && (
+            <p className="text-sm text-error">{error}</p>
+          )}
           <Button onClick={() => void loadProfile()}>Reintentar</Button>
         </Card>
       </Layout>

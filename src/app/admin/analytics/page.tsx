@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import OrganizationFilter, { organizationQueryParam } from '@/components/admin/OrganizationFilter';
+import { readApiJsonOrThrow } from '@/lib/read-api-json';
 
 type Period = '7d' | '30d' | '90d';
 
@@ -297,8 +298,15 @@ export default function AdminAnalyticsPage() {
       : '';
     fetch(`/api/admin/analytics?period=${period}${orgSuffix}`)
       .then(async (response) => {
-        if (!response.ok) throw new Error('No se pudieron cargar las metricas');
-        const data = (await response.json()) as AnalyticsResponse;
+        const data = await readApiJsonOrThrow<AnalyticsResponse & { error?: string }>(
+          response,
+          'No se pudieron cargar las métricas.'
+        );
+        if (!response.ok) {
+          throw new Error(
+            typeof data.error === 'string' ? data.error : 'No se pudieron cargar las métricas.'
+          );
+        }
         return {
           ...data,
           boardCompletionLeaderboards: data.boardCompletionLeaderboards ?? [],
@@ -410,7 +418,7 @@ export default function AdminAnalyticsPage() {
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         <div className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-4">
-          <p className="text-xs font-semibold text-slate-400 mb-3">Tableros mas jugados</p>
+          <p className="text-xs font-semibold text-slate-400 mb-3">Tableros mas completados</p>
           <div className="space-y-3">
             {analytics.topBoards.length === 0 ? (
               <p className="text-xs text-slate-500">Aun no hay actividad de tableros para este periodo.</p>
@@ -591,7 +599,7 @@ export default function AdminAnalyticsPage() {
       <div className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-4">
         <p className="text-xs font-semibold text-slate-400 mb-1">Posiciones por tablero completado</p>
         <p className="text-[11px] text-slate-500 mb-4">
-          Usuarios que completaron todos los retos del bingo, ordenados por cuándo cerraron el último reto. Lista filtrada a finalizaciones en{' '}
+          Solo tableros activos. Usuarios que completaron todos los retos del bingo, ordenados por cuándo cerraron el último reto. Lista filtrada a finalizaciones en{' '}
           {periodPhrase(period)}; el contador histórico es de siempre.
         </p>
         {analytics.boardCompletionLeaderboards.length === 0 ? (
@@ -654,7 +662,10 @@ export default function AdminAnalyticsPage() {
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         <div className="xl:col-span-2 bg-slate-800/60 border border-slate-700/50 rounded-xl p-4">
-          <p className="text-xs font-semibold text-slate-400 mb-3">Participacion por tablero</p>
+          <p className="text-xs font-semibold text-slate-400 mb-1">Participacion por tablero</p>
+          <p className="text-[10px] text-slate-500 mb-3">
+            Solo tableros activos con bingo completado en {periodPhrase(period)}.
+          </p>
           <div className="space-y-2">
             {analytics.topBoards.length === 0 ? (
               <p className="text-xs text-slate-500">Sin datos de participacion para el periodo.</p>
@@ -665,7 +676,7 @@ export default function AdminAnalyticsPage() {
                   <div className="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
                     <div className="h-full rounded-full transition-all duration-700 ease-out" style={{ width: `${board.pct}%`, background: board.color }} />
                   </div>
-                  <span className="text-slate-300 w-16 sm:w-20 text-right">{formatCompact(board.participantCount)} inicios</span>
+                  <span className="text-slate-300 w-16 sm:w-24 text-right">{formatCompact(board.participantCount)} completados</span>
                 </div>
               ))
             )}
@@ -674,10 +685,13 @@ export default function AdminAnalyticsPage() {
 
         <div className="space-y-3">
           <div className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-4">
-            <p className="text-xs font-semibold text-slate-400 mb-3">Conversion inicio a completado</p>
+            <p className="text-xs font-semibold text-slate-400 mb-1">Conversion inicio a completado</p>
+            <p className="text-[10px] text-slate-500 mb-3">
+              Solo tableros activos en {periodPhrase(period)}.
+            </p>
             <div className="space-y-2">
               <div className="flex justify-between text-xs">
-                <span className="text-slate-400">Inicios de retos</span>
+                <span className="text-slate-400">Tableros iniciados</span>
                 <span className="text-white font-semibold">{formatCompact(analytics.conversion.startedBoards)}</span>
               </div>
               <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
@@ -685,7 +699,7 @@ export default function AdminAnalyticsPage() {
               </div>
 
               <div className="flex justify-between text-xs">
-                <span className="text-slate-400">Retos completados</span>
+                <span className="text-slate-400">Tableros completados</span>
                 <span className="text-white font-semibold">{formatCompact(analytics.conversion.completedBoards)}</span>
               </div>
               <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
