@@ -6,6 +6,7 @@ import type { Challenge } from '@/types';
 import { ChallengeStatus } from '@/types';
 import ChallengeFlipCard from '@/components/challenges/ChallengeFlipCard';
 import BingoModal from './BingoModal';
+import { resolveMediaUrl } from '@/lib/media-url';
 import { cn } from '@/lib/utils';
 
 interface BingoBoardProps {
@@ -23,15 +24,18 @@ interface BingoBoardProps {
 }
 
 function EmptyCell({ coverImage }: { coverImage?: string | null }) {
-  if (coverImage) {
+  const src = resolveMediaUrl(coverImage);
+  if (src) {
     return (
       <div className="w-full h-full rounded-[16px] overflow-hidden">
         <img
-          src={coverImage}
+          src={src}
           alt="Casilla especial"
           className="block w-full h-full object-cover object-center"
           loading="lazy"
           decoding="async"
+          referrerPolicy="no-referrer"
+          crossOrigin="anonymous"
         />
       </div>
     );

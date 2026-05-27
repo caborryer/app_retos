@@ -3,13 +3,16 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { Info } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import { BingoBoard } from '@/components/bingo/BingoBoard';
+import BoardDetailSheet from '@/components/bingo/BoardDetailSheet';
 import InfoAccordion from '@/components/bingo/InfoAccordion';
 import { useAppStore } from '@/store/useAppStore';
 import type { Challenge } from '@/types';
 import { ChallengeStatus } from '@/types';
 import { isChallengeNotStarted } from '@/lib/utils';
+import { resolveMediaUrl } from '@/lib/media-url';
 
 type BoardPlayStatus = 'completed' | 'not_started' | 'in_progress' | 'unknown';
 
@@ -54,6 +57,7 @@ export default function HomePage() {
   const [boardsLoaded, setBoardsLoaded] = useState(false);
   const [startingBoardPlay, setStartingBoardPlay] = useState(false);
   const [completedBoardIds, setCompletedBoardIds] = useState<string[]>([]);
+  const [boardDetailOpen, setBoardDetailOpen] = useState(false);
   const boardCache = useRef<Record<string, Challenge[]>>({});
   const boardCompletedCache = useRef<Record<string, boolean>>({});
   const boardCompletionRequestCache = useRef<Record<string, Promise<boolean>>>({});
@@ -153,18 +157,26 @@ export default function HomePage() {
       (c) => c.status === ChallengeStatus.COMPLETED
     );
     boardCompletedCache.current[activeBoardId] = isCompleted;
-    setCompletedBoardIds((prev) => {
-      if (isCompleted) {
+
+    if (isCompleted) {
+      setCompletedBoardIds((prev) => {
         if (prev.includes(activeBoardId)) return prev;
-        const next = orderedIncompleteBoards.find((b) => b.id !== activeBoardId);
-        if (next) {
-          queueMicrotask(() => setActiveBoardId(next.id));
+        const nextBoard = boards.find(
+          (b) => b.id !== activeBoardId && !prev.includes(b.id)
+        );
+        if (nextBoard) {
+          queueMicrotask(() => setActiveBoardId(nextBoard.id));
         }
         return [...prev, activeBoardId];
-      }
+      });
+      return;
+    }
+
+    setCompletedBoardIds((prev) => {
+      if (!prev.includes(activeBoardId)) return prev;
       return prev.filter((id) => id !== activeBoardId);
     });
-  }, [activeBoardId, challenges, orderedIncompleteBoards]);
+  }, [activeBoardId, challenges, boards]);
 
   const isBoardCompleted = useCallback(async (boardId: string) => {
     if (boardCompletedCache.current[boardId] !== undefined) {
@@ -351,6 +363,10 @@ export default function HomePage() {
     setActiveBoardId(boardId);
   }, [activeBoardId]);
 
+  useEffect(() => {
+    setBoardDetailOpen(false);
+  }, [activeBoardId]);
+
   if (
     status === 'loading' ||
     status === 'unauthenticated' ||
@@ -369,6 +385,15 @@ export default function HomePage() {
   const showNoActiveBoards = !hasBoards;
   const activeBoardCompleted =
     !!activeBoardId && completedBoardIds.includes(activeBoardId);
+  const activeBoardStatus: BoardPlayStatus = activeBoardId
+    ? getBoardPlayStatus(activeBoardId)
+    : 'unknown';
+  const activeBoardStatusLabel =
+    activeBoardStatus === 'completed'
+      ? 'Completado'
+      : activeBoardStatus === 'in_progress'
+        ? 'En curso'
+        : 'Nuevo';
 
   return (
     <Layout brandLogoSrc="/images/box-challenge-logo.png" brandLogoAlt="Box Challenge">
@@ -379,9 +404,20 @@ export default function HomePage() {
               Retos
             </h1>
             {activeBoard && (
-              <span className="text-xs text-secondary-400 font-medium">
-                {activeBoard.emoji} {activeBoard.title}
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-secondary-400 font-medium max-w-[175px] truncate">
+                  {activeBoard.emoji} {activeBoard.title}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setBoardDetailOpen(true)}
+                  className="inline-flex items-center justify-center w-8 h-8 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                  aria-label="Ver descripción del tablero"
+                  title="Ver descripción del tablero"
+                >
+                  <Info className="w-4 h-4" />
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -490,6 +526,15 @@ export default function HomePage() {
             <InfoAccordion />
           </div>
         </div>
+
+        <BoardDetailSheet
+          board={activeBoard ?? null}
+          open={boardDetailOpen}
+          onClose={() => setBoardDetailOpen(false)}
+          statusLabel={activeBoardStatusLabel}
+          completedChallenges={challenges.filter((c) => c.status === ChallengeStatus.COMPLETED).length}
+          totalChallenges={challenges.length}
+        />
       </div>
     </Layout>
   );
@@ -535,11 +580,13 @@ function BoardThumbnailGrid({
             <div className="relative aspect-square bg-slate-800">
               {board.coverImage ? (
                 <img
-                  src={board.coverImage}
+                  src={resolveMediaUrl(board.coverImage) ?? board.coverImage}
                   alt={board.title}
                   className="absolute inset-0 w-full h-full object-cover object-center"
                   loading="lazy"
                   decoding="async"
+                  referrerPolicy="no-referrer"
+                  crossOrigin="anonymous"
                 />
               ) : (
                 <div

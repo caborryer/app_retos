@@ -10,6 +10,7 @@ import { useAppStore } from '@/store/useAppStore';
 import CameraCaptureModal from '@/components/ui/CameraCaptureModal';
 import ChallengeDetailSheet from '@/components/challenges/ChallengeDetailSheet';
 import { preferNativeCameraPicker } from '@/lib/native-camera-input';
+import { resolveMediaUrl } from '@/lib/media-url';
 import { cn } from '@/lib/utils';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -86,7 +87,7 @@ export default function ChallengeFlipCard({ challenge, className }: ChallengeFli
     alert('Evidencia enviada. Estado: En revision por el admin.');
   };
 
-  const imageUrl = challenge.images?.[0] ?? null;
+  const imageUrl = resolveMediaUrl(challenge.images?.[0] ?? null);
   const isCompleted = challenge.status === ChallengeStatus.COMPLETED;
   const hasPhotoTask = challenge.tasks?.some((t) => !t.completed && t.photoRequired) ?? false;
   const hasLinkTask = challenge.tasks?.some((t) => !t.completed && !!t.linkRequired) ?? false;
@@ -182,11 +183,18 @@ export default function ChallengeFlipCard({ challenge, className }: ChallengeFli
 
   return (
     <div className={cn('group/card w-full aspect-square', className)}>
-      <button
-        type="button"
-        className="block w-full h-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+      <div
+        role="button"
+        tabIndex={0}
+        className="block w-full h-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 cursor-pointer"
         style={{ perspective: 1000, borderRadius: 16 }}
         onClick={handleCardInteraction}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleCardInteraction();
+          }
+        }}
         aria-label={isFlipped ? 'Volver a la imagen del reto' : 'Ver opciones del reto'}
       >
         <div
@@ -216,6 +224,7 @@ export default function ChallengeFlipCard({ challenge, className }: ChallengeFli
                   loading="lazy"
                   decoding="async"
                   referrerPolicy="no-referrer"
+                  crossOrigin="anonymous"
                 />
                 <div
                   className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"
@@ -436,7 +445,7 @@ export default function ChallengeFlipCard({ challenge, className }: ChallengeFli
             )}
           </div>
         </div>
-      </button>
+      </div>
 
       <ChallengeDetailSheet
         challenge={challenge}

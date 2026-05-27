@@ -6,6 +6,7 @@ import { Bell, ChevronLeft, Settings } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { useRouter } from 'next/navigation';
 import NotificationPanel from '../notifications/NotificationPanel';
+import BoxChallengeLogo, { isBoxChallengeLogoSrc } from '@/components/brand/BoxChallengeLogo';
 
 interface HeaderProps {
   title?: string;
@@ -45,15 +46,19 @@ export default function Header({
 
               {brandLogoSrc && (
                 <div className="flex items-center gap-1 min-w-0">
-                  <Image
-                    src={brandLogoSrc}
-                    alt={brandLogoAlt}
-                    width={200}
-                    height={72}
-                    className="h-9 w-auto max-h-9 shrink-0 object-contain object-left"
-                    sizes="(max-width: 640px) 72px, 88px"
-                    priority
-                  />
+                  {isBoxChallengeLogoSrc(brandLogoSrc) ? (
+                    <BoxChallengeLogo className="h-9 w-9 shrink-0" />
+                  ) : (
+                    <Image
+                      src={brandLogoSrc}
+                      alt={brandLogoAlt}
+                      width={200}
+                      height={72}
+                      className="h-9 w-auto max-h-9 shrink-0 object-contain object-left"
+                      sizes="(max-width: 640px) 72px, 88px"
+                      priority
+                    />
+                  )}
                   {brandTitle ? (
                     <span className="text-lg sm:text-xl font-bold text-white tracking-tight leading-none truncate">
                       {brandTitle}

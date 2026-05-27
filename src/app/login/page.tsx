@@ -3,9 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn, useSession } from 'next-auth/react';
-import Image from 'next/image';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
+import BoxChallengeLogo from '@/components/brand/BoxChallengeLogo';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -83,15 +83,7 @@ export default function LoginPage() {
           className="flex items-center gap-1 py-1 min-w-0"
           aria-label="Ir al inicio"
         >
-          <Image
-            src="/images/box-challenge-logo.png"
-            alt="Box Challenge"
-            width={200}
-            height={72}
-            className="h-9 w-auto max-h-9 shrink-0 object-contain object-left"
-            sizes="(max-width: 640px) 72px, 88px"
-            priority
-          />
+          <BoxChallengeLogo className="h-9 w-9 shrink-0" />
           <span className="text-[15px] sm:text-base font-bold text-white tracking-tight truncate">
             BOX Challenge
           </span>
