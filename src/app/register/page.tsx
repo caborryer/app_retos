@@ -1,8 +1,8 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { signIn, useSession } from 'next-auth/react';
+import { signIn, signOut, useSession } from 'next-auth/react';
 import { Eye, EyeOff, Lock, Mail, User, X, Building2 } from 'lucide-react';
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
 import { INVITE_COOKIE_NAME, getInviteCookieMaxAgeSeconds } from '@/lib/invite-cookie';
@@ -73,6 +73,7 @@ function RegisterPageContent() {
   const searchParams = useSearchParams();
   const inviteToken = searchParams.get('invite')?.trim() ?? '';
   const { status } = useSession();
+  const signOutForInviteRef = useRef(false);
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -84,15 +85,36 @@ function RegisterPageContent() {
   const [showTerms, setShowTerms] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [clearingSession, setClearingSession] = useState(false);
+  const [sessionCheckTimedOut, setSessionCheckTimedOut] = useState(false);
   const [inviteValidating, setInviteValidating] = useState(!!inviteToken);
   const [inviteValid, setInviteValid] = useState(false);
   const [organizationName, setOrganizationName] = useState<string | null>(null);
 
   useEffect(() => {
-    if (status === 'authenticated') {
-      window.location.assign('/home');
+    if (status !== 'loading') {
+      setSessionCheckTimedOut(false);
+      return;
     }
+    const timer = window.setTimeout(() => setSessionCheckTimedOut(true), 5000);
+    return () => window.clearTimeout(timer);
   }, [status]);
+
+  // Invite links are for new accounts: always clear any existing session first.
+  useEffect(() => {
+    if (!inviteToken) return;
+    if (status === 'loading') return;
+    if (status !== 'authenticated') {
+      setClearingSession(false);
+      return;
+    }
+    if (signOutForInviteRef.current) return;
+    signOutForInviteRef.current = true;
+    setClearingSession(true);
+    signOut({ redirect: false })
+      .catch(() => setError('No se pudo cerrar la sesión anterior. Recarga la página.'))
+      .finally(() => setClearingSession(false));
+  }, [inviteToken, status]);
 
   useEffect(() => {
     if (!inviteToken) {
@@ -122,10 +144,41 @@ function RegisterPageContent() {
       .finally(() => setInviteValidating(false));
   }, [inviteToken]);
 
-  if (status === 'loading' || inviteValidating) {
+  const waitingForRegister =
+    clearingSession ||
+    (inviteToken && status === 'authenticated') ||
+    (status === 'loading' && !sessionCheckTimedOut) ||
+    inviteValidating;
+
+  if (waitingForRegister) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-slate-950 px-6">
         <div className="w-8 h-8 border-4 border-[#FC0230] border-t-transparent rounded-full animate-spin" />
+        {clearingSession || (inviteToken && status === 'authenticated') ? (
+          <p className="text-slate-400 text-sm text-center">Cerrando sesión anterior…</p>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (status === 'loading' && sessionCheckTimedOut) {
+    return (
+      <div
+        style={{ minHeight: '100vh', fontFamily: "'DM Sans','Helvetica Neue',sans-serif" }}
+        className="bg-slate-950 flex flex-col items-center justify-center px-6"
+      >
+        <div className="max-w-md w-full text-center space-y-4">
+          <h1 className="text-xl font-bold text-white">No se pudo verificar la sesión</h1>
+          <p className="text-sm text-slate-400">Recarga la página e intenta de nuevo.</p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="inline-block py-2.5 px-6 rounded-xl text-white text-sm font-semibold"
+            style={{ background: '#FC0230' }}
+          >
+            Recargar
+          </button>
+        </div>
       </div>
     );
   }
