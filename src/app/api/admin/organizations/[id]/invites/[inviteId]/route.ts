@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAdmin } from '@/lib/admin-auth';
-import { buildInviteUrl } from '@/lib/organization-access';
+import { buildInviteUrl, getRequestPublicOrigin } from '@/lib/app-url';
 
 export async function PATCH(
   req: Request,
@@ -32,5 +32,8 @@ export async function PATCH(
     },
   });
 
-  return NextResponse.json({ ...invite, url: buildInviteUrl(invite.token) });
+  return NextResponse.json({
+    ...invite,
+    url: buildInviteUrl(invite.token, getRequestPublicOrigin(req)),
+  });
 }

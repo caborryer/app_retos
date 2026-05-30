@@ -124,10 +124,7 @@ export async function validateInviteToken(token: string) {
   return invite;
 }
 
-export function buildInviteUrl(token: string): string {
-  const base = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ?? '';
-  return `${base}/register?invite=${encodeURIComponent(token)}`;
-}
+export { buildInviteUrl } from '@/lib/app-url';
 
 export function generateInviteToken(): string {
   return randomBytes(24).toString('base64url');

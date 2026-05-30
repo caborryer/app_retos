@@ -1,15 +1,17 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAdmin } from '@/lib/admin-auth';
-import { buildInviteUrl, generateInviteToken } from '@/lib/organization-access';
+import { generateInviteToken } from '@/lib/organization-access';
+import { buildInviteUrl, getRequestPublicOrigin } from '@/lib/app-url';
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: { id: string } }
 ) {
   const authResult = await requireAdmin();
   if ('error' in authResult) return authResult.error;
 
+  const origin = getRequestPublicOrigin(req);
   const invites = await prisma.organizationInvite.findMany({
     where: { organizationId: params.id },
     orderBy: { createdAt: 'desc' },
@@ -18,7 +20,7 @@ export async function GET(
   return NextResponse.json(
     invites.map((inv) => ({
       ...inv,
-      url: buildInviteUrl(inv.token),
+      url: buildInviteUrl(inv.token, origin),
     }))
   );
 }
@@ -61,7 +63,7 @@ export async function POST(
   });
 
   return NextResponse.json(
-    { ...invite, url: buildInviteUrl(invite.token) },
+    { ...invite, url: buildInviteUrl(invite.token, getRequestPublicOrigin(req)) },
     { status: 201 }
   );
 }

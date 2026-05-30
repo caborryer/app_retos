@@ -55,6 +55,13 @@ export async function PATCH(
       select: { active: true },
     });
 
+    if (organizationId !== undefined) {
+      const org = await prisma.organization.findUnique({ where: { id: organizationId } });
+      if (!org) {
+        return NextResponse.json({ error: 'Organization not found' }, { status: 400 });
+      }
+    }
+
     const board = await prisma.board.update({
       where: { id: params.id },
       data: {
@@ -69,6 +76,10 @@ export async function PATCH(
         ...(endDate !== undefined && { endDate: endDate ? new Date(endDate) : null }),
         ...(organizationId !== undefined && { organizationId }),
         ...(isGeneral !== undefined && { isGeneral: Boolean(isGeneral) }),
+      },
+      include: {
+        organization: { select: { id: true, name: true, slug: true } },
+        _count: { select: { challenges: true } },
       },
     });
 

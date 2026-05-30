@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Building2, Plus, ChevronRight } from 'lucide-react';
+import { Building2, Plus, ChevronRight, LayoutGrid } from 'lucide-react';
 
 type OrgRow = {
   id: string;
@@ -63,7 +63,7 @@ export default function AdminOrganizationsPage() {
           Empresas
         </h1>
         <p className="text-slate-400 mt-1 text-sm">
-          Crea empresas y gestiona enlaces de invitación para el registro de usuarios.
+          Crea empresas, gestiona enlaces de invitación y asigna tableros por empresa en Admin → Tableros.
         </p>
       </div>
 
@@ -119,7 +119,15 @@ export default function AdminOrganizationsPage() {
                       {o.active ? 'Activa' : 'Inactiva'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3 text-right space-x-3">
+                    <Link
+                      href={`/admin/boards?organizationId=${encodeURIComponent(o.id)}&new=1`}
+                      className="inline-flex items-center gap-1 text-slate-400 hover:text-white text-sm"
+                      title="Asignar tableros a esta empresa"
+                    >
+                      <LayoutGrid className="w-4 h-4" />
+                      Tableros
+                    </Link>
                     <Link
                       href={`/admin/organizations/${o.id}`}
                       className="inline-flex items-center gap-1 text-primary-400 hover:text-primary-300 text-sm"

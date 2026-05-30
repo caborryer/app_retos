@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Copy, Link2, Plus, Ban } from 'lucide-react';
+import { ArrowLeft, Copy, Link2, Plus, Ban, LayoutGrid, ChevronRight } from 'lucide-react';
+import { resolveInviteUrlForDisplay } from '@/lib/app-url';
 
 type Invite = {
   id: string;
@@ -23,6 +24,17 @@ type Org = {
   active: boolean;
 };
 
+type OrgBoard = {
+  id: string;
+  title: string;
+  emoji: string;
+  active: boolean;
+  isGeneral: boolean;
+  organizationId: string;
+  organization?: { id: string; name: string; slug: string };
+  _count?: { challenges: number };
+};
+
 export default function AdminOrganizationDetailPage({
   params,
 }: {
@@ -31,6 +43,10 @@ export default function AdminOrganizationDetailPage({
   const orgId = params.id;
   const [org, setOrg] = useState<Org | null>(null);
   const [invites, setInvites] = useState<Invite[]>([]);
+  const [boards, setBoards] = useState<OrgBoard[]>([]);
+  const [allBoards, setAllBoards] = useState<OrgBoard[]>([]);
+  const [selectedBoardIds, setSelectedBoardIds] = useState<Set<string>>(new Set());
+  const [assigning, setAssigning] = useState(false);
   const [loading, setLoading] = useState(true);
   const [label, setLabel] = useState('');
   const [maxUses, setMaxUses] = useState('');
@@ -40,12 +56,16 @@ export default function AdminOrganizationDetailPage({
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [orgRes, invRes] = await Promise.all([
+      const [orgRes, invRes, boardsRes, allBoardsRes] = await Promise.all([
         fetch(`/api/admin/organizations/${orgId}`, { credentials: 'include' }),
         fetch(`/api/admin/organizations/${orgId}/invites`, { credentials: 'include' }),
+        fetch(`/api/boards?organizationId=${encodeURIComponent(orgId)}`, { credentials: 'include' }),
+        fetch('/api/boards', { credentials: 'include' }),
       ]);
       if (orgRes.ok) setOrg(await orgRes.json());
       if (invRes.ok) setInvites(await invRes.json());
+      if (boardsRes.ok) setBoards(await boardsRes.json());
+      if (allBoardsRes.ok) setAllBoards(await allBoardsRes.json());
     } finally {
       setLoading(false);
     }
@@ -54,6 +74,61 @@ export default function AdminOrganizationDetailPage({
   useEffect(() => {
     load();
   }, [load]);
+
+  const assignableBoards = useMemo(
+    () =>
+      allBoards
+        .filter((b) => b.organizationId !== orgId)
+        .sort((a, b) => {
+          const aGeneral = a.organization?.slug === 'general' ? 0 : 1;
+          const bGeneral = b.organization?.slug === 'general' ? 0 : 1;
+          if (aGeneral !== bGeneral) return aGeneral - bGeneral;
+          return a.title.localeCompare(b.title, 'es');
+        }),
+    [allBoards, orgId]
+  );
+
+  function toggleBoardSelection(boardId: string) {
+    setSelectedBoardIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(boardId)) next.delete(boardId);
+      else next.add(boardId);
+      return next;
+    });
+  }
+
+  async function handleAssignExisting() {
+    if (selectedBoardIds.size === 0) return;
+    const count = selectedBoardIds.size;
+    if (
+      !confirm(
+        `¿Asignar ${count} tablero${count !== 1 ? 's' : ''} a "${org?.name}"? Dejarán de pertenecer a su empresa actual.`
+      )
+    ) {
+      return;
+    }
+    setAssigning(true);
+    try {
+      const results = await Promise.all(
+        [...selectedBoardIds].map((boardId) =>
+          fetch(`/api/boards/${boardId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ organizationId: orgId }),
+          })
+        )
+      );
+      const failed = results.filter((r) => !r.ok).length;
+      if (failed > 0) {
+        alert(`${failed} tablero(s) no se pudieron asignar.`);
+      }
+      setSelectedBoardIds(new Set());
+      await load();
+    } finally {
+      setAssigning(false);
+    }
+  }
 
   async function handleCreateInvite(e: React.FormEvent) {
     e.preventDefault();
@@ -95,7 +170,8 @@ export default function AdminOrganizationDetailPage({
   }
 
   function copyUrl(url: string) {
-    navigator.clipboard.writeText(url).then(() => alert('Enlace copiado'));
+    const fullUrl = resolveInviteUrlForDisplay(url);
+    navigator.clipboard.writeText(fullUrl).then(() => alert('Enlace copiado'));
   }
 
   if (loading) {
@@ -130,9 +206,129 @@ export default function AdminOrganizationDetailPage({
       <div>
         <h1 className="text-2xl font-bold text-white">{org.name}</h1>
         <p className="text-slate-400 text-sm mt-1">
-          Slug: {org.slug} · Los usuarios que se registren con un enlace quedan en esta empresa.
+          Slug: {org.slug} · Los usuarios invitados quedan en esta empresa y ven sus tableros activos.
         </p>
       </div>
+
+      <section className="bg-slate-800/50 border-2 border-primary-500/20 rounded-2xl p-5 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <h2 className="text-white font-semibold flex items-center gap-2">
+            <LayoutGrid className="w-5 h-5 text-primary-400" />
+            Asignar tableros a esta empresa
+          </h2>
+          <Link
+            href={`/admin/boards?organizationId=${encodeURIComponent(orgId)}&new=1`}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-white text-sm font-semibold hover:bg-primary-600 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Crear tablero para {org.name}
+          </Link>
+        </div>
+
+        <ol className="text-slate-400 text-sm list-decimal pl-5 space-y-1.5">
+          <li>
+            <strong className="text-slate-300">Tablero nuevo:</strong> pulsa &quot;Crear tablero para {org.name}&quot;.
+          </li>
+          <li>
+            <strong className="text-slate-300">Tablero existente:</strong> selecciónalo abajo (p. ej. los que están en
+            &quot;General&quot;) y pulsa &quot;Asignar seleccionados&quot;.
+          </li>
+          <li>Si el tablero tiene &quot;Tablero general&quot; activo, lo seguirán viendo todos los usuarios.</li>
+        </ol>
+
+        <div className="border-t border-slate-700 pt-4 space-y-3">
+          <p className="text-white text-sm font-medium">Asignar tablero existente</p>
+          <p className="text-slate-500 text-xs leading-relaxed">
+            Los tableros creados antes de empresas suelen estar en la empresa &quot;General&quot;. Márcalos aquí para
+            moverlos a {org.name} sin recrearlos.
+          </p>
+
+          {assignableBoards.length === 0 ? (
+            <p className="text-slate-500 text-sm">
+              No hay tableros en otras empresas.{' '}
+              <Link
+                href={`/admin/boards?organizationId=${encodeURIComponent(orgId)}`}
+                className="text-primary-400 hover:text-primary-300"
+              >
+                Ver todos en Tableros
+              </Link>
+            </p>
+          ) : (
+            <>
+              <div className="max-h-52 overflow-y-auto space-y-1 rounded-xl border border-slate-700 bg-slate-900/40 p-2">
+                {assignableBoards.map((board) => (
+                  <label
+                    key={board.id}
+                    className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-slate-800/80 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedBoardIds.has(board.id)}
+                      onChange={() => toggleBoardSelection(board.id)}
+                      className="rounded shrink-0"
+                    />
+                    <span className="text-lg shrink-0">{board.emoji}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white text-sm truncate">{board.title}</p>
+                      <p className="text-slate-500 text-xs">
+                        {board._count?.challenges ?? 0} retos ·{' '}
+                        {board.active ? 'Activo' : 'Inactivo'}
+                        {board.isGeneral ? ' · Tablero general' : ''}
+                      </p>
+                    </div>
+                    <span className="text-slate-400 text-xs shrink-0">
+                      {board.organization?.name ?? 'Otra empresa'}
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <button
+                type="button"
+                disabled={selectedBoardIds.size === 0 || assigning}
+                onClick={handleAssignExisting}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-700 text-white text-sm font-semibold hover:bg-slate-600 disabled:opacity-50 transition-colors"
+              >
+                {assigning ? (
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <LayoutGrid className="w-4 h-4" />
+                )}
+                Asignar seleccionados ({selectedBoardIds.size})
+              </button>
+            </>
+          )}
+        </div>
+
+        {boards.length === 0 ? (
+          <p className="text-slate-500 text-sm border-t border-slate-700 pt-4">
+            Esta empresa aún no tiene tableros asignados.
+          </p>
+        ) : (
+          <div className="space-y-2 border-t border-slate-700 pt-4">
+            <p className="text-slate-400 text-xs font-medium uppercase tracking-wide">
+              Tableros asignados ({boards.length})
+            </p>
+            {boards.map((board) => (
+              <Link
+                key={board.id}
+                href={`/admin/boards?organizationId=${encodeURIComponent(orgId)}`}
+                className="flex items-center gap-3 p-3 bg-slate-900/60 rounded-xl border border-slate-700 hover:border-slate-600 transition-colors"
+              >
+                <span className="text-xl shrink-0">{board.emoji}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white text-sm font-medium truncate">{board.title}</p>
+                  <p className="text-slate-500 text-xs mt-0.5">
+                    {board._count?.challenges ?? 0} retos ·{' '}
+                    {board.active ? 'Activo' : 'Inactivo'}
+                    {board.isGeneral ? ' · General (todos los usuarios)' : ' · Solo esta empresa'}
+                  </p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-500 shrink-0" />
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
 
       <section className="bg-slate-800/50 border border-slate-700 rounded-2xl p-5 space-y-4">
         <h2 className="text-white font-semibold flex items-center gap-2">
@@ -187,7 +383,9 @@ export default function AdminOrganizationDetailPage({
                       <span className="ml-2 text-xs text-red-400">Revocado</span>
                     )}
                   </p>
-                  <p className="text-slate-500 text-xs mt-1 truncate">{inv.url}</p>
+                  <p className="text-slate-500 text-xs mt-1 truncate">
+                    {resolveInviteUrlForDisplay(inv.url)}
+                  </p>
                   <p className="text-slate-500 text-xs mt-1">
                     Usos: {inv.usedCount}
                     {inv.maxUses != null ? ` / ${inv.maxUses}` : ' (ilimitado)'}

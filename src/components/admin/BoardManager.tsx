@@ -1,10 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Upload, Save, X, RefreshCw, ChevronDown, ChevronUp,
-  Trash2, Edit2, GripVertical, Camera, Link as LinkIcon, ImageIcon, RotateCcw, Filter,
+  Trash2, Edit2, GripVertical, Camera, Link as LinkIcon, ImageIcon, RotateCcw, Filter, Building2, LayoutGrid,
 } from 'lucide-react';
 import Image from 'next/image';
 import {
@@ -688,11 +689,15 @@ function BoardCard({
   onSave,
   onDelete,
   existingFolders,
+  organizations,
+  showOrganization,
 }: {
   board: Board;
   onSave: (b: Partial<Board>) => Promise<void>;
   onDelete: () => Promise<void>;
   existingFolders: string[];
+  organizations: { id: string; name: string }[];
+  showOrganization: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [showChallenges, setShowChallenges] = useState(false);
@@ -744,6 +749,7 @@ function BoardCard({
       startDate: board.startDate ? board.startDate.split('T')[0] : '',
       endDate: board.endDate ? board.endDate.split('T')[0] : '',
       isGeneral: board.isGeneral ?? false,
+      organizationId: board.organizationId ?? board.organization?.id,
     });
     setAddingNewFolder(false);
     setEditing(true);
@@ -855,6 +861,23 @@ function BoardCard({
               rows={2}
               className="w-full bg-slate-700 text-white text-sm rounded-lg px-3 py-2 resize-none placeholder-slate-400"
             />
+
+            {/* Organization */}
+            <div className="space-y-2">
+              <label className="text-slate-400 text-xs block">Empresa</label>
+              <select
+                value={draft.organizationId ?? board.organizationId ?? ''}
+                onChange={(e) => setDraft((d) => ({ ...d, organizationId: e.target.value }))}
+                className="w-full bg-slate-700 text-white text-sm rounded-lg px-3 py-2"
+              >
+                {organizations.map((o) => (
+                  <option key={o.id} value={o.id}>{o.name}</option>
+                ))}
+              </select>
+              <p className="text-slate-500 text-[10px] leading-relaxed">
+                Solo los usuarios de esta empresa verán el tablero (salvo que marques &quot;Tablero general&quot;).
+              </p>
+            </div>
 
             {/* Folder */}
             <div className="space-y-2">
@@ -995,6 +1018,16 @@ function BoardCard({
                 <p className="text-slate-400 text-xs mt-0.5 line-clamp-2">{board.description}</p>
               )}
               <div className="flex flex-wrap gap-1 mt-1">
+                {showOrganization && board.organization && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-700 text-slate-400">
+                    🏢 {board.organization.name}
+                  </span>
+                )}
+                {board.isGeneral && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary-500/10 text-primary-400 border border-primary-500/20">
+                    General
+                  </span>
+                )}
                 {board.folder && (
                   <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-700 text-slate-400">
                     📁 {board.folder}
@@ -1088,11 +1121,12 @@ function BoardCard({
 
 // ─── New board modal ──────────────────────────────────────────────────────────
 
-function NewBoardModal({ onClose, onCreate, existingFolders, organizationId }: {
+function NewBoardModal({ onClose, onCreate, existingFolders, organizationId, organizationName }: {
   onClose: () => void;
   onCreate: (b: Board) => void;
   existingFolders: string[];
   organizationId: string;
+  organizationName: string;
 }) {
   const [form, setForm] = useState({
     title: '',
@@ -1151,6 +1185,17 @@ function NewBoardModal({ onClose, onCreate, existingFolders, organizationId }: {
           <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
             <X className="w-5 h-5" />
           </button>
+        </div>
+
+        <div className="rounded-xl border border-primary-500/30 bg-primary-500/10 px-4 py-3">
+          <p className="text-primary-300 text-xs font-semibold uppercase tracking-wide">Asignado a empresa</p>
+          <p className="text-white font-medium mt-1 flex items-center gap-2">
+            <Building2 className="w-4 h-4 text-primary-400 shrink-0" />
+            {organizationName}
+          </p>
+          <p className="text-slate-400 text-xs mt-1.5 leading-relaxed">
+            Solo usuarios de esta empresa verán el tablero en Home, salvo que marques &quot;Tablero general&quot;.
+          </p>
         </div>
 
         {/* Emoji + title */}
@@ -1283,7 +1328,14 @@ function NewBoardModal({ onClose, onCreate, existingFolders, organizationId }: {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function BoardManager() {
+  const searchParams = useSearchParams();
+  const urlOrganizationId = searchParams.get('organizationId')?.trim() || null;
+  const openNewFromUrl = searchParams.get('new') === '1';
+
   const [boards, setBoards] = useState<Board[]>([]);
+  const [allBoards, setAllBoards] = useState<Board[]>([]);
+  const [selectedBoardIds, setSelectedBoardIds] = useState<Set<string>>(new Set());
+  const [assigning, setAssigning] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'active' | 'inactive' | 'all'>('active');
@@ -1291,18 +1343,23 @@ export default function BoardManager() {
   const [organizationId, setOrganizationId] = useState<string | null>(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem('adminOrganizationId');
-    if (stored && stored !== 'all') setOrganizationId(stored);
     fetch('/api/admin/organizations', { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : []))
       .then((data: { id: string; name: string }[]) => {
         setOrganizations(data);
-        if (!stored || stored === 'all') {
-          const general = data.find((o) => o.name === 'General') ?? data[0];
-          if (general) setOrganizationId(general.id);
+        if (urlOrganizationId && data.some((o) => o.id === urlOrganizationId)) {
+          setOrganizationId(urlOrganizationId);
+          return;
         }
+        const stored = localStorage.getItem('adminOrganizationId');
+        if (stored && stored !== 'all' && data.some((o) => o.id === stored)) {
+          setOrganizationId(stored);
+          return;
+        }
+        const general = data.find((o) => o.name === 'General') ?? data[0];
+        if (general) setOrganizationId(general.id);
       });
-  }, []);
+  }, [urlOrganizationId]);
 
   useEffect(() => {
     if (organizationId) {
@@ -1310,18 +1367,38 @@ export default function BoardManager() {
     }
   }, [organizationId]);
 
+  useEffect(() => {
+    if (openNewFromUrl && organizationId) {
+      setShowNew(true);
+    }
+  }, [openNewFromUrl, organizationId]);
+
+  const selectedOrganizationName =
+    organizations.find((o) => o.id === organizationId)?.name ?? null;
+
   const fetchBoards = useCallback(async () => {
     setLoading(true);
     try {
-      const q = organizationId ? `?organizationId=${encodeURIComponent(organizationId)}` : '';
-      const res = await fetch(`/api/boards${q}`, { credentials: 'include' });
-      const data = await res.json();
-      setBoards(data);
+      const [filteredRes, allRes] = await Promise.all([
+        fetch(
+          organizationId
+            ? `/api/boards?organizationId=${encodeURIComponent(organizationId)}`
+            : '/api/boards',
+          { credentials: 'include' }
+        ),
+        fetch('/api/boards', { credentials: 'include' }),
+      ]);
+      if (filteredRes.ok) setBoards(await filteredRes.json());
+      if (allRes.ok) setAllBoards(await allRes.json());
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
     }
+  }, [organizationId]);
+
+  useEffect(() => {
+    setSelectedBoardIds(new Set());
   }, [organizationId]);
 
   useEffect(() => { fetchBoards(); }, [fetchBoards]);
@@ -1359,8 +1436,65 @@ export default function BoardManager() {
       const res = await fetch(`/api/boards/${id}`, { method: 'DELETE', credentials: 'include' });
       if (!res.ok) throw new Error();
       setBoards((prev) => prev.filter((b) => b.id !== id));
+      setAllBoards((prev) => prev.filter((b) => b.id !== id));
     } catch {
       alert('Error al eliminar el tablero');
+    }
+  }
+
+  const assignableBoards = useMemo(
+    () =>
+      organizationId
+        ? allBoards
+            .filter((b) => b.organizationId !== organizationId)
+            .sort((a, b) => {
+              const aGeneral = a.organization?.slug === 'general' ? 0 : 1;
+              const bGeneral = b.organization?.slug === 'general' ? 0 : 1;
+              if (aGeneral !== bGeneral) return aGeneral - bGeneral;
+              return a.title.localeCompare(b.title, 'es');
+            })
+        : [],
+    [allBoards, organizationId]
+  );
+
+  function toggleBoardSelection(boardId: string) {
+    setSelectedBoardIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(boardId)) next.delete(boardId);
+      else next.add(boardId);
+      return next;
+    });
+  }
+
+  async function handleAssignExisting() {
+    if (!organizationId || selectedBoardIds.size === 0) return;
+    const count = selectedBoardIds.size;
+    if (
+      !confirm(
+        `¿Asignar ${count} tablero${count !== 1 ? 's' : ''} a "${selectedOrganizationName}"?`
+      )
+    ) {
+      return;
+    }
+    setAssigning(true);
+    try {
+      const results = await Promise.all(
+        [...selectedBoardIds].map((boardId) =>
+          fetch(`/api/boards/${boardId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ organizationId }),
+          })
+        )
+      );
+      const failed = results.filter((r) => !r.ok).length;
+      if (failed > 0) alert(`${failed} tablero(s) no se pudieron asignar.`);
+      setSelectedBoardIds(new Set());
+      setActiveFilter('all');
+      await fetchBoards();
+    } finally {
+      setAssigning(false);
     }
   }
 
@@ -1392,23 +1526,125 @@ export default function BoardManager() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Tableros</h1>
-          <p className="text-slate-400 text-sm mt-1">Gestiona los tableros y sus retos por empresa</p>
+      {/* Assignment banner */}
+      <div
+        className={`rounded-2xl border p-4 sm:p-5 ${
+          organizationId
+            ? 'border-primary-500/30 bg-primary-500/10'
+            : 'border-amber-500/30 bg-amber-500/10'
+        }`}
+      >
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div className="space-y-2">
+            <p className="text-white font-semibold flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-primary-400 shrink-0" />
+              Asignar tableros a una empresa
+            </p>
+            {organizationId && selectedOrganizationName ? (
+              <>
+                <p className="text-slate-300 text-sm">
+                  Empresa seleccionada:{' '}
+                  <span className="text-white font-medium">{selectedOrganizationName}</span>
+                </p>
+                <ol className="text-slate-400 text-sm list-decimal pl-5 space-y-1">
+                  <li>
+                    <strong className="text-slate-300">Nuevo:</strong> pulsa Nuevo tablero.
+                  </li>
+                  <li>
+                    <strong className="text-slate-300">Existente:</strong> elige tableros de otras empresas
+                    (p. ej. General) en la lista de abajo.
+                  </li>
+                  <li>Configura 8 retos y actívalo para que los usuarios invitados lo vean.</li>
+                </ol>
+              </>
+            ) : (
+              <p className="text-amber-100/90 text-sm">
+                Elige una empresa en el selector de abajo. Sin empresa seleccionada no puedes crear tableros asignados.
+              </p>
+            )}
+          </div>
+          <div className="flex flex-col gap-2 shrink-0 min-w-[220px]">
+            <label htmlFor="board-org-select" className="text-slate-400 text-xs font-medium">
+              Empresa
+            </label>
+            <select
+              id="board-org-select"
+              value={organizationId ?? ''}
+              onChange={(e) => setOrganizationId(e.target.value || null)}
+              className="bg-slate-800 border border-slate-600 text-white text-sm rounded-xl px-3 py-2.5"
+            >
+              <option value="">Ver todas las empresas</option>
+              {organizations.map((o) => (
+                <option key={o.id} value={o.id}>{o.name}</option>
+              ))}
+            </select>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <select
-            value={organizationId ?? ''}
-            onChange={(e) => setOrganizationId(e.target.value || null)}
-            className="bg-slate-800 border border-slate-700 text-white text-sm rounded-xl px-3 py-2"
-          >
-            <option value="">Todas</option>
-            {organizations.map((o) => (
-              <option key={o.id} value={o.id}>{o.name}</option>
-            ))}
-          </select>
+      </div>
+
+      {/* Assign existing boards — only when a company is selected */}
+      {organizationId && selectedOrganizationName && !loading && (
+        <section className="rounded-2xl border border-slate-700 bg-slate-800/50 p-4 sm:p-5 space-y-3">
+          <p className="text-white text-sm font-semibold">Asignar tablero existente a {selectedOrganizationName}</p>
+          <p className="text-slate-500 text-xs leading-relaxed">
+            Los tableros creados antes de empresas están en &quot;General&quot;. Selecciónalos aquí para moverlos a
+            esta empresa sin recrearlos.
+          </p>
+          {assignableBoards.length === 0 ? (
+            <p className="text-slate-500 text-sm">
+              {allBoards.length === 0
+                ? 'No hay tableros en la plataforma. Crea uno en General o con Nuevo tablero.'
+                : 'No hay tableros en otras empresas. Selecciona "General" arriba para ver los tableros legacy y comprobar que existen.'}
+            </p>
+          ) : (
+            <>
+              <div className="max-h-56 overflow-y-auto space-y-1 rounded-xl border border-slate-700 bg-slate-900/40 p-2">
+                {assignableBoards.map((board) => (
+                  <label
+                    key={board.id}
+                    className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-slate-800/80 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedBoardIds.has(board.id)}
+                      onChange={() => toggleBoardSelection(board.id)}
+                      className="rounded shrink-0"
+                    />
+                    <span className="text-lg shrink-0">{board.emoji}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white text-sm truncate">{board.title}</p>
+                      <p className="text-slate-500 text-xs">
+                        {board._count?.challenges ?? 0} retos ·{' '}
+                        {board.active ? 'Activo' : 'Inactivo'}
+                        {board.isGeneral ? ' · Tablero general' : ''}
+                      </p>
+                    </div>
+                    <span className="text-slate-400 text-xs shrink-0 hidden sm:inline">
+                      {board.organization?.name ?? 'Otra empresa'}
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <button
+                type="button"
+                disabled={selectedBoardIds.size === 0 || assigning}
+                onClick={handleAssignExisting}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-700 text-white text-sm font-semibold hover:bg-slate-600 disabled:opacity-50 transition-colors"
+              >
+                {assigning ? (
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <LayoutGrid className="w-4 h-4" />
+                )}
+                Asignar seleccionados ({selectedBoardIds.size})
+              </button>
+            </>
+          )}
+        </section>
+      )}
+
+      {/* Toolbar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex gap-2">
           <button
             onClick={fetchBoards}
@@ -1416,11 +1652,12 @@ export default function BoardManager() {
             title="Recargar"
           >
             <RefreshCw className="w-4 h-4" />
+            Recargar
           </button>
           <button
             onClick={() => {
               if (!organizationId) {
-                alert('Selecciona una empresa para crear un tablero.');
+                alert('Selecciona una empresa arriba para asignar un tablero.');
                 return;
               }
               setShowNew(true);
@@ -1430,7 +1667,6 @@ export default function BoardManager() {
             <Plus className="w-4 h-4" />
             Nuevo tablero
           </button>
-        </div>
         </div>
       </div>
 
@@ -1461,15 +1697,23 @@ export default function BoardManager() {
           <div className="w-8 h-8 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
         </div>
       ) : filteredBoards.length === 0 ? (
-        <div className="text-center py-20 text-slate-500">
+        <div className="text-center py-12 text-slate-500 space-y-2">
           <p className="text-4xl mb-3">📋</p>
           <p>
-            {activeFilter === 'active'
+            {organizationId
+              ? `Esta empresa aún no tiene tableros${activeFilter === 'active' ? ' activos' : activeFilter === 'inactive' ? ' inactivos' : ''}.`
+              : activeFilter === 'active'
               ? 'No hay tableros activos.'
               : activeFilter === 'inactive'
               ? 'No hay tableros inactivos.'
               : 'No hay tableros aún. Crea el primero.'}
           </p>
+          {organizationId && assignableBoards.length > 0 && (
+            <p className="text-slate-400 text-sm">
+              Usa la sección &quot;Asignar tablero existente&quot; de arriba para mover tableros de General u otra
+              empresa.
+            </p>
+          )}
         </div>
       ) : (
         <div className="space-y-8">
@@ -1492,6 +1736,8 @@ export default function BoardManager() {
                     onSave={(updates) => handleSave(board.id, updates)}
                     onDelete={() => handleDelete(board.id)}
                     existingFolders={existingFolders}
+                    organizations={organizations}
+                    showOrganization={!organizationId}
                   />
                 ))}
               </div>
@@ -1500,12 +1746,13 @@ export default function BoardManager() {
         </div>
       )}
 
-      {showNew && organizationId && (
+      {showNew && organizationId && selectedOrganizationName && (
         <NewBoardModal
           onClose={() => setShowNew(false)}
           onCreate={(board) => setBoards((prev) => [...prev, board])}
           existingFolders={existingFolders}
           organizationId={organizationId}
+          organizationName={selectedOrganizationName}
         />
       )}
     </div>

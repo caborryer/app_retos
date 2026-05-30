@@ -28,6 +28,7 @@ try {
 const nextConfig = {
   env: {
     NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: process.env.AUTH_GOOGLE_ID ? 'true' : 'false',
+    NEXT_PUBLIC_BASE_PATH: process.env.NEXT_PUBLIC_BASE_PATH ?? '',
   },
   reactStrictMode: true,
   images: {

@@ -166,6 +166,13 @@ function SubmissionCard({
             <span className="text-[#FC4C02] text-sm font-medium truncate">{submission.linkUrl}</span>
             <ExternalLink className="w-4 h-4 text-[#FC4C02] shrink-0 ml-auto" />
           </a>
+        ) : submission.completed ? (
+          <div className="flex items-center gap-2 px-4 py-4 bg-slate-900/60 border-b border-slate-700">
+            <Trash2 className="w-4 h-4 text-slate-500 shrink-0" />
+            <p className="text-xs text-slate-400">
+              Evidencia eliminada automáticamente por política de limpieza.
+            </p>
+          </div>
         ) : null}
 
         {/* Info */}
