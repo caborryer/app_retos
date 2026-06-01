@@ -18,6 +18,8 @@ import { userFacingApiError } from '@/lib/user-facing-api-error';
 import { normalizeEvidenceLink } from '@/lib/normalize-evidence-link';
 import CameraCaptureModal from '@/components/ui/CameraCaptureModal';
 import { preferNativeCameraPicker } from '@/lib/native-camera-input';
+import AppLoadingScreen from '@/components/brand/AppLoadingScreen';
+import { useHydrated } from '@/hooks/useHydrated';
 
 const STRAVA_CATEGORIES: ChallengeCategory[] = [
   ChallengeCategory.RUNNING, ChallengeCategory.CYCLING, ChallengeCategory.GYM,
@@ -95,6 +97,7 @@ function StravaLinkInput({ task, challengeId, onSubmit }: {
 }
 
 export default function ChallengeDetailPage({ params }: { params: { id: string } }) {
+  const hydrated = useHydrated();
   const authReady = useAuthGuard();
   const { challenges, setChallenges, updateChallenge } = useAppStore();
   const [challenge, setChallenge] = useState<Challenge | null>(null);
@@ -136,12 +139,8 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
     return () => clearInterval(interval);
   }, [authReady, params.id]);
 
-  if (!authReady || isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950">
-        <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+  if (!hydrated || !authReady || isLoading) {
+    return <AppLoadingScreen />;
   }
 
   if (!challenge) {

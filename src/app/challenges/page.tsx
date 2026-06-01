@@ -10,6 +10,8 @@ import type { ThemedBoard } from '@/lib/mockData';
 import type { Challenge } from '@/types';
 import { ChallengeStatus } from '@/types';
 import { useAuthGuard } from '@/hooks/useAuthGuard';
+import AppLoadingScreen from '@/components/brand/AppLoadingScreen';
+import { useHydrated } from '@/hooks/useHydrated';
 
 function makeFreshBoard(template: Challenge[]): Challenge[] {
   return template.map((c) => ({
@@ -25,7 +27,8 @@ function makeFreshBoard(template: Challenge[]): Challenge[] {
   }));
 }
 
-export default function HomePage() {
+export default function ChallengesPage() {
+  const hydrated = useHydrated();
   const ready = useAuthGuard();
   const { challenges, resetChallenges, setIsLoading } = useAppStore();
   const [activeBoard, setActiveBoard] = useState<ThemedBoard>(THEMED_BOARDS[0]);
@@ -73,12 +76,8 @@ export default function HomePage() {
     setConfirmBoard(null);
   };
 
-  if (!ready) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950">
-        <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+  if (!hydrated || !ready) {
+    return <AppLoadingScreen />;
   }
 
   return (

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import OrganizationFilter, { organizationQueryParam } from '@/components/admin/OrganizationFilter';
 import { readApiJsonOrThrow } from '@/lib/read-api-json';
+import { SkeletonPanel } from '@/components/admin/AdminSkeleton';
 
 type Period = '7d' | '30d' | '90d';
 
@@ -107,10 +108,6 @@ function KpiCard({ label, value, delta }: { label: string; value: string; delta:
       <div className="text-xs mt-1 text-green-400">{delta}</div>
     </div>
   );
-}
-
-function SkeletonPanel({ className = '' }: { className?: string }) {
-  return <div className={`rounded-xl border border-slate-700/40 bg-slate-800/40 animate-pulse ${className}`} />;
 }
 
 function SkeletonDashboard() {

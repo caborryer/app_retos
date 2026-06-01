@@ -8,6 +8,7 @@ import Card from '../ui/Card';
 import CameraCaptureModal from '@/components/ui/CameraCaptureModal';
 import { preferNativeCameraPicker } from '@/lib/native-camera-input';
 import { userFacingApiError } from '@/lib/user-facing-api-error';
+import BoxChallengeLoader from '@/components/brand/BoxChallengeLoader';
 
 interface PhotoUploadProps {
   taskId: string;
@@ -147,7 +148,7 @@ export default function PhotoUpload({
           >
             {isUploading ? (
               <div className="flex flex-col items-center gap-2">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
+                <BoxChallengeLoader size="md" showGlow={false} />
                 <span className="text-xs text-secondary-600">Subiendo...</span>
               </div>
             ) : (

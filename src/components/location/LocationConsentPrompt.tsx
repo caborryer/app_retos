@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, X } from 'lucide-react';
+import BoxChallengeLoader from '@/components/brand/BoxChallengeLoader';
 
 const STORAGE_KEY = 'Bingo_location_consent_v1';
 
@@ -216,7 +217,7 @@ export default function LocationConsentPrompt() {
               >
                 {loading ? (
                   <>
-                    <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    <BoxChallengeLoader size="xs" compact showGlow={false} />
                     Obteniendo ubicación…
                   </>
                 ) : (

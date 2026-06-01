@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Challenge } from '@/types';
 import { Camera, X, Upload } from 'lucide-react';
 import { useState } from 'react';
+import BoxChallengeLoader from '@/components/brand/BoxChallengeLoader';
 
 interface PhotoUploadModalProps {
     challenge: Challenge;
@@ -67,11 +68,7 @@ export function PhotoUploadModal({ challenge, onClose, onUpload }: PhotoUploadMo
                             className="w-full bg-gradient-to-r from-[#FC0230] to-[#E9191C] hover:opacity-90 disabled:opacity-50 text-white font-semibold flex items-center justify-center gap-2 py-3 px-4 rounded-[12px] transition-all"
                         >
                             {isUploading ? (
-                                <motion.div
-                                    animate={{ rotate: 360 }}
-                                    transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-                                    className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
-                                />
+                                <BoxChallengeLoader size="sm" compact showGlow={false} />
                             ) : (
                                 <>
                                     <Upload size={18} />

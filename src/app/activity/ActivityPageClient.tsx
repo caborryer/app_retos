@@ -1,0 +1,476 @@
+'use client';
+
+import { motion } from 'framer-motion';
+import { Trophy, TrendingUp, Flame, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import Layout from '@/components/layout/Layout';
+import Card from '@/components/ui/Card';
+import { useAppStore } from '@/store/useAppStore';
+import { formatRelativeTime } from '@/lib/utils';
+import { useAuthGuard } from '@/hooks/useAuthGuard';
+import AppLoadingScreen from '@/components/brand/AppLoadingScreen';
+import BoxChallengeLoader from '@/components/brand/BoxChallengeLoader';
+
+type ActivityStatResponse = {
+  stats: {
+    activeChallenges: number;
+    completedChallenges: number;
+    completedBoards: number;
+    streakDays: number;
+  };
+  recentActivity: Array<{
+    id: string;
+    type: 'start' | 'complete' | 'submission';
+    title: string;
+    icon: string;
+    color: string;
+    time: string;
+  }>;
+  boardRanking: null | {
+    boardId: string;
+    boardTitle: string;
+    boardEmoji: string;
+    yourPosition: number;
+    totalCompetitors: number;
+    entries: Array<{
+      userId: string;
+      name: string;
+      completedChallenges: number;
+      earnedPoints: number;
+      isCurrentUser: boolean;
+    }>;
+    trend: {
+      direction: 'up' | 'down' | 'same' | 'new';
+      delta: number;
+    };
+  };
+  globalRanking: null | {
+    boardId: string;
+    boardTitle: string;
+    boardEmoji: string;
+    yourPosition: number;
+    totalCompetitors: number;
+    entries: Array<{
+      userId: string;
+      name: string;
+      completedChallenges: number;
+      earnedPoints: number;
+      isCurrentUser: boolean;
+    }>;
+    trend: {
+      direction: 'up' | 'down' | 'same' | 'new';
+      delta: number;
+    };
+  };
+  boardCompletionOrder: null | {
+    boardId: string;
+    boardTitle: string;
+    boardEmoji: string;
+    entries: Array<{
+      place: number;
+      userId: string;
+      name: string;
+      finishedAt: string;
+      isCurrentUser: boolean;
+    }>;
+  };
+  boardsForCompletionOrder: Array<{ boardId: string; title: string; emoji: string }>;
+  completionBoardId: string | null;
+};
+
+export default function ActivityPageClient() {
+  const ready = useAuthGuard();
+  const { activeChallenges, completedChallenges } = useAppStore();
+  const [loading, setLoading] = useState(true);
+  const [apiData, setApiData] = useState<ActivityStatResponse | null>(null);
+  const [rankingMode, setRankingMode] = useState<'board' | 'global'>('board');
+  const [pickedCompletionBoardId, setPickedCompletionBoardId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!ready) return;
+    let mounted = true;
+
+    setLoading(true);
+    const qs =
+      pickedCompletionBoardId != null && pickedCompletionBoardId !== ''
+        ? `?completionBoardId=${encodeURIComponent(pickedCompletionBoardId)}`
+        : '';
+
+    fetch(`/api/user/activity${qs}`, { credentials: 'include' })
+      .then(async (res) => {
+        if (!res.ok) {
+          throw new Error('No se pudo cargar la actividad.');
+        }
+        return (await res.json()) as ActivityStatResponse;
+      })
+      .then((data) => {
+        if (!mounted) return;
+        setApiData(data);
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setApiData(null);
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [ready, pickedCompletionBoardId]);
+
+  const stats = useMemo(
+    () => ({
+      activeChallenges: apiData?.stats.activeChallenges ?? activeChallenges.length,
+      completedChallenges: apiData?.stats.completedChallenges ?? completedChallenges.length,
+      completedBoards: apiData?.stats.completedBoards ?? 0,
+      streakDays: apiData?.stats.streakDays ?? 0,
+    }),
+    [apiData, activeChallenges.length, completedChallenges.length]
+  );
+
+  const recentActivity = apiData?.recentActivity ?? [];
+  const boardRanking = apiData?.boardRanking ?? null;
+  const globalRanking = apiData?.globalRanking ?? null;
+  const boardCompletionOrder = apiData?.boardCompletionOrder ?? null;
+  const boardsForCompletionOrder = apiData?.boardsForCompletionOrder ?? [];
+  const resolvedCompletionBoardId =
+    pickedCompletionBoardId ?? apiData?.completionBoardId ?? '';
+  const activeRanking =
+    rankingMode === 'global'
+      ? (globalRanking ?? boardRanking)
+      : (boardRanking ?? globalRanking);
+  const trendInfo =
+    activeRanking?.trend.direction === 'up'
+      ? { text: `Subiste ${activeRanking.trend.delta} puesto${activeRanking.trend.delta !== 1 ? 's' : ''} vs hace 7 días`, className: 'text-green-600', icon: ArrowUpRight }
+      : activeRanking?.trend.direction === 'down'
+      ? { text: `Bajaste ${activeRanking.trend.delta} puesto${activeRanking.trend.delta !== 1 ? 's' : ''} vs hace 7 días`, className: 'text-red-600', icon: ArrowDownRight }
+      : activeRanking?.trend.direction === 'same'
+      ? { text: 'Sin cambios vs hace 7 días', className: 'text-slate-400', icon: Minus }
+      : { text: 'Nueva entrada en ranking', className: 'text-indigo-600', icon: TrendingUp };
+
+  if (!ready) {
+    return <AppLoadingScreen />;
+  }
+
+  return (
+    <Layout title="Actividad">
+      <div className="space-y-6">
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 gap-4">
+          <Card variant="elevated" className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-primary-100">
+                <TrendingUp className="w-6 h-6 text-primary-500" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-white">
+                  {stats.activeChallenges}
+                </div>
+                <div className="text-xs text-slate-400">Retos Activos</div>
+              </div>
+            </div>
+          </Card>
+
+          <Card variant="elevated" className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-green-100">
+                <Trophy className="w-6 h-6 text-green-500" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-white">
+                  {stats.completedChallenges}
+                </div>
+                <div className="text-xs text-slate-400">Completados</div>
+              </div>
+            </div>
+          </Card>
+
+          <Card variant="elevated" className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-100">
+                <Trophy className="w-6 h-6 text-indigo-500" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-white">
+                  {stats.completedBoards}
+                </div>
+                <div className="text-xs text-slate-400">Tableros completados</div>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Streak Card */}
+        <Card variant="gradient" className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-bold text-white mb-1">
+                Racha Actual
+              </h3>
+              <p className="text-white/80 text-sm">
+                ¡Sigue así! Cada día cuenta
+              </p>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <div className="flex items-center gap-2 text-white">
+                <Flame className="w-8 h-8" />
+                <span className="text-4xl font-bold">{stats.streakDays}</span>
+              </div>
+              <span className="text-xs text-white/80">días</span>
+            </div>
+          </div>
+        </Card>
+
+        {/* Recent Badges */}
+        {/* {user && user.badges.length > 0 && (
+          <div className="space-y-4">
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <Award className="w-5 h-5 text-primary-500" />
+              Insignias Recientes
+            </h2>
+
+            <div className="grid grid-cols-2 gap-3">
+              {user.badges.map((badge, idx) => (
+                <motion.div
+                  key={badge.id}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: idx * 0.1 }}
+                >
+                  <Card variant="elevated" hoverable className="p-4">
+                    <div className="text-center">
+                      <div className="text-4xl mb-2">{badge.icon}</div>
+                      <h3 className="font-semibold text-white text-sm mb-1">
+                        {badge.name}
+                      </h3>
+                      <p className="text-xs text-slate-400 line-clamp-2 mb-2">
+                        {badge.description}
+                      </p>
+                      <Badge
+                        variant={
+                          badge.rarity === 'legendary'
+                            ? 'warning'
+                            : badge.rarity === 'epic'
+                            ? 'primary'
+                            : badge.rarity === 'rare'
+                            ? 'info'
+                            : 'secondary'
+                        }
+                        size="sm"
+                      >
+                        {badge.rarity}
+                      </Badge>
+                    </div>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        )} */}
+
+        {/* Recent Activity Timeline */}
+        {activeRanking && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-lg font-bold text-white">
+                Tu posición en el ranking
+              </h2>
+              <div className="inline-flex rounded-lg border border-slate-700 bg-slate-800 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setRankingMode('board')}
+                  className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
+                    rankingMode === 'board'
+                      ? 'bg-primary-500/100 text-white'
+                      : 'text-slate-400 hover:bg-slate-800'
+                  }`}
+                >
+                  Tablero
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRankingMode('global')}
+                  className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
+                    rankingMode === 'global'
+                      ? 'bg-primary-500/100 text-white'
+                      : 'text-slate-400 hover:bg-slate-800'
+                  }`}
+                >
+                  Global
+                </button>
+              </div>
+            </div>
+            <Card variant="elevated" className="p-4">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div className="min-w-0">
+                  <p className="text-xs text-slate-500">Ranking actual</p>
+                  <p className="font-semibold text-white truncate">
+                    {activeRanking.boardEmoji} {activeRanking.boardTitle}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-slate-500">Tu posición</p>
+                  <p className="text-xl font-bold text-primary-600">
+                    #{activeRanking.yourPosition}
+                  </p>
+                  <div className={`mt-1 inline-flex items-center gap-1 text-[11px] font-medium ${trendInfo.className}`}>
+                    <trendInfo.icon className="w-3.5 h-3.5" />
+                    <span>{trendInfo.text}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {activeRanking.entries.map((entry, idx) => (
+                  <div
+                    key={entry.userId}
+                    className={`flex items-center justify-between rounded-xl px-3 py-2 ${
+                      entry.isCurrentUser ? 'bg-primary-500/10 border border-primary-500/30' : 'bg-slate-800/50'
+                    }`}
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-white truncate">
+                        {idx + 1}. {entry.name}
+                        {entry.isCurrentUser ? ' (Tú)' : ''}
+                      </p>
+                      <p className="text-[11px] text-slate-400">
+                        {entry.completedChallenges} retos completados
+                      </p>
+                    </div>
+                    <p className="text-sm font-semibold text-slate-200">
+                      {entry.earnedPoints} pts
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[11px] text-slate-500 mt-3">
+                Compites con {activeRanking.totalCompetitors} jugador{activeRanking.totalCompetitors !== 1 ? 'es' : ''} en este ranking.
+              </p>
+            </Card>
+          </div>
+        )}
+
+        {boardsForCompletionOrder.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-lg font-bold text-white">
+                Orden de finalización del tablero
+              </h2>
+              <label className="text-xs text-slate-400 shrink-0">
+                <span className="sr-only">Elegir tablero</span>
+                <select
+                  aria-label="Tablero para ver orden de finalización"
+                  className="max-w-[min(100vw-2rem,220px)] w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white"
+                  value={resolvedCompletionBoardId}
+                  onChange={(e) => setPickedCompletionBoardId(e.target.value)}
+                  disabled={loading}
+                >
+                  {boardsForCompletionOrder.map((b) => (
+                    <option key={b.boardId} value={b.boardId}>
+                      {b.emoji} {b.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            {boardCompletionOrder && (
+              <Card variant="elevated" className="p-4">
+                <p className="text-xs text-slate-500 mb-2">Quién terminó todos los retos primero</p>
+                <p className="font-semibold text-white truncate mb-3">
+                  {boardCompletionOrder.boardEmoji} {boardCompletionOrder.boardTitle}
+                </p>
+                {boardCompletionOrder.entries.length === 0 ? (
+                  <p className="text-sm text-slate-400 py-4 text-center">
+                    Nadie ha completado todos los retos de este tablero aún.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {boardCompletionOrder.entries.map((entry) => (
+                      <div
+                        key={entry.userId}
+                        className={`flex items-center justify-between rounded-xl px-3 py-2 ${
+                          entry.isCurrentUser ? 'bg-primary-500/10 border border-primary-500/30' : 'bg-slate-800/50'
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-white truncate">
+                            {entry.place}° {entry.name}
+                            {entry.isCurrentUser ? ' (Tú)' : ''}
+                          </p>
+                          <p className="text-[11px] text-slate-400">
+                            {formatRelativeTime(new Date(entry.finishedAt))}
+                          </p>
+                        </div>
+                        <span className="text-xs font-bold text-primary-600 shrink-0 ml-2">
+                          {entry.place === 1 ? '🥇' : entry.place === 2 ? '🥈' : entry.place === 3 ? '🥉' : ''}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
+            )}
+          </div>
+        )}
+
+        <div className="space-y-4">
+          <h2 className="text-lg font-bold text-white">
+            Actividad Reciente
+          </h2>
+
+          <div className="space-y-3">
+            {recentActivity.map((activity, idx) => (
+              <motion.div
+                key={activity.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.1 }}
+              >
+                <Card variant="elevated" className="p-4">
+                  <div className="flex items-start gap-4">
+                    <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${activity.color}`}>
+                      <span className="text-xl">{activity.icon}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-white">
+                        {activity.title}
+                      </h3>
+                      <p className="text-sm text-slate-400 mt-1">
+                        {formatRelativeTime(new Date(activity.time))}
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+
+        {loading && (
+          <Card variant="bordered" className="p-4">
+            <div className="flex items-center justify-center gap-2 text-sm text-slate-400">
+              <BoxChallengeLoader size="xs" compact showGlow={false} />
+              Cargando actividad…
+            </div>
+          </Card>
+        )}
+
+        {/* Empty State for no activity */}
+        {!loading && recentActivity.length === 0 && stats.activeChallenges === 0 && stats.completedChallenges === 0 && (
+          <Card variant="bordered" className="p-12 text-center">
+            <div className="text-6xl mb-4">📊</div>
+            <h3 className="text-lg font-bold text-white mb-2">
+              Sin actividad reciente
+            </h3>
+            <p className="text-sm text-slate-400">
+              Comienza un reto para ver tu progreso aquí
+            </p>
+          </Card>
+        )}
+      </div>
+    </Layout>
+  );
+}
+

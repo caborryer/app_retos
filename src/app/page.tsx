@@ -3,15 +3,16 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import PublicBrandNav from '@/components/brand/PublicBrandNav';
 import styles from './page.module.css';
 
 const BOARDS = [
-  { id: 'running',  emoji: '🏃', label: 'Running',  color: '#FC0230' },
-  { id: 'gym',      emoji: '💪', label: 'Gym',       color: '#FC0230' },
-  { id: 'swimming', emoji: '🏊', label: 'Natación',  color: '#06B6D4' },
-  { id: 'yoga',     emoji: '🧘', label: 'Yoga',      color: '#10B981' },
-  { id: 'cycling',  emoji: '🚴', label: 'Ciclismo',  color: '#3B82F6' },
-  { id: 'pets',     emoji: '🐾', label: 'Mascotas',  color: '#F59E0B' },
+  { id: 'running', emoji: '🏃', label: 'Running', color: '#FC0230' },
+  { id: 'gym', emoji: '💪', label: 'Gym', color: '#FC0230' },
+  { id: 'swimming', emoji: '🏊', label: 'Natación', color: '#06B6D4' },
+  { id: 'yoga', emoji: '🧘', label: 'Yoga', color: '#10B981' },
+  { id: 'cycling', emoji: '🚴', label: 'Ciclismo', color: '#3B82F6' },
+  { id: 'pets', emoji: '🐾', label: 'Mascotas', color: '#F59E0B' },
 ];
 
 const CELLS = [
@@ -26,82 +27,93 @@ const CELLS = [
   { emoji: '🏔️', label: 'Trail' },
 ];
 
-// SVG logos en escala de grises
+const SPONSOR_GRAY = '#64748b';
+const SPONSOR_GRAY_LIGHT = '#94a3b8';
+
 function LogoBingo() {
   return (
-    <svg width="72" height="28" viewBox="0 0 72 28" fill="none">
-      <rect x="0" y="4" width="20" height="20" rx="4" fill="#C8C6BF"/>
-      <rect x="2" y="6" width="7" height="7" rx="1.5" fill="#FAFAF9"/>
-      <rect x="11" y="6" width="7" height="7" rx="1.5" fill="#FAFAF9"/>
-      <rect x="2" y="15" width="7" height="7" rx="1.5" fill="#FAFAF9"/>
-      <rect x="11" y="15" width="3" height="7" rx="1.5" fill="#FAFAF9"/>
-      <text x="26" y="19" fontFamily="'DM Sans',sans-serif" fontSize="13" fontWeight="700" fill="#A8A69F" letterSpacing="-0.5">BINGO</text>
+    <svg width="72" height="28" viewBox="0 0 72 28" fill="none" aria-hidden>
+      <rect x="0" y="4" width="20" height="20" rx="4" fill={SPONSOR_GRAY} />
+      <rect x="2" y="6" width="7" height="7" rx="1.5" fill="#1e293b" />
+      <rect x="11" y="6" width="7" height="7" rx="1.5" fill="#1e293b" />
+      <rect x="2" y="15" width="7" height="7" rx="1.5" fill="#1e293b" />
+      <rect x="11" y="15" width="3" height="7" rx="1.5" fill="#1e293b" />
+      <text x="26" y="19" fontFamily="'DM Sans',sans-serif" fontSize="13" fontWeight="700" fill={SPONSOR_GRAY_LIGHT} letterSpacing="-0.5">
+        BINGO
+      </text>
     </svg>
   );
 }
 
 function LogoStrava() {
   return (
-    <svg width="80" height="28" viewBox="0 0 80 28" fill="none">
-      <path d="M14 4L20 16H17L14 10L11 16H8L14 4Z" fill="#C8C6BF"/>
-      <path d="M20 16L23 22H26L20 10L17 16H20Z" fill="#B0AEA7"/>
-      <text x="30" y="19" fontFamily="'DM Sans',sans-serif" fontSize="13" fontWeight="700" fill="#A8A69F" letterSpacing="-0.3">STRAVA</text>
+    <svg width="80" height="28" viewBox="0 0 80 28" fill="none" aria-hidden>
+      <path d="M14 4L20 16H17L14 10L11 16H8L14 4Z" fill={SPONSOR_GRAY} />
+      <path d="M20 16L23 22H26L20 10L17 16H20Z" fill={SPONSOR_GRAY_LIGHT} />
+      <text x="30" y="19" fontFamily="'DM Sans',sans-serif" fontSize="13" fontWeight="700" fill={SPONSOR_GRAY_LIGHT} letterSpacing="-0.3">
+        STRAVA
+      </text>
     </svg>
   );
 }
 
 function LogoSportline() {
   return (
-    <svg width="100" height="28" viewBox="0 0 100 28" fill="none">
-      <circle cx="14" cy="14" r="10" stroke="#C8C6BF" strokeWidth="2" fill="none"/>
-      <path d="M9 14 Q14 8 19 14 Q14 20 9 14Z" fill="#C8C6BF"/>
-      <text x="30" y="19" fontFamily="'DM Sans',sans-serif" fontSize="13" fontWeight="600" fill="#A8A69F" letterSpacing="-0.3">SPORTLINE</text>
+    <svg width="100" height="28" viewBox="0 0 100 28" fill="none" aria-hidden>
+      <circle cx="14" cy="14" r="10" stroke={SPONSOR_GRAY} strokeWidth="2" fill="none" />
+      <path d="M9 14 Q14 8 19 14 Q14 20 9 14Z" fill={SPONSOR_GRAY} />
+      <text x="30" y="19" fontFamily="'DM Sans',sans-serif" fontSize="13" fontWeight="600" fill={SPONSOR_GRAY_LIGHT} letterSpacing="-0.3">
+        SPORTLINE
+      </text>
     </svg>
   );
 }
 
 function LogoNike() {
   return (
-    <svg width="56" height="28" viewBox="0 0 56 28" fill="none">
-      <path d="M4 20C4 20 28 4 44 8C52 10 44 18 36 16C28 14 20 18 20 18L4 20Z" fill="#C8C6BF"/>
+    <svg width="56" height="28" viewBox="0 0 56 28" fill="none" aria-hidden>
+      <path d="M4 20C4 20 28 4 44 8C52 10 44 18 36 16C28 14 20 18 20 18L4 20Z" fill={SPONSOR_GRAY} />
     </svg>
   );
 }
 
 function LogoGarmin() {
   return (
-    <svg width="84" height="28" viewBox="0 0 84 28" fill="none">
-      <rect x="2" y="8" width="18" height="12" rx="6" stroke="#C8C6BF" strokeWidth="2" fill="none"/>
-      <circle cx="11" cy="14" r="3" fill="#C8C6BF"/>
-      <text x="26" y="19" fontFamily="'DM Sans',sans-serif" fontSize="13" fontWeight="600" fill="#A8A69F" letterSpacing="-0.3">GARMIN</text>
+    <svg width="84" height="28" viewBox="0 0 84 28" fill="none" aria-hidden>
+      <rect x="2" y="8" width="18" height="12" rx="6" stroke={SPONSOR_GRAY} strokeWidth="2" fill="none" />
+      <circle cx="11" cy="14" r="3" fill={SPONSOR_GRAY} />
+      <text x="26" y="19" fontFamily="'DM Sans',sans-serif" fontSize="13" fontWeight="600" fill={SPONSOR_GRAY_LIGHT} letterSpacing="-0.3">
+        GARMIN
+      </text>
     </svg>
   );
 }
 
 function LogoDecathlon() {
   return (
-    <svg width="106" height="28" viewBox="0 0 106 28" fill="none">
-      <rect x="2" y="9" width="18" height="10" rx="2" fill="#C8C6BF"/>
-      <rect x="6" y="12" width="10" height="4" rx="1" fill="#FAFAF9"/>
-      <text x="26" y="19" fontFamily="'DM Sans',sans-serif" fontSize="13" fontWeight="600" fill="#A8A69F" letterSpacing="-0.3">DECATHLON</text>
+    <svg width="106" height="28" viewBox="0 0 106 28" fill="none" aria-hidden>
+      <rect x="2" y="9" width="18" height="10" rx="2" fill={SPONSOR_GRAY} />
+      <rect x="6" y="12" width="10" height="4" rx="1" fill="#1e293b" />
+      <text x="26" y="19" fontFamily="'DM Sans',sans-serif" fontSize="13" fontWeight="600" fill={SPONSOR_GRAY_LIGHT} letterSpacing="-0.3">
+        DECATHLON
+      </text>
     </svg>
   );
 }
 
 const SPONSORS = [
-  { id: 'bingo',      Logo: LogoBingo },
-  { id: 'strava',     Logo: LogoStrava },
-  { id: 'sportline',  Logo: LogoSportline },
-  { id: 'nike',       Logo: LogoNike },
-  { id: 'garmin',     Logo: LogoGarmin },
-  { id: 'decathlon',  Logo: LogoDecathlon },
+  { id: 'bingo', Logo: LogoBingo },
+  { id: 'strava', Logo: LogoStrava },
+  { id: 'sportline', Logo: LogoSportline },
+  { id: 'nike', Logo: LogoNike },
+  { id: 'garmin', Logo: LogoGarmin },
+  { id: 'decathlon', Logo: LogoDecathlon },
 ];
 
 function CheckIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-      stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="20 6 9 17 4 12"/>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <polyline points="20 6 9 17 4 12" />
     </svg>
   );
 }
@@ -113,7 +125,6 @@ export default function LandingPage() {
   const [completed, setCompleted] = useState<Set<number>>(new Set([4]));
   const [showBingo, setShowBingo] = useState(false);
 
-  // Already logged in → skip landing
   useEffect(() => {
     if (status === 'authenticated' && session?.user) {
       router.replace(session.user.role === 'ADMIN' ? '/admin' : '/home');
@@ -130,14 +141,15 @@ export default function LandingPage() {
 
   const toggleCell = (i: number) => {
     if (CELLS[i].special) return;
-    setCompleted(prev => {
+    setCompleted((prev) => {
       const next = new Set(prev);
-      next.has(i) ? next.delete(i) : next.add(i);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
       return next;
     });
   };
 
-  const handleBoardChange = (board: typeof BOARDS[0]) => {
+  const handleBoardChange = (board: (typeof BOARDS)[0]) => {
     setActiveBoard(board);
     setCompleted(new Set([4]));
     setShowBingo(false);
@@ -148,66 +160,26 @@ export default function LandingPage() {
   const pct = Math.round((done / total) * 100);
   const c = activeBoard.color;
 
-  // Duplicar sponsors para loop continuo
   const marqueeItems = [...SPONSORS, ...SPONSORS, ...SPONSORS];
 
   return (
-    <div style={{ minHeight: '100vh', background: '#FAFAF9', fontFamily: "'DM Sans','Helvetica Neue',sans-serif" }}>
-
-      {/* ── Nav ─────────────────────────────────────────────────────── */}
-      <nav style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 clamp(1.25rem,5vw,3rem)', height: 60,
-        borderBottom: '1px solid #EEECEA', background: '#FAFAF9',
-        position: 'sticky', top: 0, zIndex: 10,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{
-            width: 28, height: 28, borderRadius: 8, background: c,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            transition: 'background .3s',
-          }}>
-            <span style={{ fontSize: 14 }}>🏆</span>
-          </div>
-          <span style={{ fontWeight: 700, fontSize: 15, color: '#1C1C1A', letterSpacing: '-.02em' }}>
-            Bingo
-          </span>
-        </div>
+    <div className="min-h-screen bg-slate-950 font-sans">
+      <PublicBrandNav>
         <button
+          type="button"
           onClick={() => router.push('/login')}
-          style={{
-            background: 'transparent', border: '1px solid #E5E3DC',
-            borderRadius: 8, padding: '7px 16px', fontSize: 13,
-            fontWeight: 500, color: '#444441', cursor: 'pointer',
-            transition: 'border-color .2s, color .2s',
-          }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = c; e.currentTarget.style.color = c; }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = '#E5E3DC'; e.currentTarget.style.color = '#444441'; }}
+          className="rounded-lg border border-slate-700 px-4 py-1.5 text-[13px] font-medium text-slate-300 transition-colors hover:border-primary-500 hover:text-primary-400"
         >
           Iniciar sesión
         </button>
-      </nav>
+      </PublicBrandNav>
 
-      {/* ── Banda de patrocinadores ──────────────────────────────────── */}
-      <div style={{
-        borderBottom: '1px solid #EEECEA',
-        padding: '14px 0',
-        overflow: 'hidden',
-        background: '#F7F6F2',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
-          <div
-            style={{
-              fontSize: 10, fontWeight: 600, color: '#B8B6AF',
-              letterSpacing: '.08em', textTransform: 'uppercase',
-              padding: '0 20px 0 clamp(1.25rem,5vw,3rem)',
-              flexShrink: 0, whiteSpace: 'nowrap',
-              borderRight: '1px solid #E5E3DC', marginRight: 32,
-            }}
-          >
+      <div className="border-b border-slate-800 bg-slate-900/80 py-3.5 overflow-hidden">
+        <div className="flex items-center overflow-hidden">
+          <div className="shrink-0 whitespace-nowrap border-r border-slate-700 mr-8 pl-[clamp(1.25rem,5vw,3rem)] pr-5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
             Sponsors
           </div>
-          <div style={{ overflow: 'hidden', flex: 1 }}>
+          <div className="flex-1 overflow-hidden">
             <div className={styles.marqueeTrack}>
               {marqueeItems.map((s, i) => (
                 <div key={`${s.id}-${i}`} className={styles.sponsorItem}>
@@ -219,75 +191,65 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* ── Hero ────────────────────────────────────────────────────── */}
-      <main style={{
-        maxWidth: 960, margin: '0 auto',
-        padding: 'clamp(2rem,6vw,4rem) clamp(1.25rem,5vw,3rem)',
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-        gap: 'clamp(2rem,5vw,4rem)',
-        alignItems: 'center',
-      }}>
-
-        {/* ── Columna izquierda ──────────────────────────────────────── */}
-        <div className={styles.fadeUp} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            background: `${c}12`, border: `1px solid ${c}28`,
-            borderRadius: 20, padding: '4px 12px', width: 'fit-content',
-            transition: 'background .3s, border-color .3s',
-          }}>
-            <div style={{ width: 6, height: 6, borderRadius: '50%', background: c, transition: 'background .3s' }}/>
-            <span style={{ fontSize: 12, fontWeight: 500, color: c, transition: 'color .3s' }}>
-              Bingo deportivo
-            </span>
+      <main className="mx-auto grid max-w-[960px] grid-cols-1 items-center gap-[clamp(2rem,5vw,4rem)] px-[clamp(1.25rem,5vw,3rem)] py-[clamp(2rem,6vw,4rem)] sm:grid-cols-[minmax(280px,1fr)_minmax(280px,1fr)]">
+        <div className={`${styles.fadeUp} flex flex-col gap-6`}>
+          <div
+            className="inline-flex w-fit items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors"
+            style={{
+              background: `${c}12`,
+              borderColor: `${c}28`,
+              color: c,
+            }}
+          >
+            <div className="h-1.5 w-1.5 rounded-full transition-colors" style={{ background: c }} />
+            Bingo deportivo
           </div>
 
           <div>
-            <h1 style={{
-              fontSize: 'clamp(26px,4vw,40px)', fontWeight: 700,
-              lineHeight: 1.2, letterSpacing: '-.03em',
-              color: '#1C1C1A', margin: '0 0 12px',
-            }}>
-              Completa retos.<br/>
-              <span style={{ color: c, transition: 'color .3s' }}>Gana el bingo.</span>
+            <h1 className="mb-3 text-[clamp(26px,4vw,40px)] font-bold leading-tight tracking-tight text-white">
+              Completa retos.
+              <br />
+              <span className="transition-colors" style={{ color: c }}>
+                Gana el bingo.
+              </span>
             </h1>
-            <p style={{ fontSize: 15, color: '#6B6B67', lineHeight: 1.65, margin: 0 }}>
-              Elige tu tablero, supera cada desafío deportivo y sé el primero
-              en completar la cuadrícula. Valida con foto o Strava.
+            <p className="m-0 text-[15px] leading-relaxed text-slate-400">
+              Elige tu tablero, supera cada desafío deportivo y sé el primero en completar la cuadrícula. Valida con foto o
+              Strava.
             </p>
           </div>
 
-          {/* Stats */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-            {[{ v: '2,450', l: 'Puntos' }, { v: '12', l: 'Nivel' }, { v: '15', l: 'Retos' }].map(s => (
-              <div key={s.l} style={{
-                background: '#F4F3EE', borderRadius: 10, padding: '12px 10px', textAlign: 'center',
-              }}>
-                <div style={{ fontSize: 18, fontWeight: 700, color: '#1C1C1A', letterSpacing: '-.02em' }}>{s.v}</div>
-                <div style={{ fontSize: 11, color: '#9B9B95', marginTop: 2 }}>{s.l}</div>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { v: '2,450', l: 'Puntos' },
+              { v: '12', l: 'Nivel' },
+              { v: '15', l: 'Retos' },
+            ].map((s) => (
+              <div key={s.l} className="rounded-[10px] border border-slate-700 bg-slate-800 px-2.5 py-3 text-center">
+                <div className="text-lg font-bold tracking-tight text-white">{s.v}</div>
+                <div className="mt-0.5 text-[11px] text-slate-500">{s.l}</div>
               </div>
             ))}
           </div>
 
-          {/* Selector de tableros */}
           <div>
-            <p style={{ fontSize: 11, color: '#9B9B95', margin: '0 0 8px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em' }}>
-              Tableros
-            </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {BOARDS.map(b => (
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Tableros</p>
+            <div className="flex flex-wrap gap-1.5">
+              {BOARDS.map((b) => (
                 <button
                   key={b.id}
+                  type="button"
                   className={styles.boardBtn}
                   onClick={() => handleBoardChange(b)}
                   style={{
-                    fontSize: 11, padding: '5px 11px', borderRadius: 20,
-                    fontWeight: 500, transition: 'all .2s',
+                    fontSize: 11,
+                    padding: '5px 11px',
+                    borderRadius: 20,
+                    fontWeight: 500,
+                    transition: 'all .2s',
                     background: activeBoard.id === b.id ? b.color : 'transparent',
-                    color: activeBoard.id === b.id ? '#fff' : '#6B6B67',
-                    border: activeBoard.id === b.id ? `1px solid ${b.color}` : '1px solid #E5E3DC',
+                    color: activeBoard.id === b.id ? '#fff' : '#94a3b8',
+                    border: activeBoard.id === b.id ? `1px solid ${b.color}` : '1px solid #334155',
                   }}
                 >
                   {b.emoji} {b.label}
@@ -296,32 +258,21 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* CTA */}
           <button
+            type="button"
             onClick={() => router.push('/login')}
-            style={{
-              background: c, color: '#fff', border: 'none',
-              borderRadius: 12, padding: '14px 24px',
-              fontSize: 14, fontWeight: 600, cursor: 'pointer',
-              letterSpacing: '-.01em', width: '100%',
-              transition: 'background .3s, transform .15s',
-            }}
-            onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-2px)')}
-            onMouseLeave={e => (e.currentTarget.style.transform = 'translateY(0)')}
+            className="w-full cursor-pointer rounded-xl border-none px-6 py-3.5 text-sm font-semibold tracking-tight text-white transition-all hover:-translate-y-0.5"
+            style={{ background: c }}
           >
             Comenzar — es gratis →
           </button>
         </div>
 
-        {/* ── Columna derecha: tablero ───────────────────────────────── */}
-        <div className={styles.fadeUpDelayed} style={{
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14,
-        }}>
-          <div style={{
-            background: c, borderRadius: 16, padding: 7,
-            display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6,
-            width: '100%', maxWidth: 280, transition: 'background .3s',
-          }}>
+        <div className={`${styles.fadeUpDelayed} flex flex-col items-center gap-3.5`}>
+          <div
+            className="grid w-full max-w-[280px] grid-cols-3 gap-1.5 rounded-2xl p-1.5 transition-colors"
+            style={{ background: c }}
+          >
             {CELLS.map((cell, i) => {
               const isDone = completed.has(i);
               return (
@@ -331,9 +282,13 @@ export default function LandingPage() {
                   onClick={() => toggleCell(i)}
                   style={{
                     background: isDone ? 'rgba(255,255,255,0.25)' : 'rgba(243,246,251,0.18)',
-                    borderRadius: 10, aspectRatio: '1',
-                    display: 'flex', flexDirection: 'column',
-                    alignItems: 'center', justifyContent: 'center', gap: 3,
+                    borderRadius: 10,
+                    aspectRatio: '1',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 3,
                     cursor: cell.special ? 'default' : 'pointer',
                     outline: isDone && !cell.special ? '2px solid rgba(255,255,255,0.4)' : 'none',
                     outlineOffset: -2,
@@ -343,10 +298,8 @@ export default function LandingPage() {
                     <CheckIcon />
                   ) : (
                     <>
-                      <span style={{ fontSize: 18, lineHeight: 1 }}>{cell.emoji}</span>
-                      <span style={{ fontSize: 8, color: 'rgba(255,255,255,0.75)', textAlign: 'center', lineHeight: 1.2 }}>
-                        {cell.label}
-                      </span>
+                      <span className="text-lg leading-none">{cell.emoji}</span>
+                      <span className="text-center text-[8px] leading-tight text-white/75">{cell.label}</span>
                     </>
                   )}
                 </div>
@@ -354,45 +307,38 @@ export default function LandingPage() {
             })}
           </div>
 
-          {/* Barra progreso */}
-          <div style={{ width: '100%', maxWidth: 280, background: '#F4F3EE', borderRadius: 10, padding: 12 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <span style={{ fontSize: 12, color: '#6B6B67' }}>{done} / {total} completados</span>
-              <span style={{ fontSize: 12, fontWeight: 600, color: c, transition: 'color .3s' }}>{pct}%</span>
+          <div className="w-full max-w-[280px] rounded-[10px] border border-slate-700 bg-slate-800 p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-xs text-slate-400">
+                {done} / {total} completados
+              </span>
+              <span className="text-xs font-semibold transition-colors" style={{ color: c }}>
+                {pct}%
+              </span>
             </div>
-            <div style={{ height: 6, background: '#E5E3DC', borderRadius: 99, overflow: 'hidden' }}>
-              <div style={{
-                height: '100%', background: c, borderRadius: 99,
-                width: `${pct}%`, transition: 'width .4s ease, background .3s',
-              }}/>
+            <div className="h-1.5 overflow-hidden rounded-full bg-slate-700">
+              <div
+                className="h-full rounded-full transition-all duration-300 ease-out"
+                style={{ background: c, width: `${pct}%` }}
+              />
             </div>
           </div>
 
-          {/* Badge BINGO */}
           {showBingo && (
-            <div style={{
-              background: c, color: '#fff', borderRadius: 12,
-              padding: '10px 20px', fontSize: 13, fontWeight: 600,
-              textAlign: 'center',
-              transition: 'background .3s',
-            }} className={styles.floatBadge}>
+            <div
+              className={`rounded-xl px-5 py-2.5 text-center text-[13px] font-semibold text-white transition-colors ${styles.floatBadge}`}
+              style={{ background: c }}
+            >
               ¡BINGO! +2,450 pts 🏆
             </div>
           )}
 
-          <p style={{ fontSize: 11, color: '#9B9B95', textAlign: 'center', margin: 0 }}>
-            Toca las celdas para simular
-          </p>
+          <p className="m-0 text-center text-[11px] text-slate-500">Toca las celdas para simular</p>
         </div>
       </main>
 
-      {/* ── Footer ──────────────────────────────────────────────────── */}
-      <footer style={{
-        textAlign: 'center', padding: '2rem',
-        borderTop: '1px solid #EEECEA',
-        fontSize: 12, color: '#9B9B95',
-      }}>
-        Bingo · Todos los retos, un tablero.
+      <footer className="border-t border-slate-800 py-8 text-center text-xs text-slate-500">
+        BOX Challenge · Todos los retos, un tablero.
       </footer>
     </div>
   );

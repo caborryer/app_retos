@@ -8,6 +8,8 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { useSession, signOut } from 'next-auth/react';
 import { readApiJsonOrThrow } from '@/lib/read-api-json';
+import AppLoadingScreen from '@/components/brand/AppLoadingScreen';
+import { useHydrated } from '@/hooks/useHydrated';
 
 type ProfileResponse = {
   user: {
@@ -25,6 +27,7 @@ type ProfileResponse = {
 };
 
 export default function ProfileSettingsPage() {
+  const hydrated = useHydrated();
   const router = useRouter();
   const { data: session, status } = useSession();
   const [data, setData] = useState<ProfileResponse | null>(null);
@@ -227,14 +230,8 @@ export default function ProfileSettingsPage() {
     }
   }
 
-  if (status === 'loading' || loading) {
-    return (
-      <Layout title="Configuración" showBack>
-        <div className="min-h-[40vh] flex items-center justify-center">
-          <div className="w-8 h-8 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
-        </div>
-      </Layout>
-    );
+  if (!hydrated || status === 'loading' || loading) {
+    return <AppLoadingScreen />;
   }
 
   if (!session?.user || !data) {

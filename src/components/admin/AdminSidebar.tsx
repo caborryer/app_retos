@@ -11,11 +11,10 @@ import {
   Building2,
   Users,
   LogOut,
-  Zap,
   ChevronRight,
   X,
 } from 'lucide-react';
-import { useState } from 'react';
+import BoxChallengeLogo from '@/components/brand/BoxChallengeLogo';
 
 const NAV_ITEMS = [
   {
@@ -79,23 +78,27 @@ export default function AdminSidebar({ mobileOpen = false, onMobileClose }: Admi
   const sidebarContent = (
     <aside className="flex flex-col h-full bg-slate-900 border-r border-slate-800 w-64">
       {/* Logo */}
-      <div className="flex items-center gap-3 px-5 py-5 border-b border-slate-800">
-        <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-primary-500 shadow-lg shadow-primary-500/30 shrink-0">
-          <Zap className="w-5 h-5 text-white" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-white font-bold text-sm leading-tight truncate">Sport Challenge</p>
-          <p className="text-primary-400 text-xs">Panel Admin</p>
+      <Link
+        href="/admin"
+        onClick={onMobileClose}
+        className="flex items-center gap-2.5 px-5 py-5 border-b border-slate-800 min-w-0"
+        aria-label="BOX Challenge — panel admin"
+      >
+        <BoxChallengeLogo className="h-9 w-9 shrink-0" />
+        <div className="min-w-0 flex-1">
+          <p className="text-white font-bold text-sm leading-tight truncate">BOX Challenge</p>
+          <p className="text-slate-400 text-xs truncate">Panel administrativo</p>
         </div>
         {onMobileClose && (
           <button
+            type="button"
             onClick={onMobileClose}
-            className="ml-auto text-slate-400 hover:text-white transition-colors lg:hidden"
+            className="shrink-0 text-slate-400 hover:text-white transition-colors lg:hidden"
           >
             <X className="w-5 h-5" />
           </button>
         )}
-      </div>
+      </Link>
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Copy, Link2, Plus, Ban, LayoutGrid, ChevronRight } from 'lucide-react';
 import { resolveInviteUrlForDisplay } from '@/lib/app-url';
+import { AdminOrgDetailSkeleton } from '@/components/admin/AdminSkeleton';
 
 type Invite = {
   id: string;
@@ -175,11 +176,7 @@ export default function AdminOrganizationDetailPage({
   }
 
   if (loading) {
-    return (
-      <div className="flex justify-center py-20">
-        <div className="w-8 h-8 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
-      </div>
-    );
+    return <AdminOrgDetailSkeleton />;
   }
 
   if (!org) {

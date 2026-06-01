@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { Image, LayoutGrid, CheckCircle, Clock, XCircle, Trophy, TrendingUp, Users } from 'lucide-react';
 import OrganizationFilter, { organizationQueryParam } from '@/components/admin/OrganizationFilter';
+import { AdminStatsSkeleton } from '@/components/admin/AdminSkeleton';
 
 interface Stats {
   totalUsers: number;
@@ -69,9 +70,7 @@ export default function AdminDashboardPage() {
 
       {/* Stats */}
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="w-8 h-8 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
-        </div>
+        <AdminStatsSkeleton count={7} />
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {statCards.map(({ label, value, icon: Icon, color, bg }) => (

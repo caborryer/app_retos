@@ -2,6 +2,7 @@
 
 import { signIn } from 'next-auth/react';
 import { useState } from 'react';
+import BoxChallengeLoader from '@/components/brand/BoxChallengeLoader';
 
 type Props = {
   label: string;
@@ -36,7 +37,7 @@ export default function GoogleSignInButton({
       className={`w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-slate-700 bg-slate-800 text-slate-100 font-semibold text-sm shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${enabled ? 'hover:bg-slate-700' : ''} ${className}`}
     >
       {loading ? (
-        <span className="w-5 h-5 border-2 border-[#B8B6AF] border-t-[#1C1C1A] rounded-full animate-spin" />
+        <BoxChallengeLoader size="sm" compact showGlow={false} />
       ) : (
         <GoogleGlyph className="w-5 h-5 shrink-0" />
       )}

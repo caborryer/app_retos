@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
 import BoardManager from '@/components/admin/BoardManager';
+import { AdminBoardsListSkeleton } from '@/components/admin/AdminSkeleton';
 
 export default function BoardsPage() {
   return (
@@ -16,11 +17,7 @@ export default function BoardsPage() {
         </p>
       </div>
       <Suspense
-        fallback={
-          <div className="flex justify-center py-20">
-            <div className="w-8 h-8 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
-          </div>
-        }
+        fallback={<AdminBoardsListSkeleton />}
       >
         <BoardManager />
       </Suspense>

@@ -1,14 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { signIn, useSession } from 'next-auth/react';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
-import BoxChallengeLogo from '@/components/brand/BoxChallengeLogo';
+import BoxChallengeLoader from '@/components/brand/BoxChallengeLoader';
+import PublicBrandNav from '@/components/brand/PublicBrandNav';
 
 export default function LoginPage() {
-  const router = useRouter();
   const { data: session, status } = useSession();
   const [sessionCheckTimedOut, setSessionCheckTimedOut] = useState(false);
 
@@ -76,19 +75,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col font-sans">
-      <nav className="flex items-center justify-between px-6 h-[60px] border-b border-slate-800 bg-slate-900 sticky top-0 z-10">
-        <button
-          type="button"
-          onClick={() => router.push('/')}
-          className="flex items-center gap-1 py-1 min-w-0"
-          aria-label="Ir al inicio"
-        >
-          <BoxChallengeLogo className="h-9 w-9 shrink-0" />
-          <span className="text-[15px] sm:text-base font-bold text-white tracking-tight truncate">
-            BOX Challenge
-          </span>
-        </button>
-      </nav>
+      <PublicBrandNav />
 
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-sm">
@@ -173,7 +160,7 @@ export default function LoginPage() {
             >
               {loading ? (
                 <>
-                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <BoxChallengeLoader size="xs" compact showGlow={false} />
                   Ingresando...
                 </>
               ) : (

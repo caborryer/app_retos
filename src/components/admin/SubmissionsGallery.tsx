@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle, XCircle, Clock, ExternalLink, Search, Filter, RefreshCw, Trash2, Layers } from 'lucide-react';
 import Image from 'next/image';
+import { AdminSubmissionsGridSkeleton } from '@/components/admin/AdminSkeleton';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -437,9 +438,7 @@ export default function SubmissionsGallery({
 
       {/* Grid */}
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <div className="w-8 h-8 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
-        </div>
+        <AdminSubmissionsGridSkeleton />
       ) : filtered.length === 0 ? (
         <div className="text-center py-20 text-slate-500">
           <p className="text-4xl mb-3">📭</p>

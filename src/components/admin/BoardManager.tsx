@@ -13,6 +13,10 @@ import {
   getBoardActivationBlockReasons,
   type ChallengeLikeForActivation,
 } from '@/lib/board-activation-rules';
+import {
+  AdminBoardsListSkeleton,
+  AdminChallengeSlotsSkeleton,
+} from '@/components/admin/AdminSkeleton';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -612,9 +616,7 @@ function ChallengeEditorPanel({ board }: { board: Board }) {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-4">
-          <div className="w-5 h-5 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
-        </div>
+        <AdminChallengeSlotsSkeleton />
       ) : (
         <div className="grid grid-cols-4 gap-2">
           {slots.map((challenge, i) =>
@@ -1693,9 +1695,7 @@ export default function BoardManager() {
 
       {/* Content */}
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <div className="w-8 h-8 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
-        </div>
+        <AdminBoardsListSkeleton />
       ) : filteredBoards.length === 0 ? (
         <div className="text-center py-12 text-slate-500 space-y-2">
           <p className="text-4xl mb-3">📋</p>

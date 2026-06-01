@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Building2, Plus, ChevronRight, LayoutGrid } from 'lucide-react';
+import { AdminTableSkeleton } from '@/components/admin/AdminSkeleton';
 
 type OrgRow = {
   id: string;
@@ -85,9 +86,7 @@ export default function AdminOrganizationsPage() {
       </form>
 
       {loading ? (
-        <div className="flex justify-center py-16">
-          <div className="w-8 h-8 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
-        </div>
+        <AdminTableSkeleton />
       ) : orgs.length === 0 ? (
         <p className="text-slate-500 text-center py-12">No hay empresas. Crea la primera arriba.</p>
       ) : (

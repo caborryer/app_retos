@@ -5,6 +5,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn, signOut, useSession } from 'next-auth/react';
 import { Eye, EyeOff, Lock, Mail, User, X, Building2 } from 'lucide-react';
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
+import PublicBrandNav from '@/components/brand/PublicBrandNav';
+import AppLoadingScreen from '@/components/brand/AppLoadingScreen';
+import BoxChallengeLoader from '@/components/brand/BoxChallengeLoader';
 import { INVITE_COOKIE_NAME, getInviteCookieMaxAgeSeconds } from '@/lib/invite-cookie';
 
 // ─── T&C Modal ────────────────────────────────────────────────────────────────
@@ -152,12 +155,13 @@ function RegisterPageContent() {
 
   if (waitingForRegister) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-slate-950 px-6">
-        <div className="w-8 h-8 border-4 border-[#FC0230] border-t-transparent rounded-full animate-spin" />
-        {clearingSession || (inviteToken && status === 'authenticated') ? (
-          <p className="text-slate-400 text-sm text-center">Cerrando sesión anterior…</p>
-        ) : null}
-      </div>
+      <AppLoadingScreen
+        message={
+          clearingSession || (inviteToken && status === 'authenticated')
+            ? 'Cerrando sesión anterior…'
+            : undefined
+        }
+      />
     );
   }
 
@@ -193,7 +197,7 @@ function RegisterPageContent() {
           <h1 className="text-xl font-bold text-white">Enlace de invitación requerido</h1>
           <p className="text-sm text-slate-400">
             {error ||
-              'Para crear una cuenta necesitas el enlace que te envió tu empresa. Si ya tienes cuenta, inicia sesión.'}
+              'Para crear una cuenta necesitas el enlace que te envió tu empresa o aliado. Si ya tienes cuenta, inicia sesión.'}
           </p>
           <a
             href="/login"
@@ -273,25 +277,14 @@ function RegisterPageContent() {
         style={{ minHeight: '100vh', fontFamily: "'DM Sans','Helvetica Neue',sans-serif" }}
         className="bg-slate-950 flex flex-col"
       >
-        {/* Nav */}
-        <nav className="flex items-center justify-between px-6 h-[60px] border-b border-slate-800 bg-slate-950 sticky top-0 z-10">
-          <button
-            type="button"
-            onClick={() => router.push('/')}
-            className="flex items-center gap-2 text-white font-bold text-[15px] tracking-tight"
-          >
-            <div className="w-7 h-7 rounded-lg bg-[#FC0230] flex items-center justify-center">
-              <span className="text-sm">🏆</span>
-            </div>
-            Bingo
-          </button>
+        <PublicBrandNav>
           <a
             href="/login"
-            className="text-[13px] font-medium text-slate-400 hover:text-[#FC0230] transition-colors"
+            className="text-[13px] font-medium text-slate-400 hover:text-primary-400 transition-colors"
           >
-            ¿Ya tienes cuenta? <span className="text-[#FC0230]">Inicia sesión</span>
+            ¿Ya tienes cuenta? <span className="text-primary-400">Inicia sesión</span>
           </a>
-        </nav>
+        </PublicBrandNav>
 
         {/* Form */}
         <div className="flex-1 flex items-center justify-center p-6">
@@ -477,7 +470,7 @@ function RegisterPageContent() {
               >
                 {loading ? (
                   <>
-                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <BoxChallengeLoader size="xs" compact showGlow={false} />
                     Creando cuenta...
                   </>
                 ) : (
@@ -503,11 +496,7 @@ function RegisterPageContent() {
 export default function RegisterPage() {
   return (
     <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center bg-slate-950">
-          <div className="w-8 h-8 border-4 border-[#FC0230] border-t-transparent rounded-full animate-spin" />
-        </div>
-      }
+      fallback={<AppLoadingScreen />}
     >
       <RegisterPageContent />
     </Suspense>

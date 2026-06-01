@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Users, Search, Save } from 'lucide-react';
+import { AdminUserCardsSkeleton } from '@/components/admin/AdminSkeleton';
 
 type Org = { id: string; name: string; slug: string };
 
@@ -114,9 +115,7 @@ export default function AdminUsersPage() {
       </form>
 
       {loading ? (
-        <div className="flex justify-center py-16">
-          <div className="w-8 h-8 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
-        </div>
+        <AdminUserCardsSkeleton />
       ) : users.length === 0 ? (
         <p className="text-slate-500 text-center py-12">No hay usuarios.</p>
       ) : (
