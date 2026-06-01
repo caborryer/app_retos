@@ -14,6 +14,7 @@ import { ChallengeStatus } from '@/types';
 import { isChallengeNotStarted } from '@/lib/utils';
 import { resolveMediaUrl } from '@/lib/media-url';
 import AppLoadingScreen from '@/components/brand/AppLoadingScreen';
+import { getBoardEvidenceWindow } from '@/lib/board-evidence-window';
 
 type BoardPlayStatus = 'completed' | 'not_started' | 'in_progress' | 'unknown';
 
@@ -26,6 +27,8 @@ type HomeBoard = {
   active: boolean;
   folder: string | null;
   description?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
 };
 
 const STATUS_SORT_ORDER: Record<BoardPlayStatus, number> = {
@@ -368,6 +371,18 @@ export default function HomePageClient() {
     setBoardDetailOpen(false);
   }, [activeBoardId]);
 
+  const activeBoard = boards.find((b) => b.id === activeBoardId);
+  const evidenceWindow = useMemo(
+    () =>
+      activeBoard
+        ? getBoardEvidenceWindow({
+            startDate: activeBoard.startDate,
+            endDate: activeBoard.endDate,
+          })
+        : { canSubmitEvidence: true, phase: 'open' as const, message: '' },
+    [activeBoard]
+  );
+
   if (
     status === 'loading' ||
     status === 'unauthenticated' ||
@@ -377,7 +392,6 @@ export default function HomePageClient() {
   }
 
   const hasBoards = boards.length > 0;
-  const activeBoard = boards.find((b) => b.id === activeBoardId);
   const showEmptyState = hasBoards && !activeBoard;
   const showNoActiveBoards = !hasBoards;
   const activeBoardCompleted =
@@ -467,6 +481,8 @@ export default function HomePageClient() {
                   playLocked={playLocked}
                   onStartPlay={handleStartBoardPlay}
                   startingPlay={startingBoardPlay}
+                  canSubmitEvidence={evidenceWindow.canSubmitEvidence}
+                  evidenceWindowMessage={evidenceWindow.message}
                 />
               )}
             </div>

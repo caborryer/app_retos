@@ -17,6 +17,8 @@ interface PhotoUploadProps {
   onPhotoUpload: (taskId: string, photoUrl: string) => void;
   validationStatus?: 'pending' | 'approved' | 'rejected';
   className?: string;
+  uploadDisabled?: boolean;
+  uploadDisabledMessage?: string;
 }
 
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -28,6 +30,8 @@ export default function PhotoUpload({
   onPhotoUpload,
   validationStatus = 'pending',
   className,
+  uploadDisabled = false,
+  uploadDisabledMessage,
 }: PhotoUploadProps) {
   const [preview, setPreview] = useState<string | null>(existingPhoto || null);
   const [isUploading, setIsUploading] = useState(false);
@@ -36,6 +40,10 @@ export default function PhotoUpload({
   const cameraCaptureInputRef = useRef<HTMLInputElement>(null);
 
   const uploadFile = async (file: File) => {
+    if (uploadDisabled) {
+      if (uploadDisabledMessage) alert(uploadDisabledMessage);
+      return;
+    }
     if (!file.type.startsWith('image/')) {
       alert('Por favor selecciona una imagen válida');
       return;
@@ -132,6 +140,11 @@ export default function PhotoUpload({
 
       {!preview ? (
         <div className="flex flex-col gap-2">
+          {uploadDisabled && uploadDisabledMessage && (
+            <p className="text-[10px] text-center text-secondary-500 leading-snug px-1">
+              {uploadDisabledMessage}
+            </p>
+          )}
           <motion.button
             type="button"
             onClick={() => fileInputRef.current?.click()}
@@ -144,7 +157,7 @@ export default function PhotoUpload({
             )}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            disabled={isUploading}
+            disabled={isUploading || uploadDisabled}
           >
             {isUploading ? (
               <div className="flex flex-col items-center gap-2">
@@ -169,7 +182,7 @@ export default function PhotoUpload({
                 setCameraOpen(true);
               }
             }}
-            disabled={isUploading}
+            disabled={isUploading || uploadDisabled}
             className={cn(
               'w-full py-2 rounded-xl border-2 border-primary-500/40',
               'flex items-center justify-center gap-2 text-xs font-semibold text-primary-600',

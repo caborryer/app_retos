@@ -19,9 +19,16 @@ const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 interface ChallengeFlipCardProps {
   challenge: Challenge;
   className?: string;
+  canSubmitEvidence?: boolean;
+  evidenceWindowMessage?: string;
 }
 
-export default function ChallengeFlipCard({ challenge, className }: ChallengeFlipCardProps) {
+export default function ChallengeFlipCard({
+  challenge,
+  className,
+  canSubmitEvidence = true,
+  evidenceWindowMessage = '',
+}: ChallengeFlipCardProps) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
@@ -36,6 +43,10 @@ export default function ChallengeFlipCard({ challenge, className }: ChallengeFli
 
   // Helper: call API to submit evidence for the first uncompleted task
   const submitEvidence = async (photoFile?: File, linkUrl?: string) => {
+    if (!canSubmitEvidence) {
+      if (evidenceWindowMessage) alert(evidenceWindowMessage);
+      return;
+    }
     setSubmitting(true);
     const firstTask = challenge.tasks?.find((t) => !t.completed);
     if (!firstTask) {
@@ -112,7 +123,8 @@ export default function ChallengeFlipCard({ challenge, className }: ChallengeFli
     setShowDetail(false);
     if (isCompleted) return;
     if (hasNoTasks) {
-      await submitEvidence();
+      if (canSubmitEvidence) await submitEvidence();
+      else if (evidenceWindowMessage) alert(evidenceWindowMessage);
       return;
     }
     setIsFlipped(true);
@@ -306,8 +318,14 @@ export default function ChallengeFlipCard({ challenge, className }: ChallengeFli
                   </div>
                 )}
 
+                {!isCompleted && !canSubmitEvidence && evidenceWindowMessage && (
+                  <p className="text-[10px] text-center text-slate-300 leading-snug px-1">
+                    {evidenceWindowMessage}
+                  </p>
+                )}
+
                 {/* Foto */}
-                {!isCompleted && hasPhotoTask && (
+                {!isCompleted && canSubmitEvidence && hasPhotoTask && (
                   <>
                     <input
                       ref={fileInputRef}
@@ -366,7 +384,7 @@ export default function ChallengeFlipCard({ challenge, className }: ChallengeFli
                 )}
 
                 {/* Link (Strava u otro) — solo si al menos una tarea pendiente lo requiere */}
-                {!isCompleted && hasLinkTask && (
+                {!isCompleted && canSubmitEvidence && hasLinkTask && (
                   <button
                     type="button"
                     onClick={(e) => {
@@ -385,7 +403,7 @@ export default function ChallengeFlipCard({ challenge, className }: ChallengeFli
                 )}
 
                 {/* Sin tareas */}
-                {!isCompleted && hasNoTasks && (
+                {!isCompleted && canSubmitEvidence && hasNoTasks && (
                   <button
                     type="button"
                     onClick={handleCompleteClick}
@@ -459,7 +477,7 @@ export default function ChallengeFlipCard({ challenge, className }: ChallengeFli
             ? 'Completar reto'
             : 'Abrir acciones del reto'
         }
-        primaryDisabled={isCompleted || submitting}
+        primaryDisabled={isCompleted || submitting || (!canSubmitEvidence && !isCompleted && hasNoTasks)}
       />
     </div>
   );

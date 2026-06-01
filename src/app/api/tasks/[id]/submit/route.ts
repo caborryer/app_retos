@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
+import { getBoardEvidenceWindow } from '@/lib/board-evidence-window';
 import { prisma } from '@/lib/prisma';
 
 /**
@@ -26,11 +27,25 @@ export async function POST(
   // Find the task to get its challenge
   const task = await prisma.challengeTask.findUnique({
     where: { id: params.id },
-    include: { challenge: true },
+    include: {
+      challenge: {
+        include: {
+          board: { select: { startDate: true, endDate: true } },
+        },
+      },
+    },
   });
 
   if (!task) {
     return NextResponse.json({ error: 'Task not found' }, { status: 404 });
+  }
+
+  const evidenceWindow = getBoardEvidenceWindow({
+    startDate: task.challenge.board.startDate,
+    endDate: task.challenge.board.endDate,
+  });
+  if (!evidenceWindow.canSubmitEvidence) {
+    return NextResponse.json({ error: evidenceWindow.message }, { status: 403 });
   }
 
   // Upsert user task progress

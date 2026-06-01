@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, Users, Trophy, Check, Camera, Link as LinkIcon, X, Upload } from 'lucide-react';
+import { Calendar, CalendarDays, Users, Trophy, Check, Camera, Link as LinkIcon, X, Upload } from 'lucide-react';
 import { useAuthGuard } from '@/hooks/useAuthGuard';
 import Layout from '@/components/layout/Layout';
 import Card from '@/components/ui/Card';
@@ -20,6 +20,7 @@ import CameraCaptureModal from '@/components/ui/CameraCaptureModal';
 import { preferNativeCameraPicker } from '@/lib/native-camera-input';
 import AppLoadingScreen from '@/components/brand/AppLoadingScreen';
 import { useHydrated } from '@/hooks/useHydrated';
+import { getBoardEvidenceWindow } from '@/lib/board-evidence-window';
 
 const STRAVA_CATEGORIES: ChallengeCategory[] = [
   ChallengeCategory.RUNNING, ChallengeCategory.CYCLING, ChallengeCategory.GYM,
@@ -27,10 +28,12 @@ const STRAVA_CATEGORIES: ChallengeCategory[] = [
   ChallengeCategory.OUTDOOR, ChallengeCategory.MIXED,
 ];
 
-function StravaLinkInput({ task, challengeId, onSubmit }: {
+function StravaLinkInput({ task, challengeId, onSubmit, disabled, disabledMessage }: {
   task: ChallengeTask;
   challengeId: string;
   onSubmit: (taskId: string, link: string) => void;
+  disabled?: boolean;
+  disabledMessage?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState(task.linkUrl ?? '');
@@ -48,6 +51,12 @@ function StravaLinkInput({ task, challengeId, onSubmit }: {
     setOpen(false);
     setError('');
   };
+
+  if (disabled && disabledMessage) {
+    return (
+      <p className="mt-2 text-xs text-secondary-500 leading-snug">{disabledMessage}</p>
+    );
+  }
 
   if (!open) {
     return (
@@ -106,6 +115,18 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
   const cameraCaptureInputRef = useRef<HTMLInputElement>(null);
   const pendingNativeCameraTaskIdRef = useRef<string | null>(null);
   const [cameraTaskId, setCameraTaskId] = useState<string | null>(null);
+
+  const evidenceWindow = useMemo(
+    () =>
+      challenge
+        ? getBoardEvidenceWindow({
+            startDate: challenge.boardStartDate,
+            endDate: challenge.boardEndDate,
+          })
+        : { canSubmitEvidence: true, phase: 'open' as const, message: '' },
+    [challenge]
+  );
+  const canSubmitEvidence = evidenceWindow.canSubmitEvidence;
 
   useEffect(() => {
     if (challenges.length > 0) {
@@ -172,6 +193,10 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
   };
 
   const handleCompleteTask = async (taskId: string) => {
+    if (!canSubmitEvidence) {
+      alert(evidenceWindow.message);
+      return;
+    }
     await fetch(`/api/tasks/${taskId}/submit`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -191,6 +216,10 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
 
   const uploadTaskPhoto = async (taskId: string, file: File) => {
     if (!challenge) return;
+    if (!canSubmitEvidence) {
+      alert(evidenceWindow.message);
+      return;
+    }
     if (!file.type.startsWith('image/')) {
       alert('Por favor selecciona una imagen válida (JPG, PNG, GIF)');
       return;
@@ -248,6 +277,10 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
   };
 
   const handlePhotoUpload = async (taskId: string, photoUrl: string) => {
+    if (!canSubmitEvidence) {
+      alert(evidenceWindow.message);
+      return;
+    }
     const submitRes = await fetch(`/api/tasks/${taskId}/submit`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -266,6 +299,10 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
   };
 
   const handleStravaLink = async (taskId: string, linkUrl: string) => {
+    if (!canSubmitEvidence) {
+      alert(evidenceWindow.message);
+      return;
+    }
     const submitRes = await fetch(`/api/tasks/${taskId}/submit`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -289,6 +326,16 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
   return (
     <Layout showBack title="">
       <div className="space-y-6 -mt-4">
+        {!canSubmitEvidence && evidenceWindow.message && (
+          <div
+            className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-100"
+            role="status"
+          >
+            <CalendarDays className="w-4 h-4 shrink-0 mt-0.5" aria-hidden />
+            <span>{evidenceWindow.message}</span>
+          </div>
+        )}
+
         {/* Hero Card */}
         <Card variant="gradient" className="p-6">
           <div className="flex items-start justify-between mb-4">
@@ -454,7 +501,7 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
                       )}
                     </div>
 
-                    {isInProgress && !task.completed && task.photoRequired && (
+                    {isInProgress && canSubmitEvidence && !task.completed && task.photoRequired && (
                       <>
                         <input
                           ref={(el) => { fileInputRefs.current[task.id] = el; }}
@@ -490,7 +537,7 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
                       </>
                     )}
 
-                    {isInProgress && !task.completed && !task.photoRequired && (
+                    {isInProgress && canSubmitEvidence && !task.completed && !task.photoRequired && (
                       <Button
                         size="sm"
                         onClick={() => handleCompleteTask(task.id)}
@@ -506,6 +553,8 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
                       task={task}
                       challengeId={challenge.id}
                       onSubmit={handleStravaLink}
+                      disabled={!canSubmitEvidence}
+                      disabledMessage={evidenceWindow.message}
                     />
                   )}
                 </Card>
@@ -526,6 +575,8 @@ export default function ChallengeDetailPage({ params }: { params: { id: string }
               validationStatus: t.validationStatus as 'pending' | 'approved' | 'rejected' | undefined
             }))}
             onPhotoUpload={handlePhotoUpload}
+            uploadDisabled={!canSubmitEvidence}
+            uploadDisabledMessage={evidenceWindow.message}
           />
         )}
 

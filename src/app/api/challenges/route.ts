@@ -39,6 +39,7 @@ export async function GET(req: Request) {
   const challenges = await prisma.challenge.findMany({
     where,
     include: {
+      board: { select: { startDate: true, endDate: true } },
       tasks: {
         include: {
           userProgress: {
@@ -101,6 +102,8 @@ export async function GET(req: Request) {
       images: c.images,
       participants: c.participants,
       boardId: c.boardId,
+      boardStartDate: c.board.startDate,
+      boardEndDate: c.board.endDate,
       status: normalizedStatus,
       startedAt: userChallenge?.startedAt ?? null,
       completedAt: userChallenge?.completedAt ?? null,

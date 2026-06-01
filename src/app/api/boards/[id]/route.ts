@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { notifyNewBoard } from '@/lib/notifyNewBoard';
 import { getBoardActivationBlockReasons } from '@/lib/board-activation-rules';
+import { BoardDeleteError, deleteBoardCompletely } from '@/lib/delete-board';
 
 // PATCH /api/boards/:id — update a board (admin only)
 export async function PATCH(
@@ -96,7 +97,7 @@ export async function PATCH(
   }
 }
 
-// DELETE /api/boards/:id — delete a board (admin only)
+// DELETE /api/boards/:id — delete board and all related data (admin only, inactive boards)
 export async function DELETE(
   _req: Request,
   { params }: { params: { id: string } }
@@ -106,6 +107,14 @@ export async function DELETE(
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  await prisma.board.delete({ where: { id: params.id } });
-  return NextResponse.json({ ok: true });
+  try {
+    const result = await deleteBoardCompletely(params.id);
+    return NextResponse.json(result);
+  } catch (error) {
+    if (error instanceof BoardDeleteError) {
+      return NextResponse.json({ error: error.message }, { status: error.statusCode });
+    }
+    console.error('DELETE /api/boards/[id] failed:', error);
+    return NextResponse.json({ error: 'Error al eliminar el tablero' }, { status: 500 });
+  }
 }

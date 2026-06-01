@@ -13,6 +13,8 @@ interface ChallengeGridProps {
     validationStatus?: 'pending' | 'approved' | 'rejected';
   }>;
   onPhotoUpload?: (taskId: string, photoUrl: string) => void;
+  uploadDisabled?: boolean;
+  uploadDisabledMessage?: string;
 }
 
 export default function ChallengeGrid({ 
@@ -20,7 +22,9 @@ export default function ChallengeGrid({
   count = 9,
   challengeId,
   tasks = [],
-  onPhotoUpload
+  onPhotoUpload,
+  uploadDisabled = false,
+  uploadDisabledMessage,
 }: ChallengeGridProps) {
   // Create array for grid, filling with empty slots if needed
   const gridItems = Array.from({ length: count }, (_, i) => tasks[i] || { id: `placeholder-${i}` });
@@ -53,6 +57,8 @@ export default function ChallengeGrid({
               existingPhoto={item.photoUrl}
               onPhotoUpload={handlePhotoUpload}
               validationStatus={item.validationStatus}
+              uploadDisabled={uploadDisabled}
+              uploadDisabledMessage={uploadDisabledMessage}
             />
           </motion.div>
         ))}

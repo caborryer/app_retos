@@ -776,10 +776,27 @@ function BoardCard({
   }
 
   async function handleDelete() {
-    if (!confirm(`¿Eliminar el tablero "${board.title}"? Se eliminarán todos sus retos.`)) return;
+    if (board.active) return;
+    const n = board._count?.challenges ?? 0;
+    if (
+      !confirm(
+        `¿Eliminar el tablero «${board.title}»? Se borrarán ${n} reto${n !== 1 ? 's' : ''}, envíos de usuarios, imágenes y rankings. No se puede deshacer.`
+      )
+    ) {
+      return;
+    }
     setDeleting(true);
-    await onDelete();
-    setDeleting(false);
+    try {
+      await onDelete();
+    } catch (err) {
+      const msg =
+        err instanceof Error && err.message.trim()
+          ? err.message
+          : 'Error al eliminar el tablero';
+      alert(msg);
+    } finally {
+      setDeleting(false);
+    }
   }
 
   async function handleReset() {
@@ -1065,9 +1082,13 @@ function BoardCard({
                 </button>
                 <button
                   onClick={handleDelete}
-                  disabled={deleting}
-                  className="p-1.5 rounded-lg bg-slate-700 text-slate-400 hover:bg-red-600/20 hover:text-red-400 transition-colors"
-                  title="Eliminar tablero"
+                  disabled={deleting || board.active}
+                  className="p-1.5 rounded-lg bg-slate-700 text-slate-400 hover:bg-red-600/20 hover:text-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-slate-700 disabled:hover:text-slate-400"
+                  title={
+                    board.active
+                      ? 'Desactiva el tablero para poder eliminarlo'
+                      : 'Eliminar tablero'
+                  }
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -1434,13 +1455,20 @@ export default function BoardManager() {
   }
 
   async function handleDelete(id: string) {
-    try {
-      const res = await fetch(`/api/boards/${id}`, { method: 'DELETE', credentials: 'include' });
-      if (!res.ok) throw new Error();
-      setBoards((prev) => prev.filter((b) => b.id !== id));
-      setAllBoards((prev) => prev.filter((b) => b.id !== id));
-    } catch {
-      alert('Error al eliminar el tablero');
+    const res = await fetch(`/api/boards/${id}`, { method: 'DELETE', credentials: 'include' });
+    const body = (await res.json().catch(() => ({}))) as {
+      error?: string;
+      warnings?: string[];
+    };
+    if (!res.ok) {
+      throw new Error(
+        typeof body.error === 'string' ? body.error : 'Error al eliminar el tablero'
+      );
+    }
+    setBoards((prev) => prev.filter((b) => b.id !== id));
+    setAllBoards((prev) => prev.filter((b) => b.id !== id));
+    if (body.warnings?.length) {
+      alert(body.warnings.join('\n'));
     }
   }
 

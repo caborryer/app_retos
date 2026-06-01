@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { CalendarDays } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { Challenge } from '@/types';
 import { ChallengeStatus } from '@/types';
@@ -21,6 +22,8 @@ interface BingoBoardProps {
   playLocked?: boolean;
   onStartPlay?: () => void | Promise<void>;
   startingPlay?: boolean;
+  canSubmitEvidence?: boolean;
+  evidenceWindowMessage?: string;
 }
 
 function EmptyCell({ coverImage }: { coverImage?: string | null }) {
@@ -74,6 +77,8 @@ export function BingoBoard({
   playLocked = false,
   onStartPlay,
   startingPlay = false,
+  canSubmitEvidence = true,
+  evidenceWindowMessage = '',
 }: BingoBoardProps) {
   const [showBingo, setShowBingo] = useState(false);
   const openTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -141,6 +146,15 @@ export function BingoBoard({
           maxWidth: 326,
         }}
       >
+        {!canSubmitEvidence && evidenceWindowMessage && (
+          <div
+            className="mx-2 mt-2 mb-1 flex items-start gap-2 rounded-lg bg-black/25 px-2.5 py-2 text-[10px] leading-snug text-white/95"
+            role="status"
+          >
+            <CalendarDays className="w-3.5 h-3.5 shrink-0 mt-0.5 opacity-90" aria-hidden />
+            <span>{evidenceWindowMessage}</span>
+          </div>
+        )}
         <div
           className={cn(
             'grid grid-cols-3 w-full',
@@ -157,7 +171,11 @@ export function BingoBoard({
                 transition={{ delay: index * 0.03 }}
                 className={cn('aspect-square w-full', playLocked && 'opacity-50')}
               >
-                <ChallengeFlipCard challenge={challenge} />
+                <ChallengeFlipCard
+                  challenge={challenge}
+                  canSubmitEvidence={canSubmitEvidence}
+                  evidenceWindowMessage={evidenceWindowMessage}
+                />
               </motion.div>
             ) : (
               <div key={`empty-${index}`} className="aspect-square w-full">

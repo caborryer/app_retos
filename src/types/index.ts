@@ -32,6 +32,8 @@ export interface Challenge {
   icon: string;
   color: string;
   boardId?: string;
+  boardStartDate?: Date | string | null;
+  boardEndDate?: Date | string | null;
 }
 
 export interface ChallengeTask {
