@@ -6,6 +6,30 @@ export function getAppBasePath(): string {
   return withSlash.replace(/\/$/, '');
 }
 
+/** Canonical public origin from NEXT_PUBLIC_APP_URL (e.g. https://www.boxchallenge.co). */
+export function getConfiguredAppOrigin(): string | null {
+  const raw = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (!raw) return null;
+  try {
+    const withProtocol = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    return new URL(withProtocol).origin;
+  } catch {
+    return null;
+  }
+}
+
+/** Production *.vercel.app host (Vercel system env, e.g. app-retos.vercel.app). */
+export function getProductionVercelHost(): string | null {
+  const raw = process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
+  if (!raw) return null;
+  try {
+    const host = /^https?:\/\//i.test(raw) ? new URL(raw).host : raw.split('/')[0];
+    return host?.toLowerCase() || null;
+  } catch {
+    return raw.replace(/\/$/, '').toLowerCase();
+  }
+}
+
 /** Origin from incoming request (Vercel/proxy-aware). */
 export function getRequestPublicOrigin(req: Request): string {
   const forwardedHost = req.headers.get('x-forwarded-host');
