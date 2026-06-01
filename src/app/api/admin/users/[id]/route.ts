@@ -1,32 +1,35 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
 import {
   assertUserDeleteConfirmation,
   deleteUserCompletely,
   UserDeleteError,
 } from '@/lib/delete-user';
+import { requireAdmin } from '@/lib/admin-auth';
 
 type DeleteBody = {
   confirmText?: unknown;
 };
 
-export async function DELETE(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+export async function DELETE(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
+  const authResult = await requireAdmin();
+  if ('error' in authResult) return authResult.error;
 
   const body = (await req.json().catch(() => ({}))) as DeleteBody;
 
   try {
     assertUserDeleteConfirmation(body.confirmText);
-    await deleteUserCompletely(session.user.id);
+    await deleteUserCompletely(params.id, {
+      actorUserId: authResult.session.user.id,
+    });
     return NextResponse.json({ ok: true });
   } catch (error) {
     if (error instanceof UserDeleteError) {
       return NextResponse.json({ error: error.message }, { status: error.statusCode });
     }
-    console.error('DELETE /api/user/account failed:', error);
-    return NextResponse.json({ error: 'Error al eliminar la cuenta' }, { status: 500 });
+    console.error('DELETE /api/admin/users/[id] failed:', error);
+    return NextResponse.json({ error: 'Error al eliminar el usuario' }, { status: 500 });
   }
 }

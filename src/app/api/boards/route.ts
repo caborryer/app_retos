@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { notifyNewBoard } from '@/lib/notifyNewBoard';
 import { boardWhereForUser } from '@/lib/organization-access';
+import { BOARD_PRIZE_MAX_LENGTH, normalizeBoardPrize } from '@/lib/board-prize';
 
 // GET /api/boards — admins see all boards; users see active boards for their orgs + general
 export async function GET(req: Request) {
@@ -63,6 +64,7 @@ export async function POST(req: Request) {
     endDate,
     organizationId,
     isGeneral,
+    prize,
   } = body;
 
   if (!title || !emoji || !color) {
@@ -85,6 +87,13 @@ export async function POST(req: Request) {
     );
   }
 
+  if (prize !== undefined && prize !== null && typeof prize === 'string' && prize.trim().length > BOARD_PRIZE_MAX_LENGTH) {
+    return NextResponse.json(
+      { error: `El premio no puede superar ${BOARD_PRIZE_MAX_LENGTH} caracteres` },
+      { status: 400 }
+    );
+  }
+
   const board = await prisma.board.create({
     data: {
       title,
@@ -98,6 +107,7 @@ export async function POST(req: Request) {
       endDate: endDate ? new Date(endDate) : null,
       organizationId,
       isGeneral: Boolean(isGeneral),
+      prize: normalizeBoardPrize(prize),
     },
   });
 

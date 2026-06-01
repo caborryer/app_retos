@@ -13,6 +13,7 @@ import {
   getBoardActivationBlockReasons,
   type ChallengeLikeForActivation,
 } from '@/lib/board-activation-rules';
+import { BOARD_PRIZE_MAX_LENGTH } from '@/lib/board-prize';
 import {
   AdminBoardsListSkeleton,
   AdminChallengeSlotsSkeleton,
@@ -94,6 +95,7 @@ interface Board {
   folder: string | null;
   startDate: string | null;
   endDate: string | null;
+  prize?: string | null;
   organizationId?: string;
   isGeneral?: boolean;
   organization?: { id: string; name: string; slug: string };
@@ -750,6 +752,7 @@ function BoardCard({
       folder: board.folder ?? '',
       startDate: board.startDate ? board.startDate.split('T')[0] : '',
       endDate: board.endDate ? board.endDate.split('T')[0] : '',
+      prize: board.prize ?? '',
       isGeneral: board.isGeneral ?? false,
       organizationId: board.organizationId ?? board.organization?.id,
     });
@@ -952,6 +955,28 @@ function BoardCard({
               </div>
             </div>
 
+            <div>
+              <label className="text-slate-400 text-[10px] block mb-0.5">
+                Premio o incentivo (opcional)
+              </label>
+              <textarea
+                value={typeof draft.prize === 'string' ? draft.prize : ''}
+                onChange={(e) =>
+                  setDraft((d) => ({
+                    ...d,
+                    prize: e.target.value.slice(0, BOARD_PRIZE_MAX_LENGTH),
+                  }))
+                }
+                maxLength={BOARD_PRIZE_MAX_LENGTH}
+                rows={2}
+                placeholder="Ej: Cena para dos en restaurante partner..."
+                className="w-full bg-slate-700 text-white text-xs rounded-lg px-2 py-1.5 resize-none placeholder-slate-500"
+              />
+              <p className="text-slate-500 text-[10px] mt-0.5 text-right">
+                {(typeof draft.prize === 'string' ? draft.prize : '').length}/{BOARD_PRIZE_MAX_LENGTH}
+              </p>
+            </div>
+
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -1035,6 +1060,11 @@ function BoardCard({
               <h3 className="text-white font-semibold">{board.title}</h3>
               {board.description && (
                 <p className="text-slate-400 text-xs mt-0.5 line-clamp-2">{board.description}</p>
+              )}
+              {board.prize?.trim() && (
+                <p className="text-amber-200/90 text-xs mt-1.5 line-clamp-3">
+                  🎁 {board.prize.trim()}
+                </p>
               )}
               <div className="flex flex-wrap gap-1 mt-1">
                 {showOrganization && board.organization && (
@@ -1159,6 +1189,7 @@ function NewBoardModal({ onClose, onCreate, existingFolders, organizationId, org
     folder: '',
     startDate: '',
     endDate: '',
+    prize: '',
     isGeneral: false,
   });
   const [saving, setSaving] = useState(false);
@@ -1185,6 +1216,7 @@ function NewBoardModal({ onClose, onCreate, existingFolders, organizationId, org
           folder: form.folder || null,
           startDate: form.startDate || null,
           endDate: form.endDate || null,
+          prize: form.prize.trim() || null,
           organizationId,
           isGeneral: form.isGeneral,
         }),
@@ -1305,6 +1337,21 @@ function NewBoardModal({ onClose, onCreate, existingFolders, organizationId, org
               className="w-full bg-slate-700 text-white text-sm rounded-lg px-3 py-2"
             />
           </div>
+        </div>
+
+        <div>
+          <label className="text-slate-400 text-xs mb-1 block">Premio o incentivo (opcional)</label>
+          <textarea
+            value={form.prize}
+            onChange={(e) => set('prize', e.target.value.slice(0, BOARD_PRIZE_MAX_LENGTH))}
+            maxLength={BOARD_PRIZE_MAX_LENGTH}
+            rows={3}
+            placeholder="Texto del premio por completar el tablero (máx. 150 caracteres)"
+            className="w-full bg-slate-700 text-white text-sm rounded-lg px-3 py-2 resize-none placeholder-slate-400"
+          />
+          <p className="text-slate-500 text-xs mt-1 text-right">
+            {form.prize.length}/{BOARD_PRIZE_MAX_LENGTH}
+          </p>
         </div>
 
         <label className="flex items-start gap-2 cursor-pointer">

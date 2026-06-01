@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Info } from 'lucide-react';
+import { Gift, Info } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import { BingoBoard } from '@/components/bingo/BingoBoard';
 import BoardDetailSheet from '@/components/bingo/BoardDetailSheet';
@@ -29,6 +29,7 @@ type HomeBoard = {
   description?: string | null;
   startDate?: string | null;
   endDate?: string | null;
+  prize?: string | null;
 };
 
 const STATUS_SORT_ORDER: Record<BoardPlayStatus, number> = {
@@ -493,6 +494,12 @@ export default function HomePageClient() {
               </div>
             </div>
 
+            {activeBoard?.prize?.trim() && (
+              <div className="w-full flex justify-center mt-4 px-6">
+                <BoardPrizeBanner prize={activeBoard.prize.trim()} />
+              </div>
+            )}
+
             {upcomingBoards.length > 0 && (
               <div className="w-full flex justify-center mt-6 px-6">
                 <div className="w-full space-y-3" style={{ maxWidth: 326 }}>
@@ -629,6 +636,32 @@ function BoardThumbnailGrid({
           </button>
         );
       })}
+    </div>
+  );
+}
+
+function BoardPrizeBanner({ prize }: { prize: string }) {
+  return (
+    <div
+      className="w-full rounded-xl border border-amber-500/25 bg-gradient-to-br from-amber-500/10 to-slate-800/80 px-3.5 py-3"
+      style={{ maxWidth: 326 }}
+      role="region"
+      aria-label="Premio por completar el tablero"
+    >
+      <div className="flex items-start gap-2.5">
+        <span
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 text-amber-400"
+          aria-hidden
+        >
+          <Gift className="h-4 w-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-400/90">
+            Premio al completar
+          </p>
+          <p className="mt-1 text-sm leading-snug text-slate-200">{prize}</p>
+        </div>
+      </div>
     </div>
   );
 }

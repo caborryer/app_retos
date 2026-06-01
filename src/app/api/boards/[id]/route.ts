@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { notifyNewBoard } from '@/lib/notifyNewBoard';
 import { getBoardActivationBlockReasons } from '@/lib/board-activation-rules';
 import { BoardDeleteError, deleteBoardCompletely } from '@/lib/delete-board';
+import { BOARD_PRIZE_MAX_LENGTH, normalizeBoardPrize } from '@/lib/board-prize';
 
 // PATCH /api/boards/:id — update a board (admin only)
 export async function PATCH(
@@ -29,7 +30,15 @@ export async function PATCH(
       endDate,
       organizationId,
       isGeneral,
+      prize,
     } = body;
+
+    if (prize !== undefined && prize !== null && typeof prize === 'string' && prize.trim().length > BOARD_PRIZE_MAX_LENGTH) {
+      return NextResponse.json(
+        { error: `El premio no puede superar ${BOARD_PRIZE_MAX_LENGTH} caracteres` },
+        { status: 400 }
+      );
+    }
 
     // Enforce full board setup + complete challenge data before activation
     if (active === true) {
@@ -77,6 +86,7 @@ export async function PATCH(
         ...(endDate !== undefined && { endDate: endDate ? new Date(endDate) : null }),
         ...(organizationId !== undefined && { organizationId }),
         ...(isGeneral !== undefined && { isGeneral: Boolean(isGeneral) }),
+        ...(prize !== undefined && { prize: normalizeBoardPrize(prize) }),
       },
       include: {
         organization: { select: { id: true, name: true, slug: true } },

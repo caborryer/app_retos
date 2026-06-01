@@ -15,6 +15,7 @@ interface BoardDetail {
   description?: string | null;
   startDate?: string | null;
   endDate?: string | null;
+  prize?: string | null;
 }
 
 interface BoardDetailSheetProps {
@@ -145,6 +146,13 @@ export default function BoardDetailSheet({
                     {board.description?.trim() || 'El organizador no añadió una descripción.'}
                   </p>
                 </div>
+
+                {board.prize?.trim() && (
+                  <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2.5">
+                    <p className="text-xs font-semibold text-amber-400 mb-1">Premio al completar</p>
+                    <p className="text-sm text-slate-200 leading-snug">{board.prize.trim()}</p>
+                  </div>
+                )}
 
                 {(board.folder || start || end) && (
                   <div className="space-y-2">

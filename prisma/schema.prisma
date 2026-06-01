@@ -184,6 +184,8 @@ model Board {
   folder         String?
   startDate      DateTime?
   endDate        DateTime?
+  /// Premio o incentivo por completar el tablero (texto, máx. 150 caracteres).
+  prize          String?  @db.VarChar(150)
   organizationId String
   /// Visible to all authenticated users regardless of organization membership.
   isGeneral      Boolean  @default(false)
