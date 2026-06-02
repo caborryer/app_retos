@@ -81,7 +81,7 @@ export default function ChallengesPage() {
   }
 
   return (
-    <Layout title="BingoChallenge">
+    <Layout title="BoxChallenge">
       <div className="min-h-full pb-8">
 
         {/* ── Título ─────────────────────────────────────────────────────── */}
@@ -115,15 +115,15 @@ export default function ChallengesPage() {
                 style={
                   isActive
                     ? {
-                        background: board.color,
-                        color: '#fff',
-                        boxShadow: `0 2px 8px ${board.color}55`,
-                      }
+                      background: board.color,
+                      color: '#fff',
+                      boxShadow: `0 2px 8px ${board.color}55`,
+                    }
                     : {
-                        backgroundColor: `${board.color}15`,
-                        color: board.color,
-                        border: `1.5px solid ${board.color}30`,
-                      }
+                      backgroundColor: `${board.color}15`,
+                      color: board.color,
+                      border: `1.5px solid ${board.color}30`,
+                    }
                 }
               >
                 <span style={{ fontSize: 14 }}>{board.emoji}</span>

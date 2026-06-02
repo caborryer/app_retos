@@ -43,7 +43,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             console.error('[authorize] missing credentials');
             return null;
           }
-          const email = credentials.email as string;
+          const email = (credentials.email as string).trim().toLowerCase();
           const inputPassword = credentials.password as string;
 
           console.log('[authorize] attempting login for:', email);

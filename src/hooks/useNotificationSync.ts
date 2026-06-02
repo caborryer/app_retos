@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useAppStore } from '@/store/useAppStore';
+import { clearUserSessionState } from '@/lib/sign-out-client';
 import type { Notification } from '@/types';
 
 const POLL_INTERVAL_MS = 30_000;
@@ -31,44 +32,51 @@ function toStoreNotification(n: ServerNotification): Notification {
 }
 
 /**
- * Polls GET /api/notifications every 30 seconds and syncs results into
- * the Zustand notification store. Deduplicates by ID so existing local
- * notifications are not duplicated.
+ * Polls GET /api/notifications and replaces the store with the server list
+ * for the current session user (no merge across accounts).
  */
 export function useNotificationSync() {
-  const { status } = useSession();
-  const { notifications, addNotification } = useAppStore();
-  const knownIds = useRef<Set<string>>(new Set());
-
-  // Seed knownIds from the current store on first mount
-  useEffect(() => {
-    notifications.forEach((n) => knownIds.current.add(n.id));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const { data: session, status } = useSession();
+  const setNotifications = useAppStore((s) => s.setNotifications);
+  const syncedUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (status !== 'authenticated') return;
+    const userId = session?.user?.id ?? null;
 
-    async function fetchAndMerge() {
+    if (status === 'unauthenticated' || !userId) {
+      if (syncedUserIdRef.current !== null) {
+        clearUserSessionState();
+        syncedUserIdRef.current = null;
+      }
+      return;
+    }
+
+    if (syncedUserIdRef.current !== null && syncedUserIdRef.current !== userId) {
+      clearUserSessionState();
+    }
+    syncedUserIdRef.current = userId;
+
+    async function fetchAndReplace() {
       try {
-        const res = await fetch('/api/notifications');
+        const res = await fetch('/api/notifications', { credentials: 'include' });
         if (!res.ok) return;
-        const data: { notifications: ServerNotification[]; unreadCount: number } = await res.json();
 
-        // Add only notifications not already in the store (newest first from server)
-        for (const sn of data.notifications) {
-          if (!knownIds.current.has(sn.id)) {
-            knownIds.current.add(sn.id);
-            addNotification(toStoreNotification(sn));
-          }
-        }
+        if (syncedUserIdRef.current !== userId) return;
+
+        const data: { notifications: ServerNotification[]; unreadCount: number } =
+          await res.json();
+
+        setNotifications(
+          data.notifications.map(toStoreNotification),
+          data.unreadCount ?? 0
+        );
       } catch {
-        // Silent fail — keep current UI
+        // Keep current UI on transient errors
       }
     }
 
-    fetchAndMerge();
-    const interval = setInterval(fetchAndMerge, POLL_INTERVAL_MS);
+    void fetchAndReplace();
+    const interval = setInterval(fetchAndReplace, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [status, addNotification]);
+  }, [status, session?.user?.id, setNotifications]);
 }

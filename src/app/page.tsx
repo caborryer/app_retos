@@ -174,7 +174,7 @@ export default function LandingPage() {
         </button>
       </PublicBrandNav>
 
-      <div className="border-b border-slate-800 bg-slate-900/80 py-3.5 overflow-hidden">
+      {/* <div className="border-b border-slate-800 bg-slate-900/80 py-3.5 overflow-hidden">
         <div className="flex items-center overflow-hidden">
           <div className="shrink-0 whitespace-nowrap border-r border-slate-700 mr-8 pl-[clamp(1.25rem,5vw,3rem)] pr-5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
             Sponsors
@@ -189,7 +189,7 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
 
       <main className="mx-auto grid max-w-[960px] grid-cols-1 items-center gap-[clamp(2rem,5vw,4rem)] px-[clamp(1.25rem,5vw,3rem)] py-[clamp(2rem,6vw,4rem)] sm:grid-cols-[minmax(280px,1fr)_minmax(280px,1fr)]">
         <div className={`${styles.fadeUp} flex flex-col gap-6`}>

@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { notifyNewBoard } from '@/lib/notifyNewBoard';
 import { boardWhereForUser } from '@/lib/organization-access';
 import { BOARD_PRIZE_MAX_LENGTH, normalizeBoardPrize } from '@/lib/board-prize';
+import { parseBoardDateInput } from '@/lib/board-date';
 
 // GET /api/boards — admins see all boards; users see active boards for their orgs + general
 export async function GET(req: Request) {
@@ -103,8 +104,8 @@ export async function POST(req: Request) {
       coverImage,
       active: active ?? false,
       folder: folder ?? null,
-      startDate: startDate ? new Date(startDate) : null,
-      endDate: endDate ? new Date(endDate) : null,
+      startDate: parseBoardDateInput(startDate),
+      endDate: parseBoardDateInput(endDate),
       organizationId,
       isGeneral: Boolean(isGeneral),
       prize: normalizeBoardPrize(prize),

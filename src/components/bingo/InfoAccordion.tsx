@@ -18,12 +18,12 @@ const SECTIONS: Section[] = [
     content: (
       <div className="space-y-2 text-sm text-slate-400 leading-relaxed">
         <p>
-          <span className="font-semibold text-white">Bingo</span> es una plataforma de retos deportivos
-          en formato tablero de bingo. Cada casilla del tablero representa un reto diferente que debes completar.
+          <span className="font-semibold text-white">Box Challenge</span> es una plataforma de retos, en
+          formato tablero. Cada casilla del tablero representa un reto diferente que debes completar.
         </p>
         <p>
-          Al completar una casilla sube una foto o adjunta tu actividad de Strava como evidencia. El admin
-          revisará tu envío y lo aprobará o rechazará.
+          Para completar una casilla deberás subir una foto o adjuntar tu actividad de Strava como
+          evidencia. El admin revisará tu envío y lo aprobará o rechazará.
         </p>
         <ul className="space-y-1 mt-2">
           <li className="flex items-start gap-2">
@@ -127,7 +127,7 @@ const SECTIONS: Section[] = [
           },
           {
             q: '¿Puedo subir el link de Strava en lugar de una foto?',
-            a: 'Sí, en los retos deportivos (running, ciclismo, gym, natación, etc.) puedes adjuntar el link de tu actividad en Strava como evidencia válida.',
+            a: 'Sí, solo si es requerida y permitida en los retos deportivos (running, ciclismo, gym, natación, etc.).',
           },
           {
             q: '¿Qué pasa si mi envío es rechazado?',
@@ -139,7 +139,7 @@ const SECTIONS: Section[] = [
           },
           {
             q: '¿Puedo participar en varios tableros al mismo tiempo?',
-            a: 'Actualmente solo hay un tablero activo por vez. Al completar el bingo podrás pasar al siguiente tablero disponible.',
+            a: 'Sí, puedes participar en todos los que la plataforma te muestre. Al completar cada tablero podrás escoger el siguiente tablero disponible.',
           },
         ].map(({ q, a }, i) => (
           <div key={i} className="border-b border-slate-800 pb-3 last:border-0 last:pb-0">

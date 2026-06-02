@@ -418,7 +418,7 @@ export default function ChallengeFlipCard({
             ) : (
               /* Panel de ingreso de link */
               <div
-                className="w-full flex flex-col gap-1.5"
+                className="w-full flex flex-col gap-1.5 rounded-lg bg-white p-2 text-slate-900"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center justify-between">
@@ -442,7 +442,7 @@ export default function ChallengeFlipCard({
                   value={linkValue}
                   onChange={(e) => { setLinkValue(e.target.value); setLinkError(''); }}
                   placeholder="https://strava.com/activities/..."
-                  className="w-full text-[10px] border border-secondary-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#FC4C02] focus:border-[#FC4C02]"
+                  className="evidence-link-input w-full text-[10px] placeholder:text-slate-400 border border-secondary-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#FC4C02] focus:border-[#FC4C02]"
                   onClick={(e) => e.stopPropagation()}
                   autoFocus
                 />

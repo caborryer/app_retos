@@ -18,6 +18,7 @@ import {
   AdminBoardsListSkeleton,
   AdminChallengeSlotsSkeleton,
 } from '@/components/admin/AdminSkeleton';
+import { formatBoardCalendarDate, toDateInputValue } from '@/lib/board-date';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -750,8 +751,8 @@ function BoardCard({
       coverImage: board.coverImage,
       active: board.active,
       folder: board.folder ?? '',
-      startDate: board.startDate ? board.startDate.split('T')[0] : '',
-      endDate: board.endDate ? board.endDate.split('T')[0] : '',
+      startDate: toDateInputValue(board.startDate),
+      endDate: toDateInputValue(board.endDate),
       prize: board.prize ?? '',
       isGeneral: board.isGeneral ?? false,
       organizationId: board.organizationId ?? board.organization?.id,
@@ -1084,8 +1085,9 @@ function BoardCard({
                 )}
                 {board.startDate && (
                   <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-700 text-slate-400">
-                    {new Date(board.startDate).toLocaleDateString('es', { day: '2-digit', month: 'short' })}
-                    {board.endDate && ` → ${new Date(board.endDate).toLocaleDateString('es', { day: '2-digit', month: 'short' })}`}
+                    {formatBoardCalendarDate(board.startDate, 'es', { day: '2-digit', month: 'short' })}
+                    {board.endDate &&
+                      ` → ${formatBoardCalendarDate(board.endDate, 'es', { day: '2-digit', month: 'short' })}`}
                   </span>
                 )}
               </div>

@@ -11,7 +11,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'BingoChallenge - Retos Deportivos',
+  title: 'BoxChallenge - Retos Deportivos',
   description: 'Participa en retos deportivos, alcanza tus metas y compite con amigos',
   manifest: '/manifest.json',
   themeColor: '#FC0230',
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'BingoChallenge',
+    title: 'BoxChallenge',
   },
 };
 

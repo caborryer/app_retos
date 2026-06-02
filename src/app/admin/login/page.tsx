@@ -5,6 +5,47 @@ import { useRouter } from 'next/navigation';
 import { signIn, useSession } from 'next-auth/react';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 
+async function completeAdminSignIn(email: string, password: string) {
+  const normalizedEmail = email.trim().toLowerCase();
+
+  const res = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ email: normalizedEmail, password }),
+  });
+  const data = (await res.json().catch(() => ({}))) as {
+    error?: string;
+    role?: string;
+  };
+
+  if (!res.ok) {
+    return { ok: false as const, error: data.error ?? 'Credenciales incorrectas.' };
+  }
+
+  if (data.role !== 'ADMIN') {
+    return { ok: false as const, error: 'Tu cuenta no tiene permisos de administrador.' };
+  }
+
+  const result = await signIn('credentials', {
+    email: normalizedEmail,
+    password,
+    redirect: false,
+  });
+
+  if (!result?.ok) {
+    return {
+      ok: false as const,
+      error:
+        result?.error === 'CredentialsSignin'
+          ? 'Credenciales incorrectas o sin permisos de administrador.'
+          : 'No se pudo iniciar sesión. Intenta nuevamente.',
+    };
+  }
+
+  return { ok: true as const };
+}
+
 export default function AdminLoginPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -35,39 +76,12 @@ export default function AdminLoginPage() {
     setLoading(true);
 
     try {
-      const result = await signIn('credentials', {
-        email: email.trim(),
-        password,
-        redirect: false,
-      });
-
-      if (!result) {
-        setError('Sin respuesta del servidor. Intenta nuevamente.');
+      const outcome = await completeAdminSignIn(email, password);
+      if (!outcome.ok) {
+        setError(outcome.error);
         return;
       }
-
-      if (result.ok) {
-        // Verify ADMIN role before navigating (session cookie is now set).
-        try {
-          const s = await fetch('/api/auth/session', { cache: 'no-store' }).then((r) => r.json());
-          const role = s?.user?.role as string | undefined;
-          if (role !== 'ADMIN') {
-            setError('Tu cuenta no tiene permisos de administrador.');
-            return;
-          }
-        } catch {
-          // If the session fetch fails, still navigate — the admin layout will guard.
-        }
-        // Hard navigation — do NOT use result.url (it defaults to /admin/login).
-        window.location.assign('/admin');
-        return;
-      }
-
-      setError(
-        result.error === 'CredentialsSignin'
-          ? 'Credenciales incorrectas o sin permisos de administrador.'
-          : 'No se pudo iniciar sesión. Intenta nuevamente.',
-      );
+      window.location.assign('/admin');
     } catch {
       setError('No se pudo conectar al servicio de autenticación. Intenta nuevamente.');
     } finally {
@@ -84,6 +98,12 @@ export default function AdminLoginPage() {
           </div>
           <h1 className="text-xl font-bold text-white">Panel Admin</h1>
           <p className="text-slate-400 text-sm mt-1">Acceso exclusivo para administradores</p>
+          {process.env.NODE_ENV === 'development' && (
+            <p className="text-slate-500 text-xs mt-2">
+              Dev: <span className="font-mono">admin@sport.com</span> /{' '}
+              <span className="font-mono">admin123</span>
+            </p>
+          )}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

@@ -5,6 +5,7 @@ import { notifyNewBoard } from '@/lib/notifyNewBoard';
 import { getBoardActivationBlockReasons } from '@/lib/board-activation-rules';
 import { BoardDeleteError, deleteBoardCompletely } from '@/lib/delete-board';
 import { BOARD_PRIZE_MAX_LENGTH, normalizeBoardPrize } from '@/lib/board-prize';
+import { parseBoardDateInput } from '@/lib/board-date';
 
 // PATCH /api/boards/:id — update a board (admin only)
 export async function PATCH(
@@ -82,8 +83,8 @@ export async function PATCH(
         ...(coverImage !== undefined && { coverImage }),
         ...(active !== undefined && { active }),
         ...(folder !== undefined && { folder: folder ?? null }),
-        ...(startDate !== undefined && { startDate: startDate ? new Date(startDate) : null }),
-        ...(endDate !== undefined && { endDate: endDate ? new Date(endDate) : null }),
+        ...(startDate !== undefined && { startDate: parseBoardDateInput(startDate) }),
+        ...(endDate !== undefined && { endDate: parseBoardDateInput(endDate) }),
         ...(organizationId !== undefined && { organizationId }),
         ...(isGeneral !== undefined && { isGeneral: Boolean(isGeneral) }),
         ...(prize !== undefined && { prize: normalizeBoardPrize(prize) }),

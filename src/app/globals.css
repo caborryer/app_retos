@@ -38,6 +38,25 @@
   .safe-area-right {
     padding-right: env(safe-area-inset-right);
   }
+
+  /* Strava / evidence URL inputs on dark surfaces (body uses text-slate-100) */
+  .evidence-link-input {
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
+    background-color: #ffffff !important;
+    caret-color: #0f172a;
+  }
+
+  .evidence-link-input::placeholder {
+    color: #94a3b8;
+  }
+
+  .evidence-link-input:-webkit-autofill,
+  .evidence-link-input:-webkit-autofill:hover,
+  .evidence-link-input:-webkit-autofill:focus {
+    -webkit-text-fill-color: #0f172a !important;
+    box-shadow: 0 0 0 1000px #ffffff inset;
+  }
 }
 
 @layer utilities {

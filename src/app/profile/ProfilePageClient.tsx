@@ -7,7 +7,8 @@ import Layout from '@/components/layout/Layout';
 import Card from '@/components/ui/Card';
 import ProgressBar from '@/components/ui/ProgressBar';
 import Button from '@/components/ui/Button';
-import { useSession, signOut } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
+import { signOutWithCleanup } from '@/lib/sign-out-client';
 import { formatRelativeTime } from '@/lib/utils';
 import AppLoadingScreen from '@/components/brand/AppLoadingScreen';
 
@@ -102,7 +103,7 @@ export default function ProfilePageClient() {
   }
 
   async function handleLogout() {
-    await signOut({ redirect: false });
+    await signOutWithCleanup({ redirect: false });
     router.push('/login');
   }
 
@@ -249,7 +250,7 @@ export default function ProfilePageClient() {
       if (!res.ok) {
         throw new Error(typeof body.error === 'string' ? body.error : 'No se pudo eliminar la cuenta.');
       }
-      await signOut({ redirect: false });
+      await signOutWithCleanup({ redirect: false });
       router.push('/register');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo eliminar la cuenta.');
@@ -437,11 +438,10 @@ export default function ProfilePageClient() {
                         <p className="text-xs text-slate-400 mt-1">{badge.description}</p>
                       </div>
                       <span
-                        className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
-                          badge.unlocked
+                        className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${badge.unlocked
                             ? 'bg-green-100 text-green-700'
                             : 'bg-slate-800 text-slate-400'
-                        }`}
+                          }`}
                       >
                         {badge.unlocked ? 'Obtenida' : `${badge.progress}%`}
                       </span>
@@ -706,7 +706,7 @@ export default function ProfilePageClient() {
 
         {/* App Version */}
         <p className="text-center text-xs text-secondary-400 pb-6">
-          BingoChallenge v1.0.0
+          BoxChallenge v1.0.0
         </p>
       </div>
     </Layout>

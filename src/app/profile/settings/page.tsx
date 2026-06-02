@@ -6,7 +6,8 @@ import { Camera, LogOut, ShieldCheck, Trash2 } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
-import { useSession, signOut } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
+import { signOutWithCleanup } from '@/lib/sign-out-client';
 import { readApiJsonOrThrow } from '@/lib/read-api-json';
 import AppLoadingScreen from '@/components/brand/AppLoadingScreen';
 import { useHydrated } from '@/hooks/useHydrated';
@@ -89,7 +90,7 @@ export default function ProfileSettingsPage() {
   }, [status]);
 
   async function handleLogout() {
-    await signOut({ redirect: false });
+    await signOutWithCleanup({ redirect: false });
     router.push('/login');
   }
 
@@ -221,7 +222,7 @@ export default function ProfileSettingsPage() {
       if (!res.ok) {
         throw new Error(typeof body.error === 'string' ? body.error : 'No se pudo eliminar la cuenta.');
       }
-      await signOut({ redirect: false });
+      await signOutWithCleanup({ redirect: false });
       router.push('/register');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo eliminar la cuenta.');

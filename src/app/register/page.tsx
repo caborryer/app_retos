@@ -2,7 +2,8 @@
 
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { signIn, signOut, useSession } from 'next-auth/react';
+import { signIn, useSession } from 'next-auth/react';
+import { signOutWithCleanup } from '@/lib/sign-out-client';
 import { Eye, EyeOff, Lock, Mail, User, X, Building2 } from 'lucide-react';
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
 import PublicBrandNav from '@/components/brand/PublicBrandNav';
@@ -114,7 +115,7 @@ function RegisterPageContent() {
     if (signOutForInviteRef.current) return;
     signOutForInviteRef.current = true;
     setClearingSession(true);
-    signOut({ redirect: false })
+    signOutWithCleanup({ redirect: false })
       .catch(() => setError('No se pudo cerrar la sesión anterior. Recarga la página.'))
       .finally(() => setClearingSession(false));
   }, [inviteToken, status]);

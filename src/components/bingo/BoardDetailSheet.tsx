@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { CalendarDays, FolderOpen, X } from 'lucide-react';
 import { resolveMediaUrl } from '@/lib/media-url';
+import { formatBoardCalendarDate } from '@/lib/board-date';
 
 interface BoardDetail {
   id: string;
@@ -28,10 +29,11 @@ interface BoardDetailSheetProps {
 }
 
 function formatDate(value: string | null | undefined) {
-  if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
-  return date.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
+  return formatBoardCalendarDate(value, 'es-CO', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
 }
 
 export default function BoardDetailSheet({

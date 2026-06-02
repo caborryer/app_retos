@@ -20,7 +20,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (status === 'loading') return;
 
     if (status === 'unauthenticated') {
-      router.replace('/login');
+      if (isLoginPage) return;
+      router.replace('/admin/login');
       return;
     }
 

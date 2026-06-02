@@ -16,9 +16,10 @@ interface AppState {
   updateChallenge: (id: string, updates: Partial<Challenge>) => void;
   resetChallenges: (newChallenges: Challenge[]) => void;
 
-  // Notifications (local UI)
+  // Notifications (synced from API per session — not persisted across users)
   notifications: Notification[];
   unreadCount: number;
+  setNotifications: (notifications: Notification[], unreadCount: number) => void;
   addNotification: (notification: Notification) => void;
   markAsRead: (id: string) => void;
   clearNotifications: () => void;
@@ -92,11 +93,24 @@ export const useAppStore = create<AppState>()(
         },
 
         // ── Notification actions ───────────────────────────────────────────────
+        setNotifications: (notifications, unreadCount) => {
+          set({
+            notifications: notifications.slice(0, 50),
+            unreadCount,
+          });
+        },
+
         addNotification: (notification) => {
-          set((state) => ({
-            notifications: [notification, ...state.notifications].slice(0, 50),
-            unreadCount: state.unreadCount + 1,
-          }));
+          set((state) => {
+            if (state.notifications.some((n) => n.id === notification.id)) {
+              return state;
+            }
+            const next = [notification, ...state.notifications].slice(0, 50);
+            return {
+              notifications: next,
+              unreadCount: notification.read ? state.unreadCount : state.unreadCount + 1,
+            };
+          });
         },
 
         markAsRead: (id) => {
@@ -128,8 +142,13 @@ export const useAppStore = create<AppState>()(
       }),
       {
         name: 'sport-challenge-ui',
+        version: 1,
+        migrate: (persisted) => {
+          if (!persisted || typeof persisted !== 'object') return persisted as Record<string, unknown>;
+          const { notifications: _n, unreadCount: _u, ...rest } = persisted as Record<string, unknown>;
+          return rest;
+        },
         partialize: (state) => ({
-          notifications: state.notifications,
           activeTab: state.activeTab,
         }),
       }

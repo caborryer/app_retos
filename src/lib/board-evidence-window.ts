@@ -1,5 +1,6 @@
 import { endOfDay, format, isAfter, isBefore, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { parseBoardDateInput } from '@/lib/board-date';
 
 export type BoardDateInput = {
   startDate: Date | string | null | undefined;
@@ -13,7 +14,11 @@ export type BoardEvidenceWindow = {
 };
 
 function parseBoardDate(value: Date | string): Date {
-  return value instanceof Date ? value : new Date(value);
+  const parsed = parseBoardDateInput(value);
+  if (!parsed) {
+    throw new Error('Invalid board date');
+  }
+  return parsed;
 }
 
 function formatBoardDateLabel(value: Date | string): string {

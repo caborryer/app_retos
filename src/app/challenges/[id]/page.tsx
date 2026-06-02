@@ -90,7 +90,7 @@ function StravaLinkInput({ task, challengeId, onSubmit, disabled, disabledMessag
         value={value}
         onChange={(e) => { setValue(e.target.value); setError(''); }}
         placeholder="https://strava.com/activities/1234567890"
-        className="w-full text-sm border border-secondary-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#FC4C02]/40 focus:border-[#FC4C02]"
+        className="evidence-link-input w-full text-sm placeholder:text-slate-400 border border-secondary-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#FC4C02]/40 focus:border-[#FC4C02]"
         autoFocus
       />
       {error && <p className="text-xs text-red-500">{error}</p>}
