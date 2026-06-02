@@ -1,8 +1,9 @@
 import { prisma } from '@/lib/prisma';
 import { getSupabaseAdmin, STORAGE_BUCKET } from '@/lib/supabase-server';
 import { getStorageObjectPathFromPublicUrl } from '@/lib/evidence-cleanup';
+import { USER_DELETE_CONFIRM_TEXT } from '@/lib/user-delete-constants';
 
-export const USER_DELETE_CONFIRM_TEXT = 'ELIMINAR';
+export { USER_DELETE_CONFIRM_TEXT };
 
 export class UserDeleteError extends Error {
   statusCode: number;

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { Users, Search, Save, Trash2, X } from 'lucide-react';
 import { AdminUserCardsSkeleton } from '@/components/admin/AdminSkeleton';
-import { USER_DELETE_CONFIRM_TEXT } from '@/lib/delete-user';
+import { USER_DELETE_CONFIRM_TEXT } from '@/lib/user-delete-constants';
 
 type Org = { id: string; name: string; slug: string };
 
