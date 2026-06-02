@@ -1,8 +1,9 @@
 'use client';
 
 import { Suspense, useEffect, useRef, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { signIn, signOut, useSession } from 'next-auth/react';
+import { useSearchParams } from 'next/navigation';
+import { signOut, useSession } from 'next-auth/react';
+import { PASSWORD_MIN_LENGTH } from '@/lib/password-policy';
 import { Eye, EyeOff, Lock, Mail, User, X, Building2 } from 'lucide-react';
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
 import PublicBrandNav from '@/components/brand/PublicBrandNav';
@@ -72,7 +73,6 @@ function setInviteCookie(token: string) {
 }
 
 function RegisterPageContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const inviteToken = searchParams.get('invite')?.trim() ?? '';
   const { status } = useSession();
@@ -93,6 +93,12 @@ function RegisterPageContent() {
   const [inviteValidating, setInviteValidating] = useState(!!inviteToken);
   const [inviteValid, setInviteValid] = useState(false);
   const [organizationName, setOrganizationName] = useState<string | null>(null);
+  const [verifyPending, setVerifyPending] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState('');
+  const [verificationEmailSent, setVerificationEmailSent] = useState(true);
+  const [devVerifyLink, setDevVerifyLink] = useState<string | null>(null);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendMessage, setResendMessage] = useState('');
 
   useEffect(() => {
     if (status !== 'loading') {
@@ -211,6 +217,97 @@ function RegisterPageContent() {
     );
   }
 
+  async function handleResendVerification() {
+    setResendMessage('');
+    setResendLoading(true);
+    try {
+      const res = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: registeredEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setResendMessage(data.error ?? 'No se pudo reenviar.');
+        return;
+      }
+      setResendMessage('Si la cuenta no está verificada, te enviamos un nuevo correo.');
+      if (typeof data.devLink === 'string') {
+        setDevVerifyLink(data.devLink);
+        setVerificationEmailSent(false);
+      }
+    } catch {
+      setResendMessage('Error de conexión.');
+    } finally {
+      setResendLoading(false);
+    }
+  }
+
+  if (verifyPending) {
+    return (
+      <div
+        style={{ minHeight: '100vh', fontFamily: "'DM Sans','Helvetica Neue',sans-serif" }}
+        className="bg-slate-950 flex flex-col"
+      >
+        <PublicBrandNav />
+        <div className="flex-1 flex items-center justify-center p-6">
+          <div className="w-full max-w-sm text-center">
+            <h1 className="text-2xl font-bold text-white mb-3">
+              {verificationEmailSent ? 'Revisa tu correo' : 'Confirma tu cuenta'}
+            </h1>
+            {verificationEmailSent ? (
+              <p className="text-slate-400 text-sm mb-2">
+                Enviamos un enlace de confirmación a{' '}
+                <span className="text-white font-medium">{registeredEmail}</span>.
+              </p>
+            ) : (
+              <p className="text-slate-400 text-sm mb-2">
+                Tu cuenta está creada para{' '}
+                <span className="text-white font-medium">{registeredEmail}</span>, pero el correo
+                no se pudo enviar (SMTP no configurado en este entorno).
+              </p>
+            )}
+            <p className="text-slate-500 text-xs mb-4">
+              Debes confirmar tu email antes de iniciar sesión. No es un código de 6 dígitos: es un
+              enlace que llega al correo (o abajo en desarrollo).
+            </p>
+            {devVerifyLink && (
+              <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-left">
+                <p className="text-xs font-semibold text-amber-200 mb-2">
+                  Enlace de verificación (desarrollo)
+                </p>
+                <a
+                  href={devVerifyLink}
+                  className="text-sm text-primary-400 break-all hover:underline"
+                >
+                  Confirmar mi correo ahora
+                </a>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={handleResendVerification}
+              disabled={resendLoading}
+              className="w-full py-3 rounded-xl border border-slate-700 text-slate-200 text-sm font-medium hover:bg-slate-800 disabled:opacity-60 mb-3"
+            >
+              {resendLoading ? 'Enviando…' : 'Reenviar correo'}
+            </button>
+            {resendMessage && (
+              <p className="text-xs text-slate-400 mb-4">{resendMessage}</p>
+            )}
+            <a
+              href="/login"
+              className="inline-block py-2.5 px-6 rounded-xl text-white text-sm font-semibold"
+              style={{ background: '#FC0230' }}
+            >
+              Ir a iniciar sesión
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
@@ -219,8 +316,12 @@ function RegisterPageContent() {
       setError('Las contraseñas no coinciden.');
       return;
     }
-    if (password.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres.');
+    if (password.length < PASSWORD_MIN_LENGTH) {
+      setError(`La contraseña debe tener al menos ${PASSWORD_MIN_LENGTH} caracteres.`);
+      return;
+    }
+    if (!/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+      setError('La contraseña debe incluir al menos una mayúscula y un número.');
       return;
     }
     if (!acceptTerms) {
@@ -249,19 +350,10 @@ function RegisterPageContent() {
         return;
       }
 
-      // Auto-login after registration
-      const result = await signIn('credentials', {
-        email: email.trim(),
-        password,
-        redirect: false,
-      });
-
-      if (result?.ok) {
-        window.location.assign('/home');
-      } else {
-        // Account created but auto-login failed — send to login
-        router.push('/login?registered=1');
-      }
+      setRegisteredEmail(email.trim().toLowerCase());
+      setVerificationEmailSent(data.emailSent !== false);
+      setDevVerifyLink(typeof data.devLink === 'string' ? data.devLink : null);
+      setVerifyPending(true);
     } catch {
       setError('No se pudo conectar al servidor. Intenta nuevamente.');
     } finally {

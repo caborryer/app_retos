@@ -10,6 +10,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { readApiJsonOrThrow } from '@/lib/read-api-json';
 import AppLoadingScreen from '@/components/brand/AppLoadingScreen';
 import { useHydrated } from '@/hooks/useHydrated';
+import MfaSettings from '@/components/settings/MfaSettings';
 
 type ProfileResponse = {
   user: {
@@ -312,6 +313,10 @@ export default function ProfileSettingsPage() {
             <input type="password" value={passwordNext} onChange={(e) => setPasswordNext(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 px-3 py-2 text-sm" />
           </label>
           <Button onClick={() => void handleChangePassword()} disabled={changingPassword}>Cambiar contraseña</Button>
+        </Card>
+
+        <Card variant="elevated" className="p-5">
+          <MfaSettings />
         </Card>
 
         <Card variant="elevated" className="p-5 space-y-3">

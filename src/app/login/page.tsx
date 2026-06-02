@@ -15,6 +15,9 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [emailNotVerified, setEmailNotVerified] = useState(false);
+  const [resendMessage, setResendMessage] = useState('');
+  const [resendLoading, setResendLoading] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -37,33 +40,59 @@ export default function LoginPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+    setEmailNotVerified(false);
+    setResendMessage('');
     setLoading(true);
 
     try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email: email.trim(), password }),
+      });
+      const data = await res.json();
+
+      if (res.status === 429) {
+        setError(data.error ?? 'Demasiados intentos. Espera unos minutos.');
+        return;
+      }
+
+      if (res.status === 403 && data.code === 'EMAIL_NOT_VERIFIED') {
+        setEmailNotVerified(true);
+        setError(data.error ?? 'Confirma tu email antes de entrar.');
+        return;
+      }
+
+      if (!res.ok && !data.mfaRequired) {
+        setError(data.error ?? 'Credenciales incorrectas.');
+        return;
+      }
+
+      if (data.mfaRequired) {
+        window.location.assign('/login/mfa');
+        return;
+      }
+
+      if (!data.sessionToken) {
+        setError('No se pudo iniciar sesión.');
+        return;
+      }
+
       const result = await signIn('credentials', {
-        email: email.trim(),
-        password,
+        flow: 'session_token',
+        loginToken: data.sessionToken,
         redirect: false,
-        callbackUrl: '/home',
       });
 
-      if (!result) {
-        setError('Sin respuesta del servidor. Intenta nuevamente.');
+      if (result?.ok) {
+        const dest = data.role === 'ADMIN' ? '/admin' : '/home';
+        window.location.assign(dest);
         return;
       }
 
-      if (result.ok) {
-        window.location.assign('/home');
-        return;
-      }
-
-      setError(
-        result.error === 'CredentialsSignin'
-          ? 'Credenciales incorrectas. Verifica tu email y contraseña.'
-          : `Error al iniciar sesión (${result.error ?? 'desconocido'}). Intenta nuevamente.`,
-      );
-    } catch (err) {
-      console.error('[login] signIn threw:', err);
+      setError('No se pudo completar el inicio de sesión.');
+    } catch {
       setError('No se pudo conectar al servicio de autenticación. Intenta nuevamente.');
     } finally {
       setLoading(false);
@@ -148,8 +177,40 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-red-400 text-sm">
-                {error}
+              <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-red-400 text-sm space-y-2">
+                <p>{error}</p>
+                {emailNotVerified && (
+                  <button
+                    type="button"
+                    disabled={resendLoading}
+                    onClick={async () => {
+                      setResendLoading(true);
+                      setResendMessage('');
+                      try {
+                        const res = await fetch('/api/auth/resend-verification', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ email: email.trim() }),
+                        });
+                        const body = await res.json();
+                        setResendMessage(
+                          res.ok
+                            ? 'Si la cuenta no está verificada, te enviamos un nuevo correo.'
+                            : (body.error ?? 'No se pudo reenviar.')
+                        );
+                        if (body.devLink) console.info('[dev] verification link:', body.devLink);
+                      } catch {
+                        setResendMessage('Error de conexión.');
+                      } finally {
+                        setResendLoading(false);
+                      }
+                    }}
+                    className="text-primary-400 text-xs font-medium hover:underline disabled:opacity-60"
+                  >
+                    {resendLoading ? 'Enviando…' : 'Reenviar correo de verificación'}
+                  </button>
+                )}
+                {resendMessage && <p className="text-xs text-slate-400">{resendMessage}</p>}
               </div>
             )}
 

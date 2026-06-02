@@ -5,6 +5,9 @@ import {
   consumeInviteAndCreateMember,
   InviteValidationError,
 } from '@/lib/organization-access';
+import { validatePassword } from '@/lib/password-policy';
+import { issueAndSendVerificationEmail } from '@/lib/send-verification';
+import { checkRateLimit, rateLimitKey } from '@/lib/rate-limit';
 
 /**
  * POST /api/register
@@ -35,11 +38,25 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'name, email and password are required' }, { status: 400 });
   }
 
-  if (password.length < 6) {
-    return NextResponse.json({ error: 'La contraseña debe tener al menos 6 caracteres' }, { status: 400 });
+  const passwordError = validatePassword(password);
+  if (passwordError) {
+    return NextResponse.json({ error: passwordError }, { status: 400 });
   }
 
   const normalizedEmail = email.trim().toLowerCase();
+
+  const ip =
+    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+    req.headers.get('x-real-ip') ??
+    'unknown';
+
+  const limit = await checkRateLimit(rateLimitKey('register', `${ip}:${normalizedEmail}`), 5);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: 'Demasiados intentos. Espera unos minutos.' },
+      { status: 429, headers: { 'Retry-After': String(limit.retryAfterSec) } }
+    );
+  }
 
   const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
   if (existing) {
@@ -49,7 +66,7 @@ export async function POST(req: Request) {
   try {
     const hashed = await bcrypt.hash(password, 12);
 
-    await prisma.$transaction(async (tx) => {
+    const userId = await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
           name: name.trim(),
@@ -59,9 +76,35 @@ export async function POST(req: Request) {
         },
       });
       await consumeInviteAndCreateMember(user.id, inviteToken, tx);
+      return user.id;
     });
 
-    return NextResponse.json({ ok: true }, { status: 201 });
+    let emailResult: { sent: boolean; devLink?: string } = { sent: false };
+    try {
+      emailResult = await issueAndSendVerificationEmail(userId);
+    } catch {
+      return NextResponse.json(
+        {
+          ok: true,
+          verifyEmailRequired: true,
+          emailSent: false,
+          message:
+            'Cuenta creada, pero no pudimos enviar el correo de verificación. Usa reenviar desde el login.',
+        },
+        { status: 201 }
+      );
+    }
+
+    return NextResponse.json(
+      {
+        ok: true,
+        verifyEmailRequired: true,
+        emailSent: emailResult.sent,
+        devLink: emailResult.devLink,
+        message: 'Revisa tu bandeja para activar la cuenta.',
+      },
+      { status: 201 }
+    );
   } catch (e) {
     if (e instanceof InviteValidationError) {
       return NextResponse.json({ error: e.message }, { status: 400 });

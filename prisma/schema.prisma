@@ -53,6 +53,11 @@ enum BadgeRarity {
   LEGENDARY
 }
 
+enum AuthTokenType {
+  EMAIL_VERIFY
+  MFA_LOGIN_SESSION
+}
+
 // ─── Models ──────────────────────────────────────────────────────────────────
 
 model User {
@@ -72,7 +77,14 @@ model User {
   /// When the user accepted in-app location tracking (modal + browser permission).
   locationOptInAt DateTime?
 
+  emailVerified            DateTime?
+  emailVerificationSentAt  DateTime?
+  mfaEnabled               Boolean   @default(false)
+  mfaSecretEncrypted       String?
+  mfaBackupCodeHashes      String[]  @default([])
+
   badges            Badge[]
+  authTokens        AuthToken[]
   challengeProgress UserChallengeProgress[]
   taskProgress      UserTaskProgress[]
   notifications     Notification[]
@@ -80,6 +92,29 @@ model User {
   settings          UserSettings?
   organizationMemberships OrganizationMember[]
   createdInvites    OrganizationInvite[] @relation("InviteCreatedBy")
+}
+
+model AuthToken {
+  id        String        @id @default(cuid())
+  userId    String
+  type      AuthTokenType
+  tokenHash String
+  expiresAt DateTime
+  createdAt DateTime      @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+  @@index([expiresAt])
+}
+
+model AuthRateLimit {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  count       Int      @default(0)
+  windowStart DateTime
+
+  @@index([windowStart])
 }
 
 model Organization {

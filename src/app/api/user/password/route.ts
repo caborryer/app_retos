@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { validatePassword } from '@/lib/password-policy';
 
 type Body = {
   currentPassword?: unknown;
@@ -26,11 +27,9 @@ export async function POST(req: Request) {
     );
   }
 
-  if (newPassword.length < 8) {
-    return NextResponse.json(
-      { error: 'La nueva contraseña debe tener al menos 8 caracteres.' },
-      { status: 400 }
-    );
+  const passwordError = validatePassword(newPassword);
+  if (passwordError) {
+    return NextResponse.json({ error: passwordError }, { status: 400 });
   }
 
   const user = await prisma.user.findUnique({
