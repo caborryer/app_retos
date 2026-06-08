@@ -49,21 +49,29 @@ export async function getBoardFullCompletionOrder(
   prisma: PrismaClient,
   boardId: string
 ): Promise<Array<{ userId: string; name: string; finishedAt: Date }>> {
+  // finishedAt = MAX submission time of the last approved task across all challenges.
+  // Using UserTaskProgress.completedAt (set on submit) instead of
+  // UserChallengeProgress.completedAt (set on admin approval) so the ranking
+  // reflects when the user actually finished, not when the admin reviewed.
   const rows = await prisma.$queryRaw<Array<{ userId: string; name: string; finishedAt: Date }>>(
     Prisma.sql`
-      SELECT ucp."userId" AS "userId", u."name" AS "name", MAX(ucp."completedAt") AS "finishedAt"
-      FROM "UserChallengeProgress" ucp
-      INNER JOIN "Challenge" c ON c.id = ucp."challengeId"
-      INNER JOIN "User" u ON u.id = ucp."userId"
+      SELECT
+        utp."userId"       AS "userId",
+        u."name"           AS "name",
+        MAX(utp."completedAt") AS "finishedAt"
+      FROM "UserTaskProgress" utp
+      INNER JOIN "ChallengeTask" ct ON ct.id = utp."taskId"
+      INNER JOIN "Challenge"     c  ON c.id  = ct."challengeId"
+      INNER JOIN "User"          u  ON u.id  = utp."userId"
       WHERE c."boardId" = ${boardId}
-        AND ucp.status = 'COMPLETED'
+        AND utp."validationStatus" = 'APPROVED'
         AND u."role" = 'USER'
-        AND ucp."completedAt" IS NOT NULL
-      GROUP BY ucp."userId", u."name"
-      HAVING COUNT(DISTINCT ucp."challengeId") = (
+        AND utp."completedAt" IS NOT NULL
+      GROUP BY utp."userId", u."name"
+      HAVING COUNT(DISTINCT ct."challengeId") = (
         SELECT COUNT(*)::int FROM "Challenge" c2 WHERE c2."boardId" = ${boardId}
       )
-      ORDER BY MAX(ucp."completedAt") ASC
+      ORDER BY MAX(utp."completedAt") ASC
     `
   );
   return rows;
