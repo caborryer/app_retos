@@ -595,9 +595,13 @@ export default function AdminAnalyticsPage() {
 
       <div className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-4">
         <p className="text-xs font-semibold text-slate-400 mb-1">Posiciones por tablero completado</p>
-        <p className="text-[11px] text-slate-500 mb-4">
-          Solo tableros activos. Usuarios que completaron todos los retos del bingo, ordenados por cuándo cerraron el último reto. Lista filtrada a finalizaciones en{' '}
+        <p className="text-[11px] text-slate-500 mb-1">
+          Solo tableros activos. Usuarios que completaron todos los retos del bingo, ordenados por fecha de cargue del último reto. Lista filtrada a finalizaciones en{' '}
           {periodPhrase(period)}; el contador histórico es de siempre.
+        </p>
+        <p className="text-[10px] text-slate-600 mb-4 flex items-center gap-1">
+          <span className="inline-block w-2 h-2 rounded-full bg-primary-500/70 shrink-0" />
+          &quot;Fecha de cargue&quot; = momento en que el usuario subió su última evidencia (no la aprobación del admin).
         </p>
         {analytics.boardCompletionLeaderboards.length === 0 ? (
           <p className="text-xs text-slate-500">No hay tableros elegibles o no hay datos de completados.</p>
@@ -628,7 +632,10 @@ export default function AdminAnalyticsPage() {
                           <tr className="text-slate-500 border-b border-slate-700/50">
                             <th className="py-1.5 pr-2 font-medium w-10">#</th>
                             <th className="py-1.5 pr-2 font-medium">Usuario</th>
-                            <th className="py-1.5 font-medium whitespace-nowrap">Completado</th>
+                            <th className="py-1.5 font-medium whitespace-nowrap">
+                              Fecha de cargue
+                              <span className="block text-[9px] font-normal text-slate-600 mt-0.5">último reto subido</span>
+                            </th>
                           </tr>
                         </thead>
                         <tbody>
@@ -643,7 +650,14 @@ export default function AdminAnalyticsPage() {
                                   {f.userId}
                                 </div>
                               </td>
-                              <td className="py-1.5 text-slate-400 whitespace-nowrap">{formatFinishedAt(f.finishedAt)}</td>
+                              <td className="py-1.5 whitespace-nowrap">
+                                <span className="text-slate-200 font-medium tabular-nums">
+                                  {new Date(f.finishedAt).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })}
+                                </span>
+                                <span className="ml-1.5 text-primary-400 font-semibold tabular-nums">
+                                  {new Date(f.finishedAt).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                                </span>
+                              </td>
                             </tr>
                           ))}
                         </tbody>
